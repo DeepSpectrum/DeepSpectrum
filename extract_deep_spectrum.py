@@ -2,8 +2,9 @@ import argparse
 import configparser
 import csv
 import io
+import warnings
 from os import listdir, environ
-from os.path import join, isfile, basename, expanduser, dirname, isdir
+from os.path import join, isfile, basename, expanduser, dirname
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,8 +12,9 @@ from imread import imread_from_blob
 from scipy.io import wavfile
 from tqdm import tqdm
 
-environ['GLOG_minloglevel'] = '2'
+import feature_reduction as fr
 
+environ['GLOG_minloglevel'] = '2'
 
 import caffe
 
@@ -26,19 +28,19 @@ def get_wav_info(wav_file):
 def graph_spectrogram(wav_file, config):
     sound_info, frame_rate = get_wav_info(wav_file)
     fig = plt.figure(frameon=False)
-    fig.set_size_inches(3, 3)
+    fig.set_size_inches(1, 1)
     ax = plt.Axes(fig, [0., 0., 1., 1.], )
     ax.set_axis_off()
     fig.add_axes(ax)
-    Pxx, freqs, bins, im = plt.specgram(sound_info, NFFT=config.nfft, Fs=frame_rate, cmap=config.cmap)
-    extent = im.get_extent()
-    plt.xlim([extent[0], extent[1]])
-    plt.ylim([extent[2], extent[3]])
-    # plt.xlim([0, len(sound_info) / frame_rate])
-    # plt.ylim([0, frame_rate / 2])
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        Pxx, freqs, bins, im = plt.specgram(sound_info, NFFT=config.nfft, Fs=frame_rate, cmap=config.cmap)
+    # extent = im.get_extent()
+    plt.xlim([0, len(sound_info) / frame_rate])
+    plt.ylim([0, frame_rate / 2])
 
     buf = io.BytesIO()
-    plt.savefig(buf, format='png', dpi=129)
+    plt.savefig(buf, format='png', dpi=config.dpi)
     buf.seek(0)
     plt.close('all')
     return buf.read()
@@ -49,20 +51,22 @@ def graph_spectrogram_chunks(wav_file, config):
     chunksize = int(config.chunksize / 1000 * frame_rate)
     step = chunksize if config.step is None else int(config.step / 1000 * frame_rate)
     chunks = [sound_info[n * step:min(n * step + chunksize, len(sound_info))] for n in
-              range(int(len(sound_info) / step))]
+              range(int((len(sound_info) - chunksize) / step))]
     for chunk in chunks:
         fig = plt.figure(frameon=False)
-        fig.set_size_inches(3, 3)
+        fig.set_size_inches(1, 1)
         ax = plt.Axes(fig, [0., 0., 1., 1.], )
         ax.set_axis_off()
         fig.add_axes(ax)
-        Pxx, freqs, bins, im = plt.specgram(chunk, NFFT=config.nfft, noverlap=int(config.nfft / 2), Fs=frame_rate,
-                                            cmap=config.cmap)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            Pxx, freqs, bins, im = plt.specgram(chunk, NFFT=config.nfft, noverlap=int(config.nfft / 2), Fs=frame_rate,
+                                                cmap=config.cmap)
         extent = im.get_extent()
         plt.xlim([extent[0], extent[1]])
         plt.ylim([extent[2], extent[3]])
         buf = io.BytesIO()
-        plt.savefig(buf, format='png', dpi=129)
+        plt.savefig(buf, format='png', dpi=config.dpi)
         buf.seek(0)
         plt.close('all')
         yield buf.read()
@@ -101,13 +105,11 @@ def batch_extract_folder(folder, config, writer):
 
 
 def extract(config, writer):
-    folders = [join(config.folder, subfolder) for subfolder in listdir(config.folder) if isdir(join(config.folder, subfolder))]
-    if not folders:
-        batch_extract_folder(config.folder, config, writer)
-    else:
-        for folder in folders:
-            batch_extract_folder(folder, config, writer)
+    for folder in config.folders:
+        batch_extract_folder(folder, config, writer)
     writer.write_footer()
+    if config.reduced is not None:
+        fr.reduce_features(writer.output, config.reduced)
 
 
 class FeatureWriter:
@@ -155,11 +157,11 @@ class FeatureWriter:
 
     def write_csv_header(self, features, index):
         if index is None:
-            header = ','.join(['name'] + ['neuron_' + str(i) for i in range(len(features))]+['class'])
+            header = ','.join(['name'] + ['neuron_' + str(i) for i in range(len(features))] + ['class'])
         else:
-            header = ','.join(['name'] + ['index'] + ['neuron_' + str(i) for i in range(len(features))]+['class'])
+            header = ','.join(['name'] + ['index'] + ['neuron_' + str(i) for i in range(len(features))] + ['class'])
         with open(self.output, 'w') as f:
-            f.write(header+'\n')
+            f.write(header + '\n')
         self.write_header = False
 
     def write_arff(self, features, name, index=None):
@@ -186,7 +188,7 @@ class FeatureWriter:
 
     def write_footer(self):
         if self.arff_mode:
-            self.write_arff_footer(self.output)
+            self.write_arff_footer()
 
     def write_arff_footer(self):
         with open(self.output, 'a') as f:
@@ -201,40 +203,43 @@ class Configuration:
         self.model_weights = ''
         self.gpu_mode = True
         self.device_id = 0
-        self.folder = ''
+        self.folders = []
         self.output = ''
         self.cmap = 'viridis'
         self.label_file = None
+        self.labels = None
         self.layer = 'fc7'
         self.chunksize = None
         self.step = None
         self.nfft = 256
+        self.reduced = None
+        self.dpi = 387
 
         # initialize commandline parser and parse the arguments
         self.parser = argparse.ArgumentParser(description='Extract deep spectrum features from wav files',
                                               formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         self.requiredNamed = self.parser.add_argument_group('Required named arguments')
-        self.init_parser()
-        self.parse_arguments(vars(self.parser.parse_args()))
+        self._init_parser()
+        self._parse_arguments(vars(self.parser.parse_args()))
 
         # initialize the caffe net
         self.net = None
         self.transformer = None
         self.configure_caffe()
 
-    def init_parser(self):
+    def _init_parser(self):
 
-        self.requiredNamed.add_argument('-f', help='folder where your wavs reside', required=True)
+        self.requiredNamed.add_argument('-f', nargs='+', help='folder(s) where your wavs reside', required=True)
         self.requiredNamed.add_argument('-o',
                                         help='the file which the features are written to. Supports csv and arff formats',
                                         required=True)
-        self.parser.add_argument('-l',
-                                 help='csv file with the labels for the wavs in the form: test_001.wav  label. If nothing is specified here, the name of the directory is used as label.',
+        self.parser.add_argument('-lf',
+                                 help='csv file with the labels for the wavs in the form: \'test_001.wav, label\'. If nothing is specified here, the name(s) of the directory/directories are used as labels.',
                                  default=None)
         self.parser.add_argument('-cmap', default='viridis',
                                  help='define the matplotlib colour map to use for the spectrograms')
         self.parser.add_argument('-config',
-                                 help='path to configuration file which specifies caffe model and weight files',
+                                 help='path to configuration file which specifies caffe model and weight files. If this file does not exist a new one is created and filled with the standard settings-',
                                  default="deep.conf")
         self.parser.add_argument('-layer', default='fc7',
                                  help='name of CNN layer (as defined in caffe prototxt) from which to extract the features. Supports layers with 1-D output.')
@@ -244,25 +249,42 @@ class Configuration:
                                  help='stepsize for creating the wav segments in ms')
         self.parser.add_argument('-nfft', default=256,
                                  help='specify the size for the FFT window in number of samples', type=int)
+        self.parser.add_argument('-reduced', nargs='?',
+                                 help='a reduced version of the feature set is written to the given location.',
+                                 default=None, const='deep_spectrum_reduced.arff')
+        self.parser.add_argument('-labels', nargs='+',
+                                 help='define labels for folders explicitly in format: labelForFirstFolder labelForSecondFolder ...',
+                                 default=None)
 
-    def parse_arguments(self, args):
-        self.folder = args['f']
+    def _parse_arguments(self, args):
+        self.folders = args['f']
         self.cmap = args['cmap']
         self.output = args['o']
-        self.label_file = args['l']
+        self.label_file = args['lf']
+        self.labels = args['labels']
+        if self.labels is not None and len(self.folders) != len(self.labels):
+            self.parser.error(
+                'Labels have to be specified for each folder: ' + str(len(self.folders)) + ' expected, ' + str(
+                    len(self.labels)) + ' received.')
         if self.label_file is None:
             self.create_labels_from_folder_structure()
         self.load_config(args['config'])
+        self.dpi = int(self.conf['size'])
         self.layer = args['layer']
         self.chunksize = args['chunksize']
         self.step = args['step']
         self.nfft = args['nfft']
+        self.reduced = args['reduced']
 
     def create_labels_from_folder_structure(self):
-        wavs = [join(self.folder, subfolder, wav_file) for subfolder in listdir(self.folder) for wav_file in
-                listdir(join(self.folder, subfolder)) if
-                isdir(join(self.folder, subfolder)) and isfile(join(self.folder, subfolder, wav_file))]
-        dictionary = {basename(wav): basename(dirname(wav)) for wav in wavs}
+        if self.labels is None:
+            wavs = [join(folder, wav_file) for folder in self.folders for wav_file in listdir(folder) if
+                    isfile(join(folder, wav_file)) and (wav_file.endswith('.wav') or wav_file.endswith('.WAV'))]
+            dictionary = {basename(wav): basename(dirname(wav)) for wav in wavs}
+        else:
+            dictionary = {wav: self.labels[folder_index] for folder_index, folder in enumerate(self.folders) for wav in
+                          listdir(folder) if
+                          isfile(join(folder, wav)) and (wav.endswith('.wav') or wav.endswith('.WAV'))}
         with open('labels.csv', 'w') as label_file:
             for key, value in dictionary.items():
                 row = ','.join([key, value]) + '\n'
@@ -279,7 +301,8 @@ class Configuration:
             directory = join(home, 'caffe-master/models/bvlc_alexnet')
             self.conf = {'caffe_model_directory': directory,
                          'gpu': '1',
-                         'device_id': '0'}
+                         'device_id': '0',
+                         'size': '387'}
             conf_parser['main'] = self.conf
             with open(conf_file, 'w') as configfile:
                 conf_parser.write(configfile)
@@ -306,7 +329,6 @@ class Configuration:
 
             print('Loading Net')
             self.net = caffe.Net(self.model_def, caffe.TEST, weights=self.model_weights)
-
             self.transformer = caffe.io.Transformer({'data': self.net.blobs['data'].data.shape})
             self.transformer.set_transpose('data', (2, 0, 1))
             self.transformer.set_raw_scale('data', 255)  # rescale from [0, 1] to [0, 255]
@@ -315,7 +337,7 @@ class Configuration:
             self.net.blobs['data'].reshape(1, shape[1], shape[2], shape[3])
             self.net.reshape()
         except FileNotFoundError:
-            print('Could not find model-directory. Check your configuration file!')
+            raise
 
 
 if __name__ == '__main__':

@@ -46,4 +46,3 @@ def _write_csv(features, output):
     features.to_csv(output)
 
 
-if __name__=='__main__':
