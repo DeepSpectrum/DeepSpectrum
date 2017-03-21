@@ -86,7 +86,7 @@ def batch_extract_folder(folder, config, writer):
     files = [join(folder, f) for f in listdir(folder) if isfile(join(folder, f)) and f.endswith('.wav')]
     files = sorted(files)
     print('Extracting features for ' + folder + ':')
-    for f in tqdm(files, leave=False):
+    for f in tqdm(files):
         filename = basename(f)
         if config.chunksize is None:
             img_blob = graph_spectrogram(f, config)
