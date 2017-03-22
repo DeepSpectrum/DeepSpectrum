@@ -40,7 +40,7 @@ file or specifying labels for each folder of the extraction:
   They have to follow the format *file_name.wav* **delimiter** *label* where **delimiter**
   must be `,` for *.csv* and `\t` (tab) for *.tsv*
 * labels for each folder can be specified by `-labels labelForFolder1 labelForFolder2`.
-  The number of specified labels must match the number of folders given after `f`.
+  The number of specified labels must match the number of folders given after `-f`.
 
 
 
