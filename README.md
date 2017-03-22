@@ -15,6 +15,8 @@
   Make sure you can do `import caffe` from the python propt in your commandline 
   of choice. 
 
+## Configuration
+
 ## Usage
 ### Basics
 Basic usage from the commandline requires two arguments: `-f` specifies the 
@@ -52,4 +54,26 @@ commandline by the parameters `-chunksize` and `-step`:
 * the length of the audio chunks in ms is controlled by `-chunksize`. 
 * if only `-step` is specified, the chunksize defaults to the stepsize
 
+Additionally, when extracting from audio segments, `-nfft`should also be set 
+accordingly as for small segments the default of 256 samples used for the FFT is
+often too large. 
 
+### Commandline options
+A detailed description of the commandline options is given below. Apart from 
+`-f` and `-o` none of the options are required.<br>
+
+
+
+| Option   | Description | Default |
+|----------|-------------|---------|
+| **-f**   | Specify the directory/directories containing your *.wav* files here | None |
+| **-o** | The location of the output feature file. Supported output formats are: Comma separated value files and arff files. If the specified output file's extension is *.arff*, arff is chosen as format, otherwise the output will be in comma separated value format. | None |
+| -lf | Specify a comma separated values file containing labels for each *.wav* file | None |
+| -labels | Specify labels explicitly for each folder given after -f. Number of given labels has to match the number of specified folders. If both this and -lf are not specified, each .wav is assigned the name of its parent directory as label. | None |
+| -cmap | Choose a matplotlib colourmap for creating the spectrogram plots. | viridis |
+| -layer | Name of the layer from which features should be extracted as specified in your caffe .prototxt file. Only layers with 1-D output are supported | fc7 |
+| -step | Configure a stepsize for segmentation of the wavs in ms | None |
+| -chunksize | Define the length of the segments. Defaults to *chunksize* if `-step` is given but chunksize is omissed. | None |
+| -nfft | The length of the FFT window used for creating the spectrograms in number of samples. Consider choosing smaller values when extracting from small segments. | 256 |
+| -reduced | If a filepath is given here, an additional reduced version of the output is computed after feature extraction and written to the path. The feature reduction simply removes attributes that have a value of zero for all instances. | None |
+| -config | The path to the configuration file used by the program can be given here. If the file does not exist yet, it is created and filled with standard settings. | deep.conf |
