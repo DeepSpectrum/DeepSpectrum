@@ -34,7 +34,7 @@ in the example *angry* and *sad*. The features are finally written to
 *angrySadDeepSpectrum.arff* in arff format.
 
 ### Advanced: Specifying labels
-Labels for the .wav files can be giiven explicitly either by providing a label 
+Labels for the *.wav* files can be given explicitly either by providing a label 
 file or specifying labels for each folder of the extraction:
 * label files (*.tsv*, *.csv* are supported) can be specified by `-lf labels.csv`.
   They have to follow the format *file_name.wav* **delimiter** *label* where **delimiter**
@@ -42,5 +42,14 @@ file or specifying labels for each folder of the extraction:
 * labels for each folder can be specified by `-labels labelForFolder1 labelForFolder2`.
   The number of specified labels must match the number of folders given after `-f`.
 
+### Advanced: Extracting features from audio segments
+Instead of using the whole audio file to create a single feature vector, 
+features can also be extracted from equally sized chunks of the audio file
+resulting in indexed time series features. This is controlled from the 
+commandline by the parameters `-chunksize` and `-step`:
+* the stepsize for the chunking of the audio files can be specified in ms after 
+`-step`
+* the length of the audio chunks in ms is controlled by `-chunksize`. 
+* if only `-step` is specified, the chunksize defaults to the stepsize
 
 
