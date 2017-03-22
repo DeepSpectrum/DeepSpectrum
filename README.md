@@ -12,10 +12,33 @@
 * caffe with all dependencies. For installation instructions: 
   [https://github.com/BVLC/caffe/wiki/Ubuntu-16.04-or-15.10-Installation-Guide](https://github.com/BVLC/caffe/wiki/Ubuntu-16.04-or-15.10-Installation-Guide) or 
   [http://caffe.berkeleyvision.org/installation.html](http://caffe.berkeleyvision.org/installation.html). 
-  Make sure you can do `import caffe` from the python propt in your commandline 
+  Make sure you can do `import caffe` without errors from the python prompt in your commandline 
   of choice. 
 
 ## Configuration
+Apart from the commandline options, the feature extractor is configured via a 
+configuration file. This file specifies 4 things:
+1. The directory of your caffe CNN model. This directory should contain the 
+   model specification (a file that ends with *deploy.prototxt*) and weights 
+   (a larger file that ends with *.caffemodel*) 
+2. The id of the device used for computation. Only relevant in a multi GPU system
+   -> 0 should be fine
+3. Whether you would like to use your GPU for computation (recommended).
+4. The width and height of the spectrograms plotted during the feature extraction
+   in pixels. Specify only one integer here, as the plots used by the system 
+   have equal height and width. This parameter heavily impacts performance:
+   if set to the input dimensions of your CNN (look at your *.prototxt for this)
+   the speed of the feature extraction can be nearly doubled as the spectrogram
+   plots don't have to be rescaled.
+
+
+
+`[main]
+caffe_model_directory = ~/caffe-master/models/bvlc_alexnet
+device_id = 0
+gpu = 1
+size = 227`
+
 
 ## Usage
 ### Basics
