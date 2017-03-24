@@ -35,7 +35,7 @@ def _write_features(features, output, arff_header, arff_relation):
 
 
 def _write_arff(features, output, arff_header, arff_relation):
-    arff_data = {}
+    arff_data = dict()
     arff_data['relation'] = arff_relation+" reduced"
     arff_data['attributes'] = [attribute for attribute in arff_header if attribute[0] in features.columns]
     arff_data['data'] = features.values

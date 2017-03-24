@@ -107,7 +107,7 @@ def batch_extract_folder(folder, config, writer):
 def extract(config, writer):
     for folder in config.folders:
         batch_extract_folder(folder, config, writer)
-    writer.write_footer()
+    # writer.write_footer()
     if config.reduced is not None:
         fr.reduce_features(writer.output, config.reduced)
 
