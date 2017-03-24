@@ -2,3 +2,6 @@
 .ipynb_checkpoints/*
 .fuse*
 __pycache__/*
+
+win.conf
+extract_deep_spectrum_conflict-20170322-172750.py
