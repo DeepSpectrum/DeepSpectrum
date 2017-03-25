@@ -8,7 +8,7 @@ class FeatureWriter:
             print('No labels specified. Defaulting to \'?\'')
             self.labels = '?'
         else:
-            self.labels = self.label_dict
+            self.labels = set(self.label_dict.values())
 
     def write(self, features, name, index=None):
         if self.arff_mode:

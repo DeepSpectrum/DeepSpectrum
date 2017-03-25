@@ -2,7 +2,7 @@ import argparse
 import configparser
 import csv
 from os import listdir
-from os.path import join, isfile, basename, expanduser, dirname
+from os.path import join, isfile, basename, expanduser, dirname, isdir
 
 import caffe
 
@@ -28,6 +28,7 @@ class Configuration:
         self.reduced = None
         self.size = 387
         self.files = []
+        self.output_spectrograms = None
 
         # initialize commandline parser and parse the arguments
         self.parser = argparse.ArgumentParser(description='Extract deep spectrum features from wav files',
@@ -69,6 +70,9 @@ class Configuration:
         self.parser.add_argument('-labels', nargs='+',
                                  help='define labels for folders explicitly in format: labelForFirstFolder labelForSecondFolder ...',
                                  default=None)
+        self.parser.add_argument('-specout',
+                                 help='define an existing folder where spectrogram plots should be saved during feature extraction. By default, spectrograms are not saved on disk to speed up extraction.',
+                                 default=None)
 
     def _parse_arguments(self, args):
         self.folders = args['f']
@@ -84,6 +88,7 @@ class Configuration:
             self.parser.error(
                 'Labels have to be specified for each folder: ' + str(len(self.folders)) + ' expected, ' + str(
                     len(self.labels)) + ' received.')
+        print('Parsing labels...')
         if self.label_file is None:
             self.create_labels_from_folder_structure()
         else:
@@ -92,9 +97,12 @@ class Configuration:
         self.size = int(self.conf['size'])
         self.layer = args['layer']
         self.chunksize = args['chunksize']
-        self.step = args['step']
+        self.step = args['step'] if args['step'] else self.chunksize
         self.nfft = args['nfft']
         self.reduced = args['reduced']
+        self.output_spectrograms = args['specout']
+        if not isdir(self.output_spectrograms):
+            self.parser.error('Spectrogram directory \''+self.output_spectrograms+'\' does not exist.')
 
     def read_label_file(self):
         if self.label_file.endswith('.tsv'):
