@@ -29,7 +29,7 @@ def graph_spectrogram(wav_file, nfft=256, cmap='viridis', size=227, output_folde
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         Pxx, freqs, bins, im = plt.specgram(sound_info, NFFT=nfft, Fs=frame_rate, cmap=cmap, noverlap=int(nfft / 2))
-    # extent = im.get_extent()
+    extent = im.get_extent()
     plt.xlim([0, len(sound_info) / frame_rate])
     plt.ylim([0, frame_rate / 2])
     if output_folder:
@@ -82,7 +82,7 @@ def extract_features_from_image_blob(img_blob, input_transformer, caffe_net, lay
     img = input_transformer.preprocess('data', img)
     caffe_net.blobs["data"].data[...] = img
     caffe_net.forward()
-    return True, caffe_net.blobs[layer].data[0]
+    return True, np.ravel(caffe_net.blobs[layer].data[0])
 
 
 def extract_features_from_wav(wav_file, input_transformer, caffe_net, nfft=256, layer='fc7', cmap='viridis', size=227,
