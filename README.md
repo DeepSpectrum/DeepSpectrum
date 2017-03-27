@@ -100,3 +100,4 @@ A detailed description of the commandline options is given below. Apart from
 | -nfft | The length of the FFT window used for creating the spectrograms in number of samples. Consider choosing smaller values when extracting from small segments. | 256 |
 | -reduced | If a filepath is given here, an additional reduced version of the output is computed after feature extraction and written to the path. The feature reduction simply removes attributes that have a value of zero for all instances. | None |
 | -config | The path to the configuration file used by the program can be given here. If the file does not exist yet, it is created and filled with standard settings. | deep.conf |
+| -specout | Specify an existing folder to save the spectrograms as .pngs | None |
