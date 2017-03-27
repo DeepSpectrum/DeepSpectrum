@@ -46,7 +46,7 @@ Basic usage from the commandline requires two arguments: `-f` specifies the
 folder(s) containing the .wav files you want to extract the features from 
 and `-o` is the filepath to which the output is written to. An example prompt 
 for this basic scenario is described below:
-* `python3 extract_deep_spectrum.py -f /wavs/angry /wavs/sad -o angrySadDeepSpectrum.arff`
+* `python3 main.py -f /wavs/angry /wavs/sad -o angrySadDeepSpectrum.arff`
 
 This will extract deep spectrum features by using the net, image size and device
 (GPU or CPU) sepcified in the standard configuration file [deep.conf](deep.conf)
