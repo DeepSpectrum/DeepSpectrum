@@ -1,7 +1,6 @@
 import io
 import warnings
 from os import environ
-
 import matplotlib.pyplot as plt
 import numpy as np
 from imread import imread_from_blob
@@ -15,6 +14,11 @@ import caffe
 
 def get_wav_info(wav_file):
     frame_rate, sound_info = wavfile.read(wav_file)
+    # convert stereo to mono
+    if len(sound_info.shape) > 1:
+        sound_info = sound_info.astype(float)
+        sound_info = sound_info.sum(axis=1) / 2
+        sound_info = np.array(sound_info, dtype='int16')
     sound_info = np.trim_zeros(sound_info)
     return sound_info, frame_rate
 
@@ -30,8 +34,10 @@ def graph_spectrogram(wav_file, nfft=256, cmap='viridis', size=227, output_folde
         warnings.simplefilter("ignore")
         Pxx, freqs, bins, im = plt.specgram(sound_info, NFFT=nfft, Fs=frame_rate, cmap=cmap, noverlap=int(nfft / 2))
     extent = im.get_extent()
-    plt.xlim([0, len(sound_info) / frame_rate])
-    plt.ylim([0, frame_rate / 2])
+    plt.xlim([extent[0], extent[1]])
+    plt.ylim([extent[2], extent[3]])
+    #plt.xlim([0, len(sound_info) / frame_rate])
+    #plt.ylim([0, frame_rate / 2])
     if output_folder:
         file_name = basename(wav_file)[:-4]
         plt.savefig(join(output_folder, file_name + '.png'), format='png', dpi=size)
@@ -82,7 +88,8 @@ def extract_features_from_image_blob(img_blob, input_transformer, caffe_net, lay
     img = input_transformer.preprocess('data', img)
     caffe_net.blobs["data"].data[...] = img
     caffe_net.forward()
-    return True, np.ravel(caffe_net.blobs[layer].data[0])
+    features = caffe_net.blobs[layer].data[0]
+    return True, np.ravel(features)
 
 
 def extract_features_from_wav(wav_file, input_transformer, caffe_net, nfft=256, layer='fc7', cmap='viridis', size=227,
