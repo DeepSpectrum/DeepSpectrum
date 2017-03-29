@@ -36,11 +36,11 @@ def graph_spectrogram(wav_file, nfft=256, cmap='viridis', size=227, output_folde
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         Pxx, freqs, bins, im = plt.specgram(sound_info, NFFT=nfft, Fs=frame_rate, cmap=cmap, noverlap=int(nfft / 2))
-    #extent = im.get_extent()
-    #plt.xlim([extent[0], extent[1]])
-    #plt.ylim([extent[2], extent[3]])
-    plt.xlim([0, len(sound_info) / frame_rate])
-    plt.ylim([0, frame_rate / 2])
+    extent = im.get_extent()
+    plt.xlim([extent[0], extent[1]])
+    plt.ylim([extent[2], extent[3]])
+    #plt.xlim([0, len(sound_info) / frame_rate])
+    #plt.ylim([0, frame_rate / 2])
     if output_folder:
         file_name = basename(wav_file)[:-4]
         plt.savefig(join(output_folder, file_name + '.png'), format='png', dpi=size)
