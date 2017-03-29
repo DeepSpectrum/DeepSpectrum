@@ -129,7 +129,7 @@ class Configuration:
             conf_parser.read(conf_file)
             conf = conf_parser['main']
             self.model_directory = conf['caffe_model_directory']
-            self.gpu_mode = conf['gpu'] == 1
+            self.gpu_mode = int(conf['gpu']) == 1
             self.device_id = int(conf['device_id'])
             self.size = int(conf['size'])
         else:
