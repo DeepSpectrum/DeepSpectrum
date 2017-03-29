@@ -8,7 +8,7 @@
 * scipy
 * tqdm
 * pandas
-* liac-arff
+* liac-arff (imports as 'arff')
 * caffe with all dependencies. For installation instructions: 
   [https://github.com/BVLC/caffe/wiki/Ubuntu-16.04-or-15.10-Installation-Guide](https://github.com/BVLC/caffe/wiki/Ubuntu-16.04-or-15.10-Installation-Guide) or 
   [http://caffe.berkeleyvision.org/installation.html](http://caffe.berkeleyvision.org/installation.html). 
