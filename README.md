@@ -6,6 +6,7 @@
 * matplotlib
 * imread
 * scipy
+* pysoundfile
 * tqdm
 * pandas
 * liac-arff (imports as 'arff')
