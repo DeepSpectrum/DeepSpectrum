@@ -1,13 +1,13 @@
 import io
 import warnings
 from os import environ
-# Force matplotlib to not use any Xwindows backend.
+# force matplotlib to not use X-Windows backend
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
+import soundfile as sf
 from imread import imread_from_blob
-from scipy.io import wavfile
 from os.path import basename, join
 
 environ['GLOG_minloglevel'] = '2'
@@ -16,12 +16,12 @@ import caffe
 
 
 def get_wav_info(wav_file):
-    frame_rate, sound_info = wavfile.read(wav_file)
+    sound_info, frame_rate, = sf.read(wav_file)
     # convert stereo to mono
     if len(sound_info.shape) > 1:
         sound_info = sound_info.astype(float)
         sound_info = sound_info.sum(axis=1) / 2
-        sound_info = np.array(sound_info, dtype='int16')
+        sound_info = np.array(sound_info)
     sound_info = np.trim_zeros(sound_info)
     return sound_info, frame_rate
 
@@ -39,8 +39,6 @@ def graph_spectrogram(wav_file, nfft=256, cmap='viridis', size=227, output_folde
     extent = im.get_extent()
     plt.xlim([extent[0], extent[1]])
     plt.ylim([extent[2], extent[3]])
-    #plt.xlim([0, len(sound_info) / frame_rate])
-    #plt.ylim([0, frame_rate / 2])
     if output_folder:
         file_name = basename(wav_file)[:-4]
         plt.savefig(join(output_folder, file_name + '.png'), format='png', dpi=size)
