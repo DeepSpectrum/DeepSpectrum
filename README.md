@@ -6,7 +6,7 @@
 * matplotlib
 * imread
 * scipy
-* pysoundfile
+* pysoundfile (on Linux you also need to install libsndfile manually, e.g., by `sudo apt-get install libsndfile1`)
 * tqdm
 * pandas
 * liac-arff (imports as 'arff')
