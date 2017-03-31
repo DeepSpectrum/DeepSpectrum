@@ -96,8 +96,8 @@ A detailed description of the commandline options is given below. Apart from
 | -labels | Specify labels explicitly for each folder given after -f. Number of given labels has to match the number of specified folders. If both this and -lf are not specified, each .wav is assigned the name of its parent directory as label. | None |
 | -cmap | Choose a matplotlib colourmap for creating the spectrogram plots. | viridis |
 | -layer | Name of the layer from which features should be extracted as specified in your caffe .prototxt file. Only layers with 1-D output are supported | fc7 |
-| -step | Configure a stepsize for segmentation of the wavs in ms | None |
-| -chunksize | Define the length of the segments. Defaults to *chunksize* if `-step` is given but chunksize is omissed. | None |
+| -step | Configure a stepsize for segmentation of the wavs in ms.  Defaults to *chunksize* if `-chunksize` is given but step is omissed. | None |
+| -chunksize | Define the length of the segments in ms. | None |
 | -nfft | The length of the FFT window used for creating the spectrograms in number of samples. Consider choosing smaller values when extracting from small segments. | 256 |
 | -reduced | If a filepath is given here, an additional reduced version of the output is computed after feature extraction and written to the path. The feature reduction simply removes attributes that have a value of zero for all instances. | None |
 | -config | The path to the configuration file used by the program can be given here. If the file does not exist yet, it is created and filled with standard settings. | deep.conf |
