@@ -49,7 +49,7 @@ class FeatureWriter:
 
     def _write_arff_header(self, features, index):
         with open(self.output, 'w') as f:
-            f.write('@relation \'Deep Spectrum Features\'\n\n@ATTRIBUTE name string\n')
+            f.write('@relation \'Deep Spectrum Features\'\n\n@attribute name string\n')
             if index is not None:
                 f.write('@attribute index numeric\n')
             for i, feature in enumerate(features):

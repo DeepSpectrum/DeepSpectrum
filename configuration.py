@@ -1,10 +1,9 @@
 import argparse
+import caffe
 import configparser
 import csv
 from os import listdir
 from os.path import join, isfile, basename, expanduser, dirname, isdir
-
-import caffe
 
 
 class Configuration:
@@ -32,37 +31,38 @@ class Configuration:
 
     def parse_arguments(self):
         parser = argparse.ArgumentParser(description='Extract deep spectrum features from wav files',
-                                              formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         required_named = parser.add_argument_group('Required named arguments')
         required_named.add_argument('-f', nargs='+', help='folder(s) where your wavs reside', required=True)
         required_named.add_argument('-o',
-                                        help='the file which the features are written to. Supports csv and arff formats',
-                                        required=True)
+                                    help='the file which the features are written to. Supports csv and arff formats',
+                                    required=True)
         parser.add_argument('-lf',
-                                 help='csv file with the labels for the wavs in the form: \'test_001.wav, label\'. If nothing is specified here, the name(s) of the directory/directories are used as labels.',
-                                 default=None)
-        parser.add_argument('-cmap', default='viridis',
-                                 help='define the matplotlib colour map to use for the spectrograms')
-        parser.add_argument('-config',
-                                 help='path to configuration file which specifies caffe model and weight files. If this file does not exist a new one is created and filled with the standard settings-',
-                                 default="deep.conf")
-        parser.add_argument('-layer', default='fc7',
-                                 help='name of CNN layer (as defined in caffe prototxt) from which to extract the features. Supports layers with 1-D output.')
-        parser.add_argument('-chunksize', default=None, type=int,
-                                 help='define a chunksize in ms. wav data is split into chunks of this length before feature extraction.')
-        parser.add_argument('-step', default=None, type=int,
-                                help='stepsize for creating the wav segments in ms')
-        parser.add_argument('-nfft', default=256,
-                                 help='specify the size for the FFT window in number of samples', type=int)
-        parser.add_argument('-reduced', nargs='?',
-                                 help='a reduced version of the feature set is written to the given location.',
-                                 default=None, const='deep_spectrum_reduced.arff')
+                            help='csv file with the labels for the wavs in the form: \'test_001.wav, label\'. If nothing is specified here or under -labels, the name(s) of the directory/directories are used as labels.',
+                            default=None)
         parser.add_argument('-labels', nargs='+',
-                                 help='define labels for folders explicitly in format: labelForFirstFolder labelForSecondFolder ...',
-                                 default=None)
+                            help='define labels for folders explicitly in format: labelForFirstFolder labelForSecondFolder ...',
+                            default=None)
+        parser.add_argument('-cmap', default='viridis',
+                            help='define the matplotlib colour map to use for the spectrograms')
+        parser.add_argument('-config',
+                            help='path to configuration file which specifies caffe model and weight files. If this file does not exist a new one is created and filled with the standard settings-',
+                            default="deep.conf")
+        parser.add_argument('-layer', default='fc7',
+                            help='name of CNN layer (as defined in caffe prototxt) from which to extract the features.')
+        parser.add_argument('-chunksize', default=None, type=int,
+                            help='define a chunksize in ms. wav data is split into chunks of this length before feature extraction.')
+        parser.add_argument('-step', default=None, type=int,
+                            help='stepsize for creating the wav segments in ms. Defaults to the size of the chunks if -chunksize is given but -step is omitted.')
+        parser.add_argument('-nfft', default=256,
+                            help='specify the size for the FFT window in number of samples', type=int)
+        parser.add_argument('-reduced', nargs='?',
+                            help='a reduced version of the feature set is written to the given location.',
+                            default=None, const='deep_spectrum_reduced.arff')
+
         parser.add_argument('-specout',
-                                 help='define an existing folder where spectrogram plots should be saved during feature extraction. By default, spectrograms are not saved on disk to speed up extraction.',
-                                 default=None)
+                            help='define an existing folder where spectrogram plots should be saved during feature extraction. By default, spectrograms are not saved on disk to speed up extraction.',
+                            default=None)
 
         args = vars(parser.parse_args())
         self.folders = args['f']
@@ -71,7 +71,7 @@ class Configuration:
         self.label_file = args['lf']
         self.labels = args['labels']
         self.layer = args['layer']
-        self.chunksize = args['chunksize']
+        self.chunksize = args['chunksize'] if args['chunksize'] else args['step']
         self.step = args['step'] if args['step'] else self.chunksize
         self.nfft = args['nfft']
         self.reduced = args['reduced']
@@ -125,7 +125,7 @@ class Configuration:
     def _load_config(self, conf_file):
         conf_parser = configparser.ConfigParser()
         if isfile(conf_file):
-            print('Found config file '+conf_file)
+            print('Found config file ' + conf_file)
             conf_parser.read(conf_file)
             conf = conf_parser['main']
             self.model_directory = conf['caffe_model_directory']
@@ -133,11 +133,11 @@ class Configuration:
             self.device_id = int(conf['device_id'])
             self.size = int(conf['size'])
         else:
-            print('Writing standard config to '+conf_file)
+            print('Writing standard config to ' + conf_file)
             conf = {'caffe_model_directory': self.model_directory,
-                         'gpu': '1' if self.gpu_mode else '0',
-                         'device_id': str(self.device_id),
-                         'size': str(self.size)}
+                    'gpu': '1' if self.gpu_mode else '0',
+                    'device_id': str(self.device_id),
+                    'size': str(self.size)}
             conf_parser['main'] = conf
             with open(conf_file, 'w') as configfile:
                 conf_parser.write(configfile)
