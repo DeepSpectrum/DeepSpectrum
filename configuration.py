@@ -7,6 +7,11 @@ from os.path import join, isfile, basename, expanduser, dirname, isdir
 
 
 class Configuration:
+    """
+    This class handles the configuration of the deep spectrum extractor by reading commandline options and the
+    configuration file. It then parses the labels for the audio files and configures the Caffe Network used for
+    extraction.
+    """
     def __init__(self):
         # set default values
         self.model_directory = join(expanduser('~'), 'caffe-master/models/bvlc_alexnet')
@@ -30,6 +35,10 @@ class Configuration:
         self.transformer = None
 
     def parse_arguments(self):
+        """
+        Creates a commandline parser and handles the given options.
+        :return: Nothing
+        """
         parser = argparse.ArgumentParser(description='Extract deep spectrum features from wav files',
                                          formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         required_named = parser.add_argument_group('Required named arguments')
@@ -71,17 +80,24 @@ class Configuration:
         self.label_file = args['lf']
         self.labels = args['labels']
         self.layer = args['layer']
+
+        # if either chunksize or step are not given they default to the value of the other given parameter
         self.chunksize = args['chunksize'] if args['chunksize'] else args['step']
         self.step = args['step'] if args['step'] else self.chunksize
         self.nfft = args['nfft']
         self.reduced = args['reduced']
         self.output_spectrograms = args['specout']
+
+        # list all .wavs for the extraction found in the given folders
         self.files = [join(folder, wav_file) for folder in self.folders for wav_file in listdir(folder) if
                       isfile(join(folder, wav_file)) and (wav_file.endswith('.wav') or wav_file.endswith('.WAV'))]
+
         if not self.files:
             parser.error('No .wavs were found. Check the specified input paths.')
+
         if self.output_spectrograms and not isdir(self.output_spectrograms):
             parser.error('Spectrogram directory \'' + self.output_spectrograms + '\' does not exist.')
+
         if self.labels is not None and len(self.folders) != len(self.labels):
             parser.error(
                 'Labels have to be specified for each folder: ' + str(len(self.folders)) + ' expected, ' + str(
@@ -96,34 +112,59 @@ class Configuration:
         self._configure_caffe(parser)
 
     def _read_label_file(self, parser):
+        """
+        Read labels from either .csv or .tsv files
+        :param parser: commandline parser
+        :return: Nothing
+        """
+
+        # delimiters are decided by the extension of the labels file
         if self.label_file.endswith('.tsv'):
             reader = csv.reader(open(self.label_file), delimiter="\t")
         else:
             reader = csv.reader(open(self.label_file))
         self.label_dict = {}
+
+        # a list of distinct labels is needed for deciding on the nominal class values for .arff files
         self.labels = set([])
+
+        # parse the label file line by line
         for row in reader:
             key = row[0]
             self.label_dict[key] = row[1]
             self.labels.add(row[1])
         file_names = set(map(basename, self.files))
+
+        # check if labels are missing for specific files
         missing_labels = file_names.difference(self.label_dict)
         if missing_labels:
             parser.error('No labels for: ' + ', '.join(missing_labels))
 
     def _create_labels_from_folder_structure(self):
+        """
+        If no label file is given, either explicit labels or the folder structure is used as class values for the input.
+        :return: Nothing
+        """
         if self.labels is None:
-            wavs = [join(folder, wav_file) for folder in self.folders for wav_file in listdir(folder) if
-                    isfile(join(folder, wav_file)) and (wav_file.endswith('.wav') or wav_file.endswith('.WAV'))]
-            self.label_dict = {basename(wav): basename(dirname(wav)) for wav in wavs}
+            self.label_dict = {basename(wav): basename(dirname(wav)) for wav in self.files}
         else:
+            # map the labels given on the commandline to all files in a given folder in the order both appear in the
+            # parsed options.
             self.label_dict = {wav: self.labels[folder_index] for folder_index, folder in enumerate(self.folders) for
                                wav in
                                listdir(folder) if
                                isfile(join(folder, wav)) and (wav.endswith('.wav') or wav.endswith('.WAV'))}
 
     def _load_config(self, conf_file):
+        """
+        Parses the configuration file given on the commandline. If it does not exist yet, creates a new one containing
+        standard settings.
+        :param conf_file: configuration file to parse or create
+        :return: Nothing
+        """
         conf_parser = configparser.ConfigParser()
+
+        # check if the file exists and parse it
         if isfile(conf_file):
             print('Found config file ' + conf_file)
             conf_parser.read(conf_file)
@@ -132,6 +173,8 @@ class Configuration:
             self.gpu_mode = int(conf['gpu']) == 1
             self.device_id = int(conf['device_id'])
             self.size = int(conf['size'])
+
+        # if not, create it with standard settings
         else:
             print('Writing standard config to ' + conf_file)
             conf = {'caffe_model_directory': self.model_directory,
@@ -143,8 +186,14 @@ class Configuration:
                 conf_parser.write(configfile)
 
     def _configure_caffe(self, parser):
+        """
+        Sets up the pre-trained CNN used for extraction.
+        :param parser: commandline parser object used in the set up
+        :return: Nothing
+        """
         directory = self.model_directory
         try:
+            # load model definition
             model_defs = [join(directory, file) for file in listdir(directory) if file.endswith('deploy.prototxt')]
             if model_defs:
                 model_def = model_defs[0]
@@ -152,6 +201,8 @@ class Configuration:
             else:
                 model_def = ''
                 parser.error("No model definition found in " + directory + '.')
+
+            # load model wights
             model_weights = [join(directory, file) for file in listdir(directory)
                              if file.endswith('.caffemodel')]
             if model_weights:
@@ -159,6 +210,8 @@ class Configuration:
                 print('CaffeNet weights: ' + model_weights)
             else:
                 parser.error("No model weights found in " + directory + '.')
+
+            # set mode to GPU or CPU computation
             if self.gpu_mode:
                 caffe.set_device(int(self.device_id))
                 caffe.set_mode_gpu()
@@ -173,6 +226,8 @@ class Configuration:
             self.transformer.set_transpose('data', (2, 0, 1))
             self.transformer.set_raw_scale('data', 255)  # rescale from [0, 1] to [0, 255]
             self.transformer.set_channel_swap('data', (2, 1, 0))  # swap channels from RGB to BGR
+
+            # reshape input layer as batch processing is not needed
             shape = self.net.blobs['data'].shape
             self.net.blobs['data'].reshape(1, shape[1], shape[2], shape[3])
             self.net.reshape()

@@ -5,6 +5,11 @@ from tqdm import tqdm
 
 
 def _load_features(feature_file):
+    """
+    Loads a feature file into a pandas dataframe
+    :param feature_file: the file to load
+    :return: dataframe holding the features
+    """
     if feature_file.endswith('.arff'):
         arff_data = arff.load(open(feature_file))
         header = [attribute[0] for attribute in arff_data['attributes']]
@@ -14,6 +19,12 @@ def _load_features(feature_file):
 
 
 def reduce_features(input_file, output_file):
+    """
+    Reduces a feauture file by removing all-zero attributes.
+    :param input_file: the file to reduce
+    :param output_file: where to write the reduced file to
+    :return: Nothing
+    """
     print('Parsing feature file...')
     features, arff_header, arff_relation = _load_features(input_file)
     print('Reducing features...')
@@ -28,6 +39,14 @@ def reduce_features(input_file, output_file):
 
 
 def _write_features(features, output, arff_header, arff_relation):
+    """
+    Writes features to csv or arff
+    :param features: the features to write
+    :param output: output file path
+    :param arff_header: in case of writing arff, the header can be specified here
+    :param arff_relation: name of the output arff relation
+    :return: nothing
+    """
     if output.endswith('.arff'):
         _write_arff(features, output, arff_header, arff_relation)
     else:
@@ -35,6 +54,14 @@ def _write_features(features, output, arff_header, arff_relation):
 
 
 def _write_arff(features, output, arff_header, arff_relation):
+    """
+    Writes features to an arff file
+    :param features: features to write
+    :param output: output file path
+    :param arff_header: arff header
+    :param arff_relation: name of arff relation
+    :return: Nothing
+    """
     arff_data = dict()
     arff_data['relation'] = arff_relation+" reduced"
     arff_data['attributes'] = [attribute for attribute in arff_header if attribute[0] in features.columns]
@@ -43,6 +70,12 @@ def _write_arff(features, output, arff_header, arff_relation):
 
 
 def _write_csv(features, output):
+    """
+    Writes features to a csv file
+    :param features: features to write
+    :param output: output file path
+    :return: Nothing
+    """
     features.to_csv(output)
 
 
