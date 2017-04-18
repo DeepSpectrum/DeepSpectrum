@@ -4,6 +4,8 @@ from os import environ
 from os.path import basename, join
 
 import matplotlib
+# force matplotlib to not use X-Windows backend. Needed for running the tool through an ssh connection.
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import soundfile as sf
@@ -13,8 +15,7 @@ environ['GLOG_minloglevel'] = '2'
 
 import caffe
 
-# force matplotlib to not use X-Windows backend. Needed for running the tool through an ssh connection.
-matplotlib.use('Agg')
+
 
 
 def _read_wav_data(wav_file):

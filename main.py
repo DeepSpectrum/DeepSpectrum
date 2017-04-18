@@ -27,7 +27,7 @@ def extract(config, writer):
                                                                              cmap=config.cmap, size=config.size,
                                                                              output_spectrograms=config.output_spectrograms),
                                                leave=False, desc=file_name):
-            if features:
+            if features.any():
                 writer.write(features, file_name, index=index)
     if config.reduced is not None:
         fr.reduce_features(writer.output, config.reduced)
