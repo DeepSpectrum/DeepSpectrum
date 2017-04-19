@@ -76,7 +76,7 @@ commandline by the parameters `-chunksize` and `-step`:
 * the stepsize for the chunking of the audio files can be specified in ms after 
 `-step`
 * the length of the audio chunks in ms is controlled by `-chunksize`. 
-* if only `-step` is specified, the chunksize defaults to the stepsize
+* if only `-chunksize` is specified, the step size defaults to the chunksize.
 
 Additionally, when extracting from audio segments, `-nfft`should also be set 
 accordingly as for small segments the default of 256 samples used for the FFT is
