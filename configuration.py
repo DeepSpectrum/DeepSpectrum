@@ -1,9 +1,11 @@
 import argparse
-import caffe
 import configparser
 import csv
+from itertools import chain
 from os import listdir
 from os.path import join, isfile, basename, expanduser, dirname, isdir
+
+import caffe
 
 
 class Configuration:
@@ -12,6 +14,7 @@ class Configuration:
     configuration file. It then parses the labels for the audio files and configures the Caffe Network used for
     extraction.
     """
+
     def __init__(self):
         # set default values
         self.model_directory = join(expanduser('~'), 'caffe-master/models/bvlc_alexnet')
@@ -89,9 +92,8 @@ class Configuration:
         self.output_spectrograms = args['specout']
 
         # list all .wavs for the extraction found in the given folders
-        self.files = [join(folder, wav_file) for folder in self.folders for wav_file in listdir(folder) if
-                      isfile(join(folder, wav_file)) and (wav_file.endswith('.wav') or wav_file.endswith('.WAV'))]
-
+        self.files = list(chain.from_iterable([self._find_wav_files(folder) for folder in self.folders]))
+        print(self.files)
         if not self.files:
             parser.error('No .wavs were found. Check the specified input paths.')
 
@@ -110,6 +112,17 @@ class Configuration:
 
         self._load_config(args['config'])
         self._configure_caffe(parser)
+
+    @staticmethod
+    def _find_wav_files(folder):
+        if listdir(folder):
+            wavs = [join(folder, wav_file) for wav_file in listdir(folder) if
+                    isfile(join(folder, wav_file)) and (wav_file.endswith('.wav') or wav_file.endswith('.WAV'))]
+            return wavs + list(chain.from_iterable(
+                [Configuration._find_wav_files(join(folder, subfolder)) for subfolder in listdir(folder) if
+                 isdir(join(folder, subfolder))]))
+        else:
+            return []
 
     def _read_label_file(self, parser):
         """
@@ -152,8 +165,7 @@ class Configuration:
             # parsed options.
             self.label_dict = {wav: self.labels[folder_index] for folder_index, folder in enumerate(self.folders) for
                                wav in
-                               listdir(folder) if
-                               isfile(join(folder, wav)) and (wav.endswith('.wav') or wav.endswith('.WAV'))}
+                               self._find_wav_files(folder)}
 
     def _load_config(self, conf_file):
         """
