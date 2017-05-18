@@ -1,4 +1,5 @@
 import pathlib
+import multiprocessing as mp
 from multiprocessing import JoinableQueue, Queue, Process, Value
 from os import makedirs, listdir, environ
 from os.path import basename, join, commonpath, dirname
@@ -138,7 +139,7 @@ if __name__ == '__main__':
     job_queue = JoinableQueue()
     result_queue = JoinableQueue()
     total_num_of_files = len(configuration.files)
-    number_of_processes = 4
+    number_of_processes = mp.cpu_count()
     for f in configuration.files:
         job_queue.put(f)
 
