@@ -22,8 +22,7 @@ configuration file. This file specifies 4 things:
 1. The directory of your caffe CNN model. This directory should contain the 
    model specification (a file that ends with *deploy.prototxt*) and weights 
    (a larger file that ends with *.caffemodel*) 
-2. The id of the device used for computation. Only relevant in a multi GPU system
-   -> 0 should be fine
+2. The ids of the devices used for computation. In a multi GPU system, multiple IDs can be specified separated by commas.
 3. Whether you would like to use your GPU for computation (recommended).
 4. The width and height of the spectrograms plotted during the feature extraction
    in pixels. Specify only one integer here, as the plots used by the system 
@@ -36,7 +35,7 @@ configuration file. This file specifies 4 things:
 
 `[main]
 caffe_model_directory = ~/caffe-master/models/bvlc_alexnet
-device_id = 0
+device_ids = 0,1
 gpu = 1
 size = 227`
 
@@ -102,3 +101,4 @@ A detailed description of the commandline options is given below. Apart from
 | -reduced | If a filepath is given here, an additional reduced version of the output is computed after feature extraction and written to the path. The feature reduction simply removes attributes that have a value of zero for all instances. | None |
 | -config | The path to the configuration file used by the program can be given here. If the file does not exist yet, it is created and filled with standard settings. | deep.conf |
 | -specout | Specify an existing folder to save the spectrograms as .pngs | None |
+| -np | Specify the number of processes used for the extraction. Defaults to the number of available CPU cores | None |
