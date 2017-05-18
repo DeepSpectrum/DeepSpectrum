@@ -21,7 +21,8 @@ class Configuration:
         self.model_def = ''
         self.model_weights = ''
         self.gpu_mode = True
-        self.device_id = 0
+        self.device_ids = []
+        self.number_of_processes = None
         self.folders = []
         self.output = ''
         self.cmap = 'viridis'
@@ -74,6 +75,9 @@ class Configuration:
         self.parser.add_argument('-reduced', nargs='?',
                             help='a reduced version of the feature set is written to the given location.',
                             default=None, const='deep_spectrum_reduced.arff')
+        self.parser.add_argument('-np', type=int,
+                                 help='define the number of processes used in parallel for the extraction. If None defaults to cpu-count',
+                                 default=None)
 
         self.parser.add_argument('-specout',
                             help='define an existing folder where spectrogram plots should be saved during feature extraction. By default, spectrograms are not saved on disk to speed up extraction.',
@@ -86,6 +90,7 @@ class Configuration:
         self.label_file = args['lf']
         self.labels = args['labels']
         self.layer = args['layer']
+        self.number_of_processes = args['np']
 
         # if either chunksize or step are not given they default to the value of the other given parameter
         self.chunksize = args['chunksize'] if args['chunksize'] else args['step']
@@ -185,7 +190,7 @@ class Configuration:
             conf = conf_parser['main']
             self.model_directory = conf['caffe_model_directory']
             self.gpu_mode = int(conf['gpu']) == 1
-            self.device_id = int(conf['device_id'])
+            self.device_ids = list(map(int,conf['device_ids'].split(',')))
             self.size = int(conf['size'])
 
         # if not, create it with standard settings
@@ -193,7 +198,7 @@ class Configuration:
             print('Writing standard config to ' + conf_file)
             conf = {'caffe_model_directory': self.model_directory,
                     'gpu': '1' if self.gpu_mode else '0',
-                    'device_id': str(self.device_id),
+                    'device_ids': str(','.join(self.device_ids)),
                     'size': str(self.size)}
             conf_parser['main'] = conf
             with open(conf_file, 'w') as configfile:

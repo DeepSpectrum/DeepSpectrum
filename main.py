@@ -70,8 +70,10 @@ def extract(config, writer):
     print('Extracting features...')
     for f in tqdm(files):
         file_name = basename(f)
-        spectrogram_directory = join(config.output_spectrograms, get_spectrogram_path(f, config.folders))
-        makedirs(spectrogram_directory, exist_ok=True)
+        spectrogram_directory = None
+        if config.output_spectrograms:
+            spectrogram_directory = join(config.output_spectrograms, get_spectrogram_path(f, config.folders))
+            makedirs(spectrogram_directory, exist_ok=True)
         for index, features in tqdm(eds.extract_features_from_wav(f, config.transformer, config.net,
                                                                   nfft=config.nfft,
                                                                   chunksize=config.chunksize,
@@ -87,8 +89,10 @@ def extract(config, writer):
 
 def extract_file(file, config, net, transformer):
     file_name = basename(file)
-    spectrogram_directory = join(config.output_spectrograms, get_spectrogram_path(file, config.folders))
-    makedirs(spectrogram_directory, exist_ok=True)
+    spectrogram_directory = None
+    if config.output_spectrograms:
+        spectrogram_directory = join(config.output_spectrograms, get_spectrogram_path(f, config.folders))
+        makedirs(spectrogram_directory, exist_ok=True)
     for index, features in eds.extract_features_from_wav(file, transformer, net,
                                                          nfft=config.nfft,
                                                          chunksize=config.chunksize,
@@ -139,7 +143,10 @@ if __name__ == '__main__':
     job_queue = JoinableQueue()
     result_queue = JoinableQueue()
     total_num_of_files = len(configuration.files)
-    number_of_processes = mp.cpu_count()
+    number_of_processes = configuration.number_of_processes
+    if not number_of_processes:
+        number_of_processes = mp.cpu_count()
+
     for f in configuration.files:
         job_queue.put(f)
 
@@ -148,7 +155,8 @@ if __name__ == '__main__':
         job_queue.put(None)
 
     for i in range(number_of_processes):
-        p = Process(target=extraction_worker, args=(configuration, 0, i))
+        p = Process(target=extraction_worker,
+                    args=(configuration, configuration.device_ids[i % len(configuration.device_ids)], i))
         p.daemon = True
         p.start()
 
