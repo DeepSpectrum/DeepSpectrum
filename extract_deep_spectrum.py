@@ -16,8 +16,6 @@ environ['GLOG_minloglevel'] = '2'
 import caffe
 
 
-
-
 def _read_wav_data(wav_file):
     """
     Reads data from a wav-file, converts this data to single channel and trims zeros at beginning and end of the
