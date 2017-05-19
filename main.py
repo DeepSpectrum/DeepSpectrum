@@ -98,7 +98,7 @@ def extract_file(file, config, net, transformer):
                                                          chunksize=config.chunksize,
                                                          step=config.step, layer=config.layer,
                                                          cmap=config.cmap, size=config.size,
-                                                         output_spectrograms=spectrogram_directory):
+                                                         output_spectrograms=spectrogram_directory, y_limit=config.y_limit):
         if features.any():
             yield (file_name, features, index)
 

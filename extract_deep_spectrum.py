@@ -155,7 +155,7 @@ def extract_features_from_image_blob(img_blob, input_transformer, caffe_net, lay
 
 
 def extract_features_from_wav(wav_file, input_transformer, caffe_net, nfft=256, layer='fc7', cmap='viridis', size=227,
-                              chunksize=None, step=None, output_spectrograms=None):
+                              chunksize=None, step=None, output_spectrograms=None, y_limit=None):
     """
     Extracts deep spectrum features from a given wav-file using either the whole file or equally sized chunks as basis
     for the spectrogram plots.
@@ -174,7 +174,8 @@ def extract_features_from_wav(wav_file, input_transformer, caffe_net, nfft=256, 
 
     # just extract a single vector
     if not chunksize:
-        img_blob = plot_spectrogram(wav_file, nfft=nfft, cmap=cmap, size=size, output_folder=output_spectrograms)
+        img_blob = plot_spectrogram(wav_file, nfft=nfft, cmap=cmap, size=size, output_folder=output_spectrograms,
+                                    y_limit=y_limit)
         yield None, extract_features_from_image_blob(img_blob, input_transformer, caffe_net, layer=layer)
         return
 
@@ -182,5 +183,5 @@ def extract_features_from_wav(wav_file, input_transformer, caffe_net, nfft=256, 
     else:
         for index, img_blob in enumerate(
                 plot_spectrogram_chunks(wav_file, chunksize, step, nfft=nfft, cmap=cmap, size=size,
-                                        output_folder=output_spectrograms)):
+                                        output_folder=output_spectrograms, y_limit=y_limit)):
             yield index, extract_features_from_image_blob(img_blob, input_transformer, caffe_net, layer=layer)
