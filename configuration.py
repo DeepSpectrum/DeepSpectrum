@@ -33,8 +33,9 @@ class Configuration:
         self.chunksize = None
         self.step = None
         self.nfft = 256
+        self.y_limit = None
         self.reduced = None
-        self.size = 387
+        self.size = 227
         self.files = []
         self.output_spectrograms = None
         self.net = None
@@ -78,6 +79,9 @@ class Configuration:
         self.parser.add_argument('-np', type=int,
                                  help='define the number of processes used in parallel for the extraction. If None defaults to cpu-count',
                                  default=None)
+        self.parser.add_argument('-ylim', type=int,
+                                 help='define a limit for the y-axis for plotting the spectrograms',
+                                 default=None)
 
         self.parser.add_argument('-specout',
                             help='define an existing folder where spectrogram plots should be saved during feature extraction. By default, spectrograms are not saved on disk to speed up extraction.',
@@ -98,6 +102,7 @@ class Configuration:
         self.nfft = args['nfft']
         self.reduced = args['reduced']
         self.output_spectrograms = args['specout']
+        self.y_limit = args['ylim']
 
         # list all .wavs for the extraction found in the given folders
         self.files = list(chain.from_iterable([self._find_wav_files(folder) for folder in self.folders]))

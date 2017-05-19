@@ -91,7 +91,7 @@ def extract_file(file, config, net, transformer):
     file_name = basename(file)
     spectrogram_directory = None
     if config.output_spectrograms:
-        spectrogram_directory = join(config.output_spectrograms, get_spectrogram_path(f, config.folders))
+        spectrogram_directory = join(config.output_spectrograms, get_spectrogram_path(file, config.folders))
         makedirs(spectrogram_directory, exist_ok=True)
     for index, features in eds.extract_features_from_wav(file, transformer, net,
                                                          nfft=config.nfft,

@@ -4,6 +4,7 @@ from os import environ
 from os.path import basename, join
 
 import matplotlib
+
 # force matplotlib to not use X-Windows backend. Needed for running the tool through an ssh connection.
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -34,7 +35,7 @@ def _read_wav_data(wav_file):
     return sound_info, frame_rate
 
 
-def plot_spectrogram(wav_file, nfft=256, cmap='viridis', size=227, output_folder=None):
+def plot_spectrogram(wav_file, nfft=256, cmap='viridis', size=227, output_folder=None, y_limit=None):
     """
     Plots a spectrogram from a given .wav file using the described parameters.
     :param wav_file: path to an existing .wav file
@@ -59,7 +60,12 @@ def plot_spectrogram(wav_file, nfft=256, cmap='viridis', size=227, output_folder
     # limit figure to plot
     extent = im.get_extent()
     plt.xlim([extent[0], extent[1]])
-    plt.ylim([extent[2], extent[3]])
+
+    if y_limit:
+        plt.ylim([extent[2], y_limit])
+    else:
+        plt.ylim([extent[2], extent[3]])
+
     if output_folder:
         file_name = basename(wav_file)[:-4]
         plt.savefig(join(output_folder, file_name + '.png'), format='png', dpi=size)
@@ -70,7 +76,8 @@ def plot_spectrogram(wav_file, nfft=256, cmap='viridis', size=227, output_folder
     return buf.read()
 
 
-def plot_spectrogram_chunks(wav_file, chunksize, step, nfft=256, cmap='viridis', size=227, output_folder=None):
+def plot_spectrogram_chunks(wav_file, chunksize, step, nfft=256, cmap='viridis', size=227, output_folder=None,
+                            y_limit=None):
     """
     Plot spectrograms for equally sized chunks of a wav-file using the described parameters.
     :param wav_file: path to an existing .wav file
@@ -103,7 +110,12 @@ def plot_spectrogram_chunks(wav_file, chunksize, step, nfft=256, cmap='viridis',
                                                 cmap=cmap)
         extent = im.get_extent()
         plt.xlim([extent[0], extent[1]])
-        plt.ylim([extent[2], extent[3]])
+
+        if y_limit:
+            plt.ylim([extent[2], y_limit])
+        else:
+            plt.ylim([extent[2], extent[3]])
+
         if output_folder:
             file_name = basename(wav_file)[:-4]
             plt.savefig(join(output_folder, file_name + '_' + str(idx) + '.png'), format='png', dpi=size)
