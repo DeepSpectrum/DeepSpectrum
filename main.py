@@ -54,7 +54,7 @@ def extraction_worker(config, gpu=0, id=0):
     while True:
         file = job_queue.get()
         if file:
-            features = [result for result in extract_file(file, config, net, transformer)]
+            features = [(i, fn, list(fv)) for i, fn, fv in extract_file(file, config, net, transformer)]
             if features:
                 result_queue.put(features)
             job_queue.task_done()
@@ -63,36 +63,6 @@ def extraction_worker(config, gpu=0, id=0):
             #poison pilling for writer
             result_queue.put(None)
             break
-
-
-
-
-def extract(config, writer):
-    """
-    Perform the extraction process with the parameter found in the configuration object.
-    :param config: holds the extraction options
-    :param writer: feature writer object
-    :return: Nothing
-    """
-    files = sorted(config.files)
-    print('Extracting features...')
-    for f in tqdm(files):
-        file_name = basename(f)
-        spectrogram_directory = None
-        if config.output_spectrograms:
-            spectrogram_directory = join(config.output_spectrograms, get_spectrogram_path(f, config.folders))
-            makedirs(spectrogram_directory, exist_ok=True)
-        for index, features in tqdm(eds.extract_features_from_wav(f, config.transformer, config.net,
-                                                                  nfft=config.nfft,
-                                                                  chunksize=config.chunksize,
-                                                                  step=config.step, layer=config.layer,
-                                                                  cmap=config.cmap, size=config.size,
-                                                                  output_spectrograms=spectrogram_directory),
-                                    leave=False, desc=file_name):
-            if features.any():
-                writer.write(features, file_name, index=index)
-    if config.reduced is not None:
-        fr.reduce_features(writer.output, config.reduced)
 
 
 def extract_file(file, config, net, transformer):
@@ -108,7 +78,7 @@ def extract_file(file, config, net, transformer):
                                                          cmap=config.cmap, size=config.size,
                                                          output_spectrograms=spectrogram_directory, y_limit=config.y_limit):
         if features.any():
-            yield (file_name, features, index)
+            yield index, file_name, features
 
 
 def get_spectrogram_path(file, folders):
@@ -122,7 +92,7 @@ def get_spectrogram_path(file, folders):
     return spectrogram_path
 
 
-def writer_worker(feature_writer):
+def writer_worker(writer):
     with initialization:
         initialization.wait_for(lambda: completed_inits.value == number_of_processes.value, timeout=15)
     print('Starting extraction with {} processes...'.format(number_of_processes.value))
@@ -131,8 +101,8 @@ def writer_worker(feature_writer):
         while True:
             features = result_queue.get()
             if features:
-                for file_name, feature_vector, index in features:
-                    feature_writer.write(feature_vector, file_name, index=index)
+                for index, file_name, feature_vector in features:
+                    writer.write(feature_vector, file_name, index=index)
                 result_queue.task_done()
                 pbar.update(1)
             else:
@@ -143,8 +113,8 @@ def writer_worker(feature_writer):
                 result_queue.task_done()
 
 
-def kill_inactive(processes):
-    for process in processes:
+def kill_inactive(process_list):
+    for process in process_list:
         if not process.is_alive():
             process.terminate()
 
@@ -180,9 +150,9 @@ if __name__ == '__main__':
         processes.append(p)
         p.start()
 
-    writer = Process(target=writer_worker, args=(feature_writer,))
-    writer.daemon = True
-    writer.start()
+    writer_thread = Process(target=writer_worker, args=(feature_writer,))
+    writer_thread.daemon = True
+    writer_thread.start()
 
     with initialization:
         initialization.wait_for(lambda: completed_inits.value == number_of_processes.value, timeout=15)
