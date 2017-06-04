@@ -8,6 +8,10 @@ extract_deep_spectrum_conflict-20170322-172750.py
 *.png
 *.arff
 *.wav
+*.txt
+*.ipynb
+*_old.py
+*_conflict*
 convert_wav_to_mono.py
 *.conf
 SOS_googlenet.confonf

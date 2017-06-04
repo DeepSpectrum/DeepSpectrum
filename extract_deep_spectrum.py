@@ -4,6 +4,7 @@ from os import environ
 from os.path import basename, join
 
 import matplotlib
+
 # force matplotlib to not use X-Windows backend. Needed for running the tool through an ssh connection.
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -14,8 +15,6 @@ from imread import imread_from_blob
 environ['GLOG_minloglevel'] = '2'
 
 import caffe
-
-
 
 
 def _read_wav_data(wav_file):
@@ -36,7 +35,7 @@ def _read_wav_data(wav_file):
     return sound_info, frame_rate
 
 
-def plot_spectrogram(wav_file, nfft=256, cmap='viridis', size=227, output_folder=None):
+def plot_spectrogram(wav_file, nfft=256, cmap='viridis', size=227, output_folder=None, y_limit=None):
     """
     Plots a spectrogram from a given .wav file using the described parameters.
     :param wav_file: path to an existing .wav file
@@ -61,7 +60,12 @@ def plot_spectrogram(wav_file, nfft=256, cmap='viridis', size=227, output_folder
     # limit figure to plot
     extent = im.get_extent()
     plt.xlim([extent[0], extent[1]])
-    plt.ylim([extent[2], extent[3]])
+
+    if y_limit:
+        plt.ylim([extent[2], y_limit])
+    else:
+        plt.ylim([extent[2], extent[3]])
+
     if output_folder:
         file_name = basename(wav_file)[:-4]
         plt.savefig(join(output_folder, file_name + '.png'), format='png', dpi=size)
@@ -72,7 +76,8 @@ def plot_spectrogram(wav_file, nfft=256, cmap='viridis', size=227, output_folder
     return buf.read()
 
 
-def plot_spectrogram_chunks(wav_file, chunksize, step, nfft=256, cmap='viridis', size=227, output_folder=None):
+def plot_spectrogram_chunks(wav_file, chunksize, step, nfft=256, cmap='viridis', size=227, output_folder=None,
+                            y_limit=None):
     """
     Plot spectrograms for equally sized chunks of a wav-file using the described parameters.
     :param wav_file: path to an existing .wav file
@@ -92,7 +97,7 @@ def plot_spectrogram_chunks(wav_file, chunksize, step, nfft=256, cmap='viridis',
 
     # list chunks from the audio data
     chunks = [sound_info[n * step:min(n * step + chunksize, len(sound_info))] for n in
-              range(int((len(sound_info) - chunksize) / step))]
+              range(max(int((len(sound_info)) / step), 1))]
     for idx, chunk in enumerate(chunks):
         fig = plt.figure(frameon=False)
         fig.set_size_inches(1, 1)
@@ -104,8 +109,14 @@ def plot_spectrogram_chunks(wav_file, chunksize, step, nfft=256, cmap='viridis',
             Pxx, freqs, bins, im = plt.specgram(chunk, NFFT=nfft, noverlap=int(nfft / 2), Fs=frame_rate,
                                                 cmap=cmap)
         extent = im.get_extent()
+
         plt.xlim([extent[0], extent[1]])
-        plt.ylim([extent[2], extent[3]])
+
+        if y_limit:
+            plt.ylim([extent[2], y_limit])
+        else:
+            plt.ylim([extent[2], extent[3]])
+
         if output_folder:
             file_name = basename(wav_file)[:-4]
             plt.savefig(join(output_folder, file_name + '_' + str(idx) + '.png'), format='png', dpi=size)
@@ -145,7 +156,7 @@ def extract_features_from_image_blob(img_blob, input_transformer, caffe_net, lay
 
 
 def extract_features_from_wav(wav_file, input_transformer, caffe_net, nfft=256, layer='fc7', cmap='viridis', size=227,
-                              chunksize=None, step=None, output_spectrograms=None):
+                              chunksize=None, step=None, output_spectrograms=None, y_limit=None):
     """
     Extracts deep spectrum features from a given wav-file using either the whole file or equally sized chunks as basis
     for the spectrogram plots.
@@ -164,7 +175,8 @@ def extract_features_from_wav(wav_file, input_transformer, caffe_net, nfft=256, 
 
     # just extract a single vector
     if not chunksize:
-        img_blob = plot_spectrogram(wav_file, nfft=nfft, cmap=cmap, size=size, output_folder=output_spectrograms)
+        img_blob = plot_spectrogram(wav_file, nfft=nfft, cmap=cmap, size=size, output_folder=output_spectrograms,
+                                    y_limit=y_limit)
         yield None, extract_features_from_image_blob(img_blob, input_transformer, caffe_net, layer=layer)
         return
 
@@ -172,5 +184,5 @@ def extract_features_from_wav(wav_file, input_transformer, caffe_net, nfft=256, 
     else:
         for index, img_blob in enumerate(
                 plot_spectrogram_chunks(wav_file, chunksize, step, nfft=nfft, cmap=cmap, size=size,
-                                        output_folder=output_spectrograms)):
+                                        output_folder=output_spectrograms, y_limit=y_limit)):
             yield index, extract_features_from_image_blob(img_blob, input_transformer, caffe_net, layer=layer)
