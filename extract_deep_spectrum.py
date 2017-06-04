@@ -97,7 +97,7 @@ def plot_spectrogram_chunks(wav_file, chunksize, step, nfft=256, cmap='viridis',
 
     # list chunks from the audio data
     chunks = [sound_info[n * step:min(n * step + chunksize, len(sound_info))] for n in
-              range(int((len(sound_info) - chunksize) / step))]
+              range(max(int((len(sound_info)) / step), 1))]
     for idx, chunk in enumerate(chunks):
         fig = plt.figure(frameon=False)
         fig.set_size_inches(1, 1)
@@ -109,6 +109,7 @@ def plot_spectrogram_chunks(wav_file, chunksize, step, nfft=256, cmap='viridis',
             Pxx, freqs, bins, im = plt.specgram(chunk, NFFT=nfft, noverlap=int(nfft / 2), Fs=frame_rate,
                                                 cmap=cmap)
         extent = im.get_extent()
+
         plt.xlim([extent[0], extent[1]])
 
         if y_limit:
