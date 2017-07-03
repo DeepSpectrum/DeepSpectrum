@@ -2,7 +2,7 @@ import argparse
 import configparser
 import csv
 from itertools import chain
-from os import listdir
+from os import listdir, makedirs
 from os.path import join, isfile, basename, expanduser, dirname, isdir
 
 import caffe
@@ -109,8 +109,8 @@ class Configuration:
         if not self.files:
             self.parser.error('No .wavs were found. Check the specified input paths.')
 
-        if self.output_spectrograms and not isdir(self.output_spectrograms):
-            self.parser.error('Spectrogram directory \'' + self.output_spectrograms + '\' does not exist.')
+        if self.output_spectrograms:
+            makedirs(self.output_spectrograms, exist_ok=True)
 
         if self.labels is not None and len(self.folders) != len(self.labels):
             self.parser.error(
