@@ -40,9 +40,9 @@ class FeatureWriter:
             self._write_csv_header(features, index)
         with open(self.output, 'a') as f:
             if index is None:
-                line = ','.join(map(str, [name] + features + [label]))
+                line = ','.join(map(str, [name] + features.tolist() + [label]))
             else:
-                line = ','.join(map(str, [name] + [index] + features + [label]))
+                line = ','.join(map(str, [name] + [index] + features.tolist() + [label]))
             f.write(line + '\n')
 
     def _write_csv_header(self, features, index):
@@ -73,9 +73,9 @@ class FeatureWriter:
             self._write_arff_header(features, index)
         with open(self.output, 'a') as f:
             if index is None:
-                line = ','.join(map(str, [name] + features + [label]))
+                line = ','.join(map(str, [name] + features.tolist() + [label]))
             else:
-                line = ','.join(map(str, [name] + [index] + features + [label]))
+                line = ','.join(map(str, [name] + [index] + features.tolist() + [label]))
             f.write(line + '\n')
 
     def _write_arff_header(self, features, index):

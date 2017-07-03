@@ -1,5 +1,6 @@
 import pathlib
 import multiprocessing as mp
+import numpy as np
 from multiprocessing import JoinableQueue, Process, Value, Condition
 from os import makedirs, listdir, environ
 from os.path import basename, join, commonpath, dirname
@@ -45,6 +46,11 @@ def extraction_worker(config, gpu=0, id=0):
     net.blobs['data'].reshape(1, shape[1], shape[2], shape[3])
     net.reshape()
 
+    scaling_net = None
+    if config.scale:
+        print('Process ' + str(id) + ': ' + 'Loading VDSR Net')
+        scaling_net = caffe.Net(config.sr_model_def, caffe.TEST, weights=config.sr_model_weights)
+
     # wait for all threads to be initialized
     with initialization:
         completed_inits.value += 1
@@ -54,7 +60,7 @@ def extraction_worker(config, gpu=0, id=0):
     while True:
         file = job_queue.get()
         if file:
-            features = [(i, fn, list(fv)) for i, fn, fv in extract_file(file, config, net, transformer)]
+            features = [(i, fn, fv) for i, fn, fv in extract_file(file, config, net, transformer, scaling_net)]
             if features:
                 result_queue.put(features)
             job_queue.task_done()
@@ -65,7 +71,7 @@ def extraction_worker(config, gpu=0, id=0):
             break
 
 
-def extract_file(file, config, net, transformer):
+def extract_file(file, config, net, transformer, scaling_net=None):
     file_name = basename(file)
     spectrogram_directory = None
     if config.output_spectrograms:
@@ -76,9 +82,9 @@ def extract_file(file, config, net, transformer):
                                                          chunksize=config.chunksize,
                                                          step=config.step, layer=config.layer,
                                                          cmap=config.cmap, size=config.size,
-                                                         output_spectrograms=spectrogram_directory, y_limit=config.y_limit):
+                                                         output_spectrograms=spectrogram_directory, y_limit=config.y_limit, scale=config.scale, scaling_net=scaling_net):
         if features.any():
-            yield index, file_name, features
+            yield index, file_name, np.copy(features)
 
 
 def get_spectrogram_path(file, folders):

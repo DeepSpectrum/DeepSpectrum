@@ -2,10 +2,8 @@ import argparse
 import configparser
 import csv
 from itertools import chain
-from os import listdir, makedirs
+from os import listdir
 from os.path import join, isfile, basename, expanduser, dirname, isdir
-
-import caffe
 
 
 class Configuration:
@@ -20,6 +18,9 @@ class Configuration:
         self.model_directory = join(expanduser('~'), 'caffe-master/models/bvlc_alexnet')
         self.model_def = ''
         self.model_weights = ''
+        self.sr_directory = None
+        self.sr_model_def = ''
+        self.sr_model_weights = ''
         self.gpu_mode = True
         self.device_ids = []
         self.number_of_processes = None
@@ -41,6 +42,7 @@ class Configuration:
         self.net = None
         self.transformer = None
         self.parser = None
+        self.scale = None
 
     def parse_arguments(self):
         """
@@ -48,34 +50,34 @@ class Configuration:
         :return: Nothing
         """
         self.parser = argparse.ArgumentParser(description='Extract deep spectrum features from wav files',
-                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+                                              formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         required_named = self.parser.add_argument_group('Required named arguments')
         required_named.add_argument('-f', nargs='+', help='folder(s) where your wavs reside', required=True)
         required_named.add_argument('-o',
                                     help='the file which the features are written to. Supports csv and arff formats',
                                     required=True)
         self.parser.add_argument('-lf',
-                            help='csv file with the labels for the wavs in the form: \'test_001.wav, label\'. If nothing is specified here or under -labels, the name(s) of the directory/directories are used as labels.',
-                            default=None)
+                                 help='csv file with the labels for the wavs in the form: \'test_001.wav, label\'. If nothing is specified here or under -labels, the name(s) of the directory/directories are used as labels.',
+                                 default=None)
         self.parser.add_argument('-labels', nargs='+',
-                            help='define labels for folders explicitly in format: labelForFirstFolder labelForSecondFolder ...',
-                            default=None)
+                                 help='define labels for folders explicitly in format: labelForFirstFolder labelForSecondFolder ...',
+                                 default=None)
         self.parser.add_argument('-cmap', default='viridis',
-                            help='define the matplotlib colour map to use for the spectrograms')
+                                 help='define the matplotlib colour map to use for the spectrograms')
         self.parser.add_argument('-config',
-                            help='path to configuration file which specifies caffe model and weight files. If this file does not exist a new one is created and filled with the standard settings-',
-                            default="deep.conf")
+                                 help='path to configuration file which specifies caffe model and weight files. If this file does not exist a new one is created and filled with the standard settings-',
+                                 default="deep.conf")
         self.parser.add_argument('-layer', default='fc7',
-                            help='name of CNN layer (as defined in caffe prototxt) from which to extract the features.')
+                                 help='name of CNN layer (as defined in caffe prototxt) from which to extract the features.')
         self.parser.add_argument('-chunksize', default=None, type=int,
-                            help='define a chunksize in ms. wav data is split into chunks of this length before feature extraction.')
+                                 help='define a chunksize in ms. wav data is split into chunks of this length before feature extraction.')
         self.parser.add_argument('-step', default=None, type=int,
-                            help='stepsize for creating the wav segments in ms. Defaults to the size of the chunks if -chunksize is given but -step is omitted.')
+                                 help='stepsize for creating the wav segments in ms. Defaults to the size of the chunks if -chunksize is given but -step is omitted.')
         self.parser.add_argument('-nfft', default=256,
-                            help='specify the size for the FFT window in number of samples', type=int)
+                                 help='specify the size for the FFT window in number of samples', type=int)
         self.parser.add_argument('-reduced', nargs='?',
-                            help='a reduced version of the feature set is written to the given location.',
-                            default=None, const='deep_spectrum_reduced.arff')
+                                 help='a reduced version of the feature set is written to the given location.',
+                                 default=None, const='deep_spectrum_reduced.arff')
         self.parser.add_argument('-np', type=int,
                                  help='define the number of processes used in parallel for the extraction. If None defaults to cpu-count',
                                  default=None)
@@ -84,8 +86,11 @@ class Configuration:
                                  default=None)
 
         self.parser.add_argument('-specout',
-                            help='define an existing folder where spectrogram plots should be saved during feature extraction. By default, spectrograms are not saved on disk to speed up extraction.',
-                            default=None)
+                                 help='define an existing folder where spectrogram plots should be saved during feature extraction. By default, spectrograms are not saved on disk to speed up extraction.',
+                                 default=None)
+        self.parser.add_argument('-sr',
+                                 help='define a factor for super resolution scaling using VDSR. Warning: Very memory intensive.',
+                                 default=None, type=int, nargs='?', const=2)
 
         args = vars(self.parser.parse_args())
         self.folders = args['f']
@@ -95,6 +100,7 @@ class Configuration:
         self.labels = args['labels']
         self.layer = args['layer']
         self.number_of_processes = args['np']
+        self.scale = args['sr']
 
         # if either chunksize or step are not given they default to the value of the other given parameter
         self.chunksize = args['chunksize'] if args['chunksize'] else args['step']
@@ -109,8 +115,8 @@ class Configuration:
         if not self.files:
             self.parser.error('No .wavs were found. Check the specified input paths.')
 
-        if self.output_spectrograms:
-            makedirs(self.output_spectrograms, exist_ok=True)
+        if self.output_spectrograms and not isdir(self.output_spectrograms):
+            self.parser.error('Spectrogram directory \'' + self.output_spectrograms + '\' does not exist.')
 
         if self.labels is not None and len(self.folders) != len(self.labels):
             self.parser.error(
@@ -175,7 +181,7 @@ class Configuration:
         else:
             # map the labels given on the commandline to all files in a given folder in the order both appear in the
             # parsed options.
-            self.label_dict = {wav: self.labels[folder_index] for folder_index, folder in enumerate(self.folders) for
+            self.label_dict = {basename(wav): self.labels[folder_index] for folder_index, folder in enumerate(self.folders) for
                                wav in
                                self._find_wav_files(folder)}
 
@@ -194,14 +200,16 @@ class Configuration:
             conf_parser.read(conf_file)
             conf = conf_parser['main']
             self.model_directory = conf['caffe_model_directory']
+            self.sr_directory = conf['VDSR_directory']
             self.gpu_mode = int(conf['gpu']) == 1
-            self.device_ids = list(map(int,conf['device_ids'].split(',')))
+            self.device_ids = list(map(int, conf['device_ids'].split(',')))
             self.size = int(conf['size'])
 
         # if not, create it with standard settings
         else:
             print('Writing standard config to ' + conf_file)
             conf = {'caffe_model_directory': self.model_directory,
+                    'VDSR_directory': '?',
                     'gpu': '1' if self.gpu_mode else '0',
                     'device_ids': str(','.join(self.device_ids)),
                     'size': str(self.size)}
@@ -227,30 +235,31 @@ class Configuration:
 
         # load model wights
         possible_weights = [join(directory, file) for file in listdir(directory)
-                         if file.endswith('.caffemodel')]
+                            if file.endswith('.caffemodel')]
         if possible_weights:
             self.model_weights = possible_weights[0]
             print('CaffeNet weights: ' + self.model_weights)
         else:
             self.parser.error("No model weights found in " + directory + '.')
 
-        # # set mode to GPU or CPU computation
-        # if self.gpu_mode:
-        #     caffe.set_device(int(self.device_id))
-        #     caffe.set_mode_gpu()
-        #     print('Using GPU device ' + str(self.device_id))
-        # else:
-        #     print('Using CPU-Mode')
-        #     caffe.set_mode_cpu()
-        #
-        # print('Loading Net')
-        # self.net = caffe.Net(model_def, caffe.TEST, weights=model_weights)
-        # self.transformer = caffe.io.Transformer({'data': self.net.blobs['data'].data.shape})
-        # self.transformer.set_transpose('data', (2, 0, 1))
-        # self.transformer.set_raw_scale('data', 255)  # rescale from [0, 1] to [0, 255]
-        # self.transformer.set_channel_swap('data', (2, 1, 0))  # swap channels from RGB to BGR
-        #
-        # # reshape input layer as batch processing is not needed
-        # shape = self.net.blobs['data'].shape
-        # self.net.blobs['data'].reshape(1, shape[1], shape[2], shape[3])
-        # self.net.reshape()
+        if self.scale:
+            directory = self.sr_directory
+
+            # load model definition
+            model_defs = [join(directory, file) for file in listdir(directory) if file.endswith('deploy.prototxt')]
+            if model_defs:
+                self.sr_model_def = model_defs[0]
+                print('CaffeNet definition: ' + self.sr_model_def)
+            else:
+                self.sr_model_def = ''
+                self.parser.error("No model definition found in " + directory + '.')
+
+            # load model wights
+            possible_weights = [join(directory, file) for file in listdir(directory)
+                                if file.endswith('.caffemodel')]
+            if possible_weights:
+                self.sr_model_weights = possible_weights[0]
+                print('CaffeNet weights: ' + self.sr_model_weights)
+            else:
+                self.parser.error("No model weights found in " + directory + '.')
+
