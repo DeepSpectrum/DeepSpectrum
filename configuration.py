@@ -2,7 +2,7 @@ import argparse
 import configparser
 import csv
 from itertools import chain
-from os import listdir
+from os import listdir, makedirs
 from os.path import join, isfile, basename, expanduser, dirname, isdir
 
 
@@ -18,11 +18,8 @@ class Configuration:
         self.model_directory = join(expanduser('~'), 'caffe-master/models/bvlc_alexnet')
         self.model_def = ''
         self.model_weights = ''
-        self.sr_directory = None
-        self.sr_model_def = ''
-        self.sr_model_weights = ''
         self.gpu_mode = True
-        self.device_ids = []
+        self.device_ids = [0]
         self.number_of_processes = None
         self.folders = []
         self.output = ''
@@ -42,7 +39,8 @@ class Configuration:
         self.net = None
         self.transformer = None
         self.parser = None
-        self.scale = None
+        self.net = None
+        self.config = None
 
     def parse_arguments(self):
         """
@@ -66,7 +64,7 @@ class Configuration:
                                  help='define the matplotlib colour map to use for the spectrograms')
         self.parser.add_argument('-config',
                                  help='path to configuration file which specifies caffe model and weight files. If this file does not exist a new one is created and filled with the standard settings-',
-                                 default="deep.conf")
+                                 default='deep.conf')
         self.parser.add_argument('-layer', default='fc7',
                                  help='name of CNN layer (as defined in caffe prototxt) from which to extract the features.')
         self.parser.add_argument('-chunksize', default=None, type=int,
@@ -88,9 +86,9 @@ class Configuration:
         self.parser.add_argument('-specout',
                                  help='define an existing folder where spectrogram plots should be saved during feature extraction. By default, spectrograms are not saved on disk to speed up extraction.',
                                  default=None)
-        self.parser.add_argument('-sr',
-                                 help='define a factor for super resolution scaling using VDSR. Warning: Very memory intensive.',
-                                 default=None, type=int, nargs='?', const=2)
+        self.parser.add_argument('-net',
+                                 help='specify the CNN that will be used for the feature extraction. This should be a key for which a model directory is assigned in the config file.',
+                                 default='alexnet')
 
         args = vars(self.parser.parse_args())
         self.folders = args['f']
@@ -100,7 +98,6 @@ class Configuration:
         self.labels = args['labels']
         self.layer = args['layer']
         self.number_of_processes = args['np']
-        self.scale = args['sr']
 
         # if either chunksize or step are not given they default to the value of the other given parameter
         self.chunksize = args['chunksize'] if args['chunksize'] else args['step']
@@ -109,14 +106,16 @@ class Configuration:
         self.reduced = args['reduced']
         self.output_spectrograms = args['specout']
         self.y_limit = args['ylim']
+        self.net = args['net']
+        self.config = args['config']
 
         # list all .wavs for the extraction found in the given folders
         self.files = list(chain.from_iterable([self._find_wav_files(folder) for folder in self.folders]))
         if not self.files:
             self.parser.error('No .wavs were found. Check the specified input paths.')
 
-        if self.output_spectrograms and not isdir(self.output_spectrograms):
-            self.parser.error('Spectrogram directory \'' + self.output_spectrograms + '\' does not exist.')
+        if self.output_spectrograms:
+            makedirs(self.output_spectrograms, exist_ok=True)
 
         if self.labels is not None and len(self.folders) != len(self.labels):
             self.parser.error(
@@ -128,7 +127,7 @@ class Configuration:
         else:
             self._read_label_file()
 
-        self._load_config(args['config'])
+        self._load_config()
         self._configure_caffe()
 
     @staticmethod
@@ -181,11 +180,11 @@ class Configuration:
         else:
             # map the labels given on the commandline to all files in a given folder in the order both appear in the
             # parsed options.
-            self.label_dict = {basename(wav): self.labels[folder_index] for folder_index, folder in enumerate(self.folders) for
+            self.label_dict = {wav: self.labels[folder_index] for folder_index, folder in enumerate(self.folders) for
                                wav in
                                self._find_wav_files(folder)}
 
-    def _load_config(self, conf_file):
+    def _load_config(self):
         """
         Parses the configuration file given on the commandline. If it does not exist yet, creates a new one containing
         standard settings.
@@ -195,26 +194,31 @@ class Configuration:
         conf_parser = configparser.ConfigParser()
 
         # check if the file exists and parse it
-        if isfile(conf_file):
-            print('Found config file ' + conf_file)
-            conf_parser.read(conf_file)
-            conf = conf_parser['main']
-            self.model_directory = conf['caffe_model_directory']
-            self.sr_directory = conf['VDSR_directory']
-            self.gpu_mode = int(conf['gpu']) == 1
-            self.device_ids = list(map(int, conf['device_ids'].split(',')))
-            self.size = int(conf['size'])
+        if isfile(self.config):
+            print('Found config file ' + self.config)
+            conf_parser.read(self.config)
+            main_conf = conf_parser['main']
+            self.gpu_mode = int(main_conf['gpu']) == 1
+            self.device_ids = list(map(int, main_conf['device_ids'].split(',')))
+            self.size = int(main_conf['size'])
+
+            net_conf = conf_parser['nets']
+            if self.net in net_conf:
+                self.model_directory = net_conf[self.net]
+            else:
+                self.parser.error('No model directory defined for {} in {}'.format(self.net, self.config))
+
 
         # if not, create it with standard settings
         else:
-            print('Writing standard config to ' + conf_file)
-            conf = {'caffe_model_directory': self.model_directory,
-                    'VDSR_directory': '?',
-                    'gpu': '1' if self.gpu_mode else '0',
-                    'device_ids': str(','.join(self.device_ids)),
-                    'size': str(self.size)}
-            conf_parser['main'] = conf
-            with open(conf_file, 'w') as configfile:
+            print('Writing standard config to ' + self.config)
+            main_conf = {'gpu': '1' if self.gpu_mode else '0',
+                         'device_ids': str(','.join(map(str, self.device_ids))),
+                         'size': str(self.size)}
+            net_conf = {'alexnet': self.model_directory}
+            conf_parser['main'] = main_conf
+            conf_parser['nets'] = net_conf
+            with open(self.config, 'w') as configfile:
                 conf_parser.write(configfile)
 
     def _configure_caffe(self):
@@ -224,6 +228,11 @@ class Configuration:
         :return: Nothing
         """
         directory = self.model_directory
+
+        if not isdir(self.model_directory):
+            self.parser.error(
+                'Directory {} specified in {} for net {} does not exist!'.format(self.model_directory, self.config,
+                                                                                 self.net))
         # load model definition
         model_defs = [join(directory, file) for file in listdir(directory) if file.endswith('deploy.prototxt')]
         if model_defs:
@@ -231,7 +240,7 @@ class Configuration:
             print('CaffeNet definition: ' + self.model_def)
         else:
             self.model_def = ''
-            self.parser.error("No model definition found in " + directory + '.')
+            self.parser.error('No model definition found in ' + directory + '.')
 
         # load model wights
         possible_weights = [join(directory, file) for file in listdir(directory)
@@ -240,26 +249,25 @@ class Configuration:
             self.model_weights = possible_weights[0]
             print('CaffeNet weights: ' + self.model_weights)
         else:
-            self.parser.error("No model weights found in " + directory + '.')
+            self.parser.error('No model weights found in ' + directory + '.')
 
-        if self.scale:
-            directory = self.sr_directory
-
-            # load model definition
-            model_defs = [join(directory, file) for file in listdir(directory) if file.endswith('deploy.prototxt')]
-            if model_defs:
-                self.sr_model_def = model_defs[0]
-                print('CaffeNet definition: ' + self.sr_model_def)
-            else:
-                self.sr_model_def = ''
-                self.parser.error("No model definition found in " + directory + '.')
-
-            # load model wights
-            possible_weights = [join(directory, file) for file in listdir(directory)
-                                if file.endswith('.caffemodel')]
-            if possible_weights:
-                self.sr_model_weights = possible_weights[0]
-                print('CaffeNet weights: ' + self.sr_model_weights)
-            else:
-                self.parser.error("No model weights found in " + directory + '.')
-
+            # # set mode to GPU or CPU computation
+            # if self.gpu_mode:
+            #     caffe.set_device(int(self.device_id))
+            #     caffe.set_mode_gpu()
+            #     print('Using GPU device ' + str(self.device_id))
+            # else:
+            #     print('Using CPU-Mode')
+            #     caffe.set_mode_cpu()
+            #
+            # print('Loading Net')
+            # self.net = caffe.Net(model_def, caffe.TEST, weights=model_weights)
+            # self.transformer = caffe.io.Transformer({'data': self.net.blobs['data'].data.shape})
+            # self.transformer.set_transpose('data', (2, 0, 1))
+            # self.transformer.set_raw_scale('data', 255)  # rescale from [0, 1] to [0, 255]
+            # self.transformer.set_channel_swap('data', (2, 1, 0))  # swap channels from RGB to BGR
+            #
+            # # reshape input layer as batch processing is not needed
+            # shape = self.net.blobs['data'].shape
+            # self.net.blobs['data'].reshape(1, shape[1], shape[2], shape[3])
+            # self.net.reshape()
