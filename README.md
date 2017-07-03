@@ -19,25 +19,28 @@
 ## Configuration
 Apart from the commandline options, the feature extractor is configured via a 
 configuration file. This file specifies 4 things:
-1. The directory of your caffe CNN model. This directory should contain the 
-   model specification (a file that ends with *deploy.prototxt*) and weights 
-   (a larger file that ends with *.caffemodel*) 
-2. The ids of the devices used for computation. In a multi GPU system, multiple IDs can be specified separated by commas.
-3. Whether you would like to use your GPU for computation (recommended).
-4. The width and height of the spectrograms plotted during the feature extraction
+
+1. The ids of the devices used for computation. In a multi GPU system, multiple IDs can be specified separated by commas.
+2. Whether you would like to use your GPU for computation (recommended).
+3. The width and height of the spectrograms plotted during the feature extraction
    in pixels. Specify only one integer here, as the plots used by the system 
    have equal height and width. This parameter heavily impacts performance:
    if set to the input dimensions of your CNN (look at your *.prototxt for this)
    the speed of the feature extraction can be nearly doubled as the spectrogram
    plots don't have to be rescaled.
-
+4. The directories of your caffe CNN models. These directory should contain the 
+   model specification (a file that ends with *deploy.prototxt*) and weights 
+   (a larger file that ends with *.caffemodel*) and can be specified after keys that are then accessible from the comanndline.
 
 
 `[main]
-caffe_model_directory = ~/caffe-master/models/bvlc_alexnet
 device_ids = 0,1
 gpu = 1
-size = 227`
+size = 227
+
+[net]
+alexnet = ~/caffe-master/models/bvlc_alexnet
+googlenet = ~/caffe-master/models/bvlc_alexnet`
 
 
 ## Usage
@@ -101,4 +104,6 @@ A detailed description of the commandline options is given below. Apart from
 | -reduced | If a filepath is given here, an additional reduced version of the output is computed after feature extraction and written to the path. The feature reduction simply removes attributes that have a value of zero for all instances. | None |
 | -config | The path to the configuration file used by the program can be given here. If the file does not exist yet, it is created and filled with standard settings. | deep.conf |
 | -specout | Specify an existing folder to save the spectrograms as .pngs | None |
+| -net | Choose the net for feature extraction as specified in the config file | alexnet |
+| -ylim | Specify a limit for the y-axis in the spectrogram plot. | None |
 | -np | Specify the number of processes used for the extraction. Defaults to the number of available CPU cores | None |
