@@ -94,6 +94,7 @@ class Configuration:
         self.folders = args['f']
         self.cmap = args['cmap']
         self.output = args['o']
+        makedirs(dirname(self.output), exist_ok=True)
         self.label_file = args['lf']
         self.labels = args['labels']
         self.layer = args['layer']
