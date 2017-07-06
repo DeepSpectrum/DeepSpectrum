@@ -1,6 +1,8 @@
 import arff
 import numpy as np
 import pandas as pd
+from os import makedirs
+from os.path import dirname
 from tqdm import tqdm
 
 
@@ -47,6 +49,7 @@ def _write_features(features, output, arff_header, arff_relation):
     :param arff_relation: name of the output arff relation
     :return: nothing
     """
+    makedirs(dirname(output), exist_ok=True)
     if output.endswith('.arff'):
         _write_arff(features, output, arff_header, arff_relation)
     else:

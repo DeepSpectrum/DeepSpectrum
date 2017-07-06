@@ -1,7 +1,7 @@
-import pathlib
 import multiprocessing as mp
+import pathlib
 from multiprocessing import JoinableQueue, Process, Value, Condition
-from os import makedirs, listdir, environ
+from os import makedirs, environ
 from os.path import basename, join, commonpath, dirname
 
 from tqdm import tqdm
@@ -60,7 +60,7 @@ def extraction_worker(config, gpu=0, id=0):
             job_queue.task_done()
         else:
             job_queue.task_done()
-            #poison pilling for writer
+            # poison pilling for writer
             result_queue.put(None)
             break
 
@@ -76,7 +76,8 @@ def extract_file(file, config, net, transformer):
                                                          chunksize=config.chunksize,
                                                          step=config.step, layer=config.layer,
                                                          cmap=config.cmap, size=config.size,
-                                                         output_spectrograms=spectrogram_directory, y_limit=config.y_limit):
+                                                         output_spectrograms=spectrogram_directory,
+                                                         y_limit=config.y_limit):
         if features.any():
             yield index, file_name, features
 
@@ -118,6 +119,7 @@ def kill_inactive(process_list):
         if not process.is_alive():
             process.terminate()
 
+
 if __name__ == '__main__':
     # set up the configuration object and parse commandline arguments
     configuration = Configuration()
@@ -158,16 +160,16 @@ if __name__ == '__main__':
         initialization.wait_for(lambda: completed_inits.value == number_of_processes.value, timeout=15)
         number_of_processes.value = sum(map(lambda x: x.is_alive(), processes))
 
-    #kill dead processes
+    # kill dead processes
     kill_inactive(processes)
 
     # poison pilling for extraction workers
     for i in range(number_of_processes.value):
         job_queue.put(None)
 
-
     job_queue.join()
     result_queue.join()
 
-    # extract(configuration, feature_writer)
-
+    if configuration.reduced:
+        fr.reduce_features(configuration.output, configuration.reduced)
+        # extract(configuration, feature_writer)
