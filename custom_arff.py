@@ -8,7 +8,7 @@ class Reader():
         for line in self.arff_file:
             line = line.strip()
             if line.lower().startswith('@relation'):
-                self.relation = ' '.join(line.split(' ')[1:])
+                self.relation = ' '.join(line.split(' ')[1:])[1:-1]
             if line.lower().startswith('@attribute'):
                 self.attributes.append((line.split(' ')[1], line.split(' ')[2]))
             if line.lower().startswith('@data'):

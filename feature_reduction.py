@@ -113,7 +113,7 @@ def _apply_reduction(input, output, indices_to_remove):
                 reduced_attributes = [reader.attributes[x] for x in range(len(reader.attributes)) if
                                       x not in indices_to_remove]
                 if output_arff:
-                    writer = custom_arff.Writer(output_file, '\'Reduced ' + reader.relation[1:], reduced_attributes)
+                    writer = custom_arff.Writer(output_file, 'Reduced ' + reader.relation, reduced_attributes)
                 else:
                     writer = csv.writer(output_file, delimiter=',')
                     writer.writerow([attribute[0] for attribute in reduced_attributes])
@@ -126,7 +126,7 @@ def _apply_reduction(input, output, indices_to_remove):
                     arff_attributes = [(attribute_name, 'numeric') for attribute_name in reduced_attributes]
                     arff_attributes[0][1] = 'string'
                     arff_attributes[:-1][1] = 'nominal'
-                    writer = custom_arff.Writer(output_file, '\'Reduced Features\'', arff_attributes)
+                    writer = custom_arff.Writer(output_file, 'Reduced Features', arff_attributes)
                 else:
                     writer = csv.writer(output_file, delimiter=',')
                     writer.writerow(reduced_attributes)
