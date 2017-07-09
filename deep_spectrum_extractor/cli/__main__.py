@@ -115,7 +115,6 @@ def writer_worker(config, initialization, completed_inits, total_num_of_files, n
                                 ('neuron_' + str(i), 'numeric') for i, _ in
                                 enumerate(feature_vector)] + classes
                         else:
-                            print(timestamp)
                             attributes = [('name', 'numeric')] + [
                                 ('neuron_' + str(i), 'numeric') for i, _ in
                                 enumerate(feature_vector)] + classes

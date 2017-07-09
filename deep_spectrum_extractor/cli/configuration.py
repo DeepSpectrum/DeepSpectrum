@@ -207,7 +207,6 @@ class Configuration:
                                wav in
                                self._find_wav_files(folder)}
         labels = list(map(lambda x: x[0], self.label_dict.values()))
-        print(labels)
         self.labels = [('class', set(labels))]
 
     def _load_config(self):
