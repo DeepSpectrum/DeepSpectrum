@@ -5,8 +5,8 @@ setup(name='deep_spectrum_extractor',
       packages=find_packages(),
       entry_points={
           'console_scripts': [
-              'ds_features = cli.__main__:main',
-              'reduce_features = tools.feature_reduction:main'
+              'ds_features = deep_spectrum_extractor.cli.__main__:main',
+              'reduce_features = deep_spectrum_extractor.tools.feature_reduction:main'
           ]
       },
       package_data={'': ['*.conf']},
