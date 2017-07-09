@@ -173,7 +173,6 @@ class Configuration:
             key = row[0]
             self.label_dict[key] = row[1:]
             for i, label in enumerate(row[1:]):
-                print(label)
                 if self._is_number(label):
                     self.labels[i] = (self.labels[i][0], None)
                 else:
