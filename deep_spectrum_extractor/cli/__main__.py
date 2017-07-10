@@ -109,22 +109,16 @@ def writer_worker(config, initialization, completed_inits, total_num_of_files, n
             if features:
                 for timestamp, file_name, feature_vector in features:
                     if not writer:
-                        if timestamp is not None:
-
-                            attributes = [('name', 'string'), ('timeStamp', 'numeric')] + [
-                                ('neuron_' + str(i), 'numeric') for i, _ in
-                                enumerate(feature_vector)] + classes
-                        else:
-                            attributes = [('name', 'numeric')] + [
-                                ('neuron_' + str(i), 'numeric') for i, _ in
-                                enumerate(feature_vector)] + classes
+                        attributes = _determine_attributes(timestamp, feature_vector, classes)
                         if config.output.endswith('.arff'):
                             writer = Writer(output_file, 'Deep Spectrum Features', attributes)
                         else:
                             writer = csv.writer(output_file, delimiter=',')
                             writer.writerow([attribute[0] for attribute in attributes])
                     if timestamp is not None:
-                        row = [file_name] + [str(timestamp)] + list(map(str, feature_vector)) + config.label_dict[file_name]
+                        labels = config.label_dict[file_name][timestamp] if config.continuous_labels else \
+                            config.label_dict[file_name]
+                        row = [file_name] + [str(timestamp)] + list(map(str, feature_vector)) + labels
                     else:
                         row = [file_name] + list(map(str, feature_vector)) + config.label_dict[file_name]
                     writer.writerow(row)
@@ -136,6 +130,18 @@ def writer_worker(config, initialization, completed_inits, total_num_of_files, n
                     result_queue.task_done()
                     break
                 result_queue.task_done()
+
+
+def _determine_attributes(timestamp, feature_vector, classes):
+    if timestamp is not None:
+        attributes = [('name', 'string'), ('timeStamp', 'numeric')] + [
+            ('neuron_' + str(i), 'numeric') for i, _ in
+            enumerate(feature_vector)] + classes
+    else:
+        attributes = [('name', 'numeric')] + [
+            ('neuron_' + str(i), 'numeric') for i, _ in
+            enumerate(feature_vector)] + classes
+    return attributes
 
 
 def kill_inactive(process_list):

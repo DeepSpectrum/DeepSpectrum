@@ -3,7 +3,7 @@ import configparser
 import csv
 from itertools import chain
 from os import listdir, makedirs
-from os.path import join, isfile, basename, expanduser, dirname, isdir
+from os.path import abspath, join, isfile, basename, expanduser, dirname, isdir, realpath
 
 
 class Configuration:
@@ -25,6 +25,7 @@ class Configuration:
         self.output = ''
         self.cmap = 'viridis'
         self.label_file = None
+        self.continuous_labels = False
         self.labels = None
         self.label_dict = {}
         self.layer = 'fc7'
@@ -57,14 +58,17 @@ class Configuration:
         self.parser.add_argument('-lf',
                                  help='csv file with the labels for the wavs in the form: \'test_001.wav, label\'. If nothing is specified here or under -labels, the name(s) of the directory/directories are used as labels.',
                                  default=None)
+        self.parser.add_argument('-tc',
+                                 help='Set labeling of features to time continuous mode. Only works in conjunction with -t and the specified label file has to provide labels for the specified hops in its second column.',
+                                 nargs='?', default=False, const=True)
         self.parser.add_argument('-labels', nargs='+',
                                  help='define labels for folders explicitly in format: labelForFirstFolder labelForSecondFolder ...',
                                  default=None)
         self.parser.add_argument('-cmap', default='viridis',
                                  help='define the matplotlib colour map to use for the spectrograms')
         self.parser.add_argument('-config',
-                                 help='path to configuration file which specifies caffe model and weight files. If this file does not exist a new one is created and filled with the standard settings-',
-                                 default='deep.conf')
+                                 help='path to configuration file which specifies caffe model and weight files. If this file does not exist a new one is created and filled with the standard settings.',
+                                 default=join(dirname(realpath(__file__)), 'deep.conf'))
         self.parser.add_argument('-layer', default='fc7',
                                  help='name of CNN layer (as defined in caffe prototxt) from which to extract the features.')
         # self.parser.add_argument('-chunksize', default=None, type=int,
@@ -96,7 +100,7 @@ class Configuration:
         args = vars(self.parser.parse_args())
         self.folders = args['f']
         self.cmap = args['cmap']
-        self.output = args['o']
+        self.output = abspath(args['o'])
         makedirs(dirname(self.output), exist_ok=True)
         self.label_file = args['lf']
         self.labels = args['labels']
@@ -109,9 +113,10 @@ class Configuration:
 
         self.chunksize = args['t'][0]
         self.step = args['t'][1]
+        self.continuous_labels = self.chunksize and args['tc'] and self.label_file
         self.nfft = args['nfft']
         self.reduced = args['reduced']
-        self.output_spectrograms = args['specout']
+        self.output_spectrograms = abspath(args['specout']) if args['specout'] else None
         self.y_limit = args['ylim']
         self.net = args['net']
         self.config = args['config']
@@ -161,7 +166,9 @@ class Configuration:
         else:
             reader = csv.reader(open(self.label_file, newline=''))
         header = next(reader)
-        classes = header[1:]
+        first_class_index = 2 if self.continuous_labels else 1
+
+        classes = header[first_class_index:]
 
         self.label_dict = {}
 
@@ -170,9 +177,15 @@ class Configuration:
 
         # parse the label file line by line
         for row in reader:
-            key = row[0]
-            self.label_dict[key] = row[1:]
-            for i, label in enumerate(row[1:]):
+            name = row[0]
+            if self.continuous_labels:
+                if name not in self.label_dict:
+                    self.label_dict[name] = {}
+                self.label_dict[name][float(row[1])] = row[first_class_index:]
+            else:
+                self.label_dict[name] = row[first_class_index:]
+
+            for i, label in enumerate(row[first_class_index:]):
                 if self._is_number(label):
                     self.labels[i] = (self.labels[i][0], None)
                 else:
@@ -203,7 +216,8 @@ class Configuration:
         else:
             # map the labels given on the commandline to all files in a given folder in the order both appear in the
             # parsed options.
-            self.label_dict = {basename(wav): [self.labels[folder_index]] for folder_index, folder in enumerate(self.folders) for
+            self.label_dict = {basename(wav): [self.labels[folder_index]] for folder_index, folder in
+                               enumerate(self.folders) for
                                wav in
                                self._find_wav_files(folder)}
         labels = list(map(lambda x: x[0], self.label_dict.values()))
