@@ -1,8 +1,10 @@
 import argparse
 import configparser
 import csv
+import fnmatch
+import re
 from itertools import chain
-from os import listdir, makedirs
+from os import listdir, makedirs, walk
 from os.path import abspath, join, isfile, basename, expanduser, dirname, isdir, realpath
 
 
@@ -55,14 +57,14 @@ class Configuration:
         required_named.add_argument('-o',
                                     help='the file which the features are written to. Supports csv and arff formats',
                                     required=True)
-        self.parser.add_argument('-lf',
+        self.parser.add_argument('-l',
                                  help='csv file with the labels for the wavs in the form: \'test_001.wav, label\'. If nothing is specified here or under -labels, the name(s) of the directory/directories are used as labels.',
                                  default=None)
         self.parser.add_argument('-tc',
                                  help='Set labeling of features to time continuous mode. Only works in conjunction with -t and the specified label file has to provide labels for the specified hops in its second column.',
                                  nargs='?', default=False, const=True)
-        self.parser.add_argument('-labels', nargs='+',
-                                 help='define labels for folders explicitly in format: labelForFirstFolder labelForSecondFolder ...',
+        self.parser.add_argument('-el', nargs='+',
+                                 help='Define labels for folders explicitly in format: labelForFirstFolder labelForSecondFolder ...',
                                  default=None)
         self.parser.add_argument('-cmap', default='viridis',
                                  help='define the matplotlib colour map to use for the spectrograms')
@@ -102,8 +104,8 @@ class Configuration:
         self.cmap = args['cmap']
         self.output = abspath(args['o'])
         makedirs(dirname(self.output), exist_ok=True)
-        self.label_file = args['lf']
-        self.labels = args['labels']
+        self.label_file = args['l']
+        self.labels = args['el']
         self.layer = args['layer']
         self.number_of_processes = args['np']
 
@@ -144,14 +146,12 @@ class Configuration:
 
     @staticmethod
     def _find_wav_files(folder):
-        if listdir(folder):
-            wavs = [join(folder, wav_file) for wav_file in listdir(folder) if
-                    isfile(join(folder, wav_file)) and (wav_file.endswith('.wav') or wav_file.endswith('.WAV'))]
-            return wavs + list(chain.from_iterable(
-                [Configuration._find_wav_files(join(folder, subfolder)) for subfolder in listdir(folder) if
-                 isdir(join(folder, subfolder))]))
-        else:
-            return []
+        globexpression = '*.wav'
+        reg_expr = re.compile(fnmatch.translate(globexpression), re.IGNORECASE)
+        wavs = []
+        for root, dirs, files in walk(folder, topdown=True):
+            wavs += [join(root, j) for j in files if re.match(reg_expr, j)]
+        return wavs
 
     def _read_label_file(self):
         """
@@ -289,24 +289,3 @@ class Configuration:
             print('CaffeNet weights: ' + self.model_weights)
         else:
             self.parser.error('No model weights found in ' + directory + '.')
-
-            # # set mode to GPU or CPU computation
-            # if self.gpu_mode:
-            #     caffe.set_device(int(self.device_id))
-            #     caffe.set_mode_gpu()
-            #     print('Using GPU device ' + str(self.device_id))
-            # else:
-            #     print('Using CPU-Mode')
-            #     caffe.set_mode_cpu()
-            #
-            # print('Loading Net')
-            # self.net = caffe.Net(model_def, caffe.TEST, weights=model_weights)
-            # self.transformer = caffe.io.Transformer({'data': self.net.blobs['data'].data.shape})
-            # self.transformer.set_transpose('data', (2, 0, 1))
-            # self.transformer.set_raw_scale('data', 255)  # rescale from [0, 1] to [0, 255]
-            # self.transformer.set_channel_swap('data', (2, 1, 0))  # swap channels from RGB to BGR
-            #
-            # # reshape input layer as batch processing is not needed
-            # shape = self.net.blobs['data'].shape
-            # self.net.blobs['data'].reshape(1, shape[1], shape[2], shape[3])
-            # self.net.reshape()

@@ -35,48 +35,6 @@ def _read_wav_data(wav_file):
     sound_info = np.trim_zeros(sound_info)
     return sound_info, frame_rate
 
-
-# def plot_spectrogram(wav_file, nfft=256, cmap='viridis', size=227, output_folder=None, y_limit=None):
-#     """
-#     Plots a spectrogram from a given .wav file using the described parameters.
-#     :param wav_file: path to an existing .wav file
-#     :param nfft: number of samples for the fast fourier transformation (Defaukt: 256)
-#     :param cmap: colourmap for the power spectral density (Default: 'viridis')
-#     :param size: size of the spectrogram plot in pixels. Height and width are alsways identical (Default: 227)
-#     :param output_folder: if given, the plot is saved to this existing folder in .png format (Default: None)
-#     :return: blob of the spectrogram plot
-#     """
-#     sound_info, frame_rate = _read_wav_data(wav_file)
-#     fig = plt.figure(frameon=False)
-#     fig.set_size_inches(1, 1)
-#
-#     # set figure size
-#     ax = plt.Axes(fig, [0., 0., 1., 1.], )
-#     ax.set_axis_off()
-#     fig.add_axes(ax)
-#     with warnings.catch_warnings():
-#         warnings.simplefilter("ignore")
-#         Pxx, freqs, bins, im = plt.specgram(sound_info, NFFT=nfft, Fs=frame_rate, cmap=cmap, noverlap=int(nfft / 2))
-#
-#     # limit figure to plot
-#     extent = im.get_extent()
-#     plt.xlim([extent[0], extent[1]])
-#
-#     if y_limit:
-#         plt.ylim([extent[2], y_limit])
-#     else:
-#         plt.ylim([extent[2], extent[3]])
-#
-#     if output_folder:
-#         file_name = basename(wav_file)[:-4]
-#         plt.savefig(join(output_folder, file_name + '.png'), format='png', dpi=size)
-#     buf = io.BytesIO()
-#     plt.savefig(buf, format='png', dpi=size)
-#     buf.seek(0)
-#     plt.close('all')
-#     return buf.read()
-
-
 def plot_spectrograms(wav_file, chunksize, step, nfft=256, cmap='viridis', size=227, output_folder=None,
                             y_limit=None):
     """
