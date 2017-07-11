@@ -30,17 +30,19 @@ configuration file. This file specifies 4 things:
    plots don't have to be rescaled.
 4. The directories of your caffe CNN models. These directory should contain the 
    model specification (a file that ends with *deploy.prototxt*) and weights 
-   (a larger file that ends with *.caffemodel*) and can be specified after keys that are then accessible from the comanndline.
+   (a larger file that ends with *.caffemodel*) and can be specified after keys that are then accessible from the commandline.
 
 
-`[main]
+`[main] 
 device_ids = 0,1
 gpu = 1
 size = 227
-
 [net]
 alexnet = ~/caffe-master/models/bvlc_alexnet
 googlenet = ~/caffe-master/models/bvlc_alexnet`
+
+
+
 
 
 ## Usage
@@ -64,21 +66,18 @@ in the example *angry* and *sad*. The features are finally written to
 ### Advanced: Specifying labels
 Labels for the *.wav* files can be given explicitly either by providing a label 
 file or specifying labels for each folder of the extraction:
-* label files (*.tsv*, *.csv* are supported) can be specified by `-lf labels.csv`.
+* label files (*.tsv*, *.csv* are supported) can be specified by `-l labels.csv`.
   They have to follow the format *file_name.wav* **delimiter** *label* where **delimiter**
   must be `,` for *.csv* and `\t` (tab) for *.tsv*
-* labels for each folder can be specified by `-labels labelForFolder1 labelForFolder2`.
+* labels for each folder can be specified by `-el labelForFolder1 labelForFolder2`.
   The number of specified labels must match the number of folders given after `-f`.
 
 ### Advanced: Extracting features from audio segments
 Instead of using the whole audio file to create a single feature vector, 
 features can also be extracted from equally sized chunks of the audio file
 resulting in indexed time series features. This is controlled from the 
-commandline by the parameters `-chunksize` and `-step`:
-* the stepsize for the chunking of the audio files can be specified in ms after 
-`-step`
-* the length of the audio chunks in ms is controlled by `-chunksize`. 
-* if only `-chunksize` is specified, the step size defaults to the chunksize.
+commandline by the parameter -t windowSize hopSize, where windowSize and hopSize
+should be given in seconds
 
 Additionally, when extracting from audio segments, `-nfft`should also be set 
 accordingly as for small segments the default of 256 samples used for the FFT is
@@ -94,12 +93,12 @@ A detailed description of the commandline options is given below. Apart from
 |----------|-------------|---------|
 | **-f**   | Specify the directory/directories containing your *.wav* files here | None |
 | **-o** | The location of the output feature file. Supported output formats are: Comma separated value files and arff files. If the specified output file's extension is *.arff*, arff is chosen as format, otherwise the output will be in comma separated value format. | None |
-| -lf | Specify a comma separated values file containing labels for each *.wav* file | None |
-| -labels | Specify labels explicitly for each folder given after -f. Number of given labels has to match the number of specified folders. If both this and -lf are not specified, each .wav is assigned the name of its parent directory as label. | None |
+| -l | Specify a comma separated values file containing labels for each *.wav* file | None |
+| -el | Specify labels explicitly for each folder given after -f. Number of given labels has to match the number of specified folders. If both this and -lf are not specified, each .wav is assigned the name of its parent directory as label. | None |
 | -cmap | Choose a matplotlib colourmap for creating the spectrogram plots. | viridis |
 | -layer | Name of the layer from which features should be extracted as specified in your caffe .prototxt file. Only layers with 1-D output are supported | fc7 |
 | -step | Configure a stepsize for segmentation of the wavs in ms.  Defaults to *chunksize* if `-chunksize` is given but step is omitted. | None |
-| -chunksize | Define the length of the segments in ms. | None |
+| -t | Define window and hopsize. | None |
 | -nfft | The length of the FFT window used for creating the spectrograms in number of samples. Consider choosing smaller values when extracting from small segments. | 256 |
 | -reduced | If a filepath is given here, an additional reduced version of the output is computed after feature extraction and written to the path. The feature reduction simply removes attributes that have a value of zero for all instances. | None |
 | -config | The path to the configuration file used by the program can be given here. If the file does not exist yet, it is created and filled with standard settings. | deep.conf |
