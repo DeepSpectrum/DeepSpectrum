@@ -3,9 +3,12 @@ import configparser
 import csv
 import fnmatch
 import re
+from decimal import *
 from itertools import chain
 from os import listdir, makedirs, walk
 from os.path import abspath, join, isfile, basename, expanduser, dirname, isdir, realpath
+
+getcontext().prec = 6
 
 
 class Configuration:
@@ -79,7 +82,7 @@ class Configuration:
         #                         help='stepsize for creating the wav segments in ms. Defaults to the size of the chunks if -chunksize is given but -step is omitted.')
         self.parser.add_argument('-t',
                                  help='Extract deep spectrum features from windows with specified length and hopsize in seconds.',
-                                 nargs=2, type=float, default=[None, None])
+                                 nargs=2, type=Decimal, default=[None, None])
         self.parser.add_argument('-nfft', default=256,
                                  help='specify the size for the FFT window in number of samples', type=int)
         self.parser.add_argument('-reduced', nargs='?',
@@ -181,7 +184,7 @@ class Configuration:
             if self.continuous_labels:
                 if name not in self.label_dict:
                     self.label_dict[name] = {}
-                self.label_dict[name][float(row[1])] = row[first_class_index:]
+                self.label_dict[name][Decimal(row[1])] = row[first_class_index:]
             else:
                 self.label_dict[name] = row[first_class_index:]
 

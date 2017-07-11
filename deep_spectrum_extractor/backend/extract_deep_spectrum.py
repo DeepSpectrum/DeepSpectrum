@@ -1,7 +1,6 @@
 import io
 import warnings
 
-
 import matplotlib
 
 # force matplotlib to not use X-Windows backend. Needed for running the tool through an ssh connection.
@@ -32,11 +31,12 @@ def _read_wav_data(wav_file):
         sound_info = sound_info.sum(axis=1) / 2
         sound_info = np.array(sound_info)
     # remove zeros at beginning and end of audio file
-    sound_info = np.trim_zeros(sound_info)
+    # sound_info = np.trim_zeros(sound_info)
     return sound_info, frame_rate
 
+
 def plot_spectrograms(wav_file, chunksize, step, nfft=256, cmap='viridis', size=227, output_folder=None,
-                            y_limit=None):
+                      y_limit=None):
     """
     Plot spectrograms for equally sized chunks of a wav-file using the described parameters.
     :param wav_file: path to an existing .wav file
@@ -139,8 +139,8 @@ def extract_features_from_wav(wav_file, input_transformer, caffe_net, nfft=256, 
     """
     for index, img_blob in enumerate(
             plot_spectrograms(wav_file, chunksize, step, nfft=nfft, cmap=cmap, size=size,
-                                    output_folder=output_spectrograms, y_limit=y_limit)):
+                              output_folder=output_spectrograms, y_limit=y_limit)):
         if chunksize:
-            yield index*step, extract_features_from_image_blob(img_blob, input_transformer, caffe_net, layer=layer)
+            yield index * step, extract_features_from_image_blob(img_blob, input_transformer, caffe_net, layer=layer)
         else:
             yield None, extract_features_from_image_blob(img_blob, input_transformer, caffe_net, layer=layer)
