@@ -35,13 +35,13 @@ def _read_wav_data(wav_file):
     return sound_info, frame_rate
 
 
-def plot_spectrograms(wav_file, chunksize, step, nfft=256, cmap='viridis', size=227, output_folder=None,
+def plot_spectrograms(wav_file, window, hop, nfft=256, cmap='viridis', size=227, output_folder=None,
                       y_limit=None):
     """
     Plot spectrograms for equally sized chunks of a wav-file using the described parameters.
     :param wav_file: path to an existing .wav file
-    :param chunksize: length of the chunks in s.
-    :param step: stepsize for chunking the audio data in s
+    :param window: length of the chunks in s.
+    :param hop: stepsize for chunking the audio data in s
     :param nfft: number of samples for the fast fourier transformation (Defaukt: 256)
     :param cmap: colourmap for the power spectral density (Default: 'viridis')
     :param size: size of the spectrogram plot in pixels. Height and width are alsways identical (Default: 227)
@@ -50,18 +50,9 @@ def plot_spectrograms(wav_file, chunksize, step, nfft=256, cmap='viridis', size=
     """
     sound_info, frame_rate = _read_wav_data(wav_file)
 
-    if not chunksize and not step:
-        chunks = [sound_info]
-        write_index = False
-    else:
-        # size of chunks in number of samples
-        chunksize = int(chunksize * frame_rate)
-        step = int(step * frame_rate)
-        # list chunks from the audio data
-        chunks = [sound_info[n * step:min(n * step + chunksize, len(sound_info))] for n in
-                  range(max(int((len(sound_info)) / step), 1))]
-        write_index = True
-    for idx, chunk in enumerate(chunks):
+    write_index = window or hop
+
+    for idx, chunk in enumerate(_generate_chunks(sound_info, frame_rate, window, hop)):
         fig = plt.figure(frameon=False)
         fig.set_size_inches(1, 1)
         ax = plt.Axes(fig, [0., 0., 1., 1.], )
@@ -90,6 +81,15 @@ def plot_spectrograms(wav_file, chunksize, step, nfft=256, cmap='viridis', size=
         buf.seek(0)
         plt.close('all')
         yield buf.read()
+
+
+def _generate_chunks(sound_info, sr, window, hop):
+    if not window and not hop:
+        return sound_info
+    window = int(window * sr)
+    hop = int(hop * sr)
+    for n in range(max(int((len(sound_info)) / hop), 1)):
+        yield sound_info[n * hop:min(n * hop + window, len(sound_info))]
 
 
 def extract_features_from_image_blob(img_blob, input_transformer, caffe_net, layer='fc7'):
