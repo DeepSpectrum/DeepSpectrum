@@ -1,12 +1,13 @@
 import argparse
 import configparser
-import csv
 import fnmatch
 import re
 from decimal import *
 from itertools import chain
 from os import listdir, makedirs, walk
 from os.path import abspath, join, isfile, basename, expanduser, dirname, isdir, realpath
+
+from deep_spectrum_extractor.tools.label_parser import LabelParser
 
 getcontext().prec = 6
 
@@ -36,6 +37,7 @@ class Configuration:
         self.layer = 'fc7'
         self.chunksize = None
         self.step = None
+        self.start = 0
         self.nfft = 256
         self.y_limit = None
         self.reduced = None
@@ -80,6 +82,9 @@ class Configuration:
         #                         help='define a chunksize in ms. wav data is split into chunks of this length before feature extraction.')
         # self.parser.add_argument('-step', default=None, type=int,
         #                         help='stepsize for creating the wav segments in ms. Defaults to the size of the chunks if -chunksize is given but -step is omitted.')
+        self.parser.add_argument('-start',
+                                 help='Set a start time from which features should be exrtracted from the audio files.',
+                                 type=Decimal, default=0)
         self.parser.add_argument('-t',
                                  help='Extract deep spectrum features from windows with specified length and hopsize in seconds.',
                                  nargs=2, type=Decimal, default=[None, None])
@@ -118,6 +123,7 @@ class Configuration:
 
         self.chunksize = args['t'][0]
         self.step = args['t'][1]
+        self.start = args['start']
         self.continuous_labels = self.chunksize and args['tc'] and self.label_file
         self.nfft = args['nfft']
         self.reduced = args['reduced']
@@ -165,34 +171,14 @@ class Configuration:
 
         # delimiters are decided by the extension of the labels file
         if self.label_file.endswith('.tsv'):
-            reader = csv.reader(open(self.label_file, newline=''), delimiter="\t")
+            parser = LabelParser(self.label_file, delimiter='\t', timecontinuous=self.continuous_labels)
         else:
-            reader = csv.reader(open(self.label_file, newline=''))
-        header = next(reader)
-        first_class_index = 2 if self.continuous_labels else 1
+            parser = LabelParser(self.label_file, delimiter=',', timecontinuous=self.continuous_labels)
 
-        classes = header[first_class_index:]
+        parser.parse_labels()
+        self.label_dict = parser.label_dict
+        self.labels = parser.labels
 
-        self.label_dict = {}
-
-        # a list of distinct labels is needed for deciding on the nominal class values for .arff files
-        self.labels = [(class_name, set([])) for class_name in classes]
-
-        # parse the label file line by line
-        for row in reader:
-            name = row[0]
-            if self.continuous_labels:
-                if name not in self.label_dict:
-                    self.label_dict[name] = {}
-                self.label_dict[name][Decimal(row[1])] = row[first_class_index:]
-            else:
-                self.label_dict[name] = row[first_class_index:]
-
-            for i, label in enumerate(row[first_class_index:]):
-                if self._is_number(label):
-                    self.labels[i] = (self.labels[i][0], None)
-                else:
-                    self.labels[i][1].add(label)
         file_names = set(map(basename, self.files))
 
         # check if labels are missing for specific files

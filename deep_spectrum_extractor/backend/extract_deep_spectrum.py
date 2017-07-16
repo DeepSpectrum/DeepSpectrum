@@ -17,7 +17,7 @@ environ['GLOG_minloglevel'] = '2'
 import caffe
 
 
-def _read_wav_data(wav_file):
+def _read_wav_data(wav_file, start=0):
     """
     Reads data from a wav-file, converts this data to single channel and trims zeros at beginning and end of the
     audio data.
@@ -32,11 +32,12 @@ def _read_wav_data(wav_file):
         sound_info = np.array(sound_info)
     # remove zeros at beginning and end of audio file
     # sound_info = np.trim_zeros(sound_info)
-    return sound_info, frame_rate
+    start = int(start * frame_rate)
+    return sound_info[start:], frame_rate
 
 
 def plot_spectrograms(wav_file, window, hop, nfft=256, cmap='viridis', size=227, output_folder=None,
-                      y_limit=None):
+                      y_limit=None, start=0):
     """
     Plot spectrograms for equally sized chunks of a wav-file using the described parameters.
     :param wav_file: path to an existing .wav file
@@ -48,7 +49,7 @@ def plot_spectrograms(wav_file, window, hop, nfft=256, cmap='viridis', size=227,
     :param output_folder: if given, the plot is saved to this existing folder in .png format (Default: None)
     :return: blob of the spectrogram plot
     """
-    sound_info, frame_rate = _read_wav_data(wav_file)
+    sound_info, frame_rate = _read_wav_data(wav_file, start=start)
 
     write_index = window or hop
 
@@ -121,7 +122,7 @@ def extract_features_from_image_blob(img_blob, input_transformer, caffe_net, lay
 
 
 def extract_features_from_wav(wav_file, input_transformer, caffe_net, nfft=256, layer='fc7', cmap='viridis', size=227,
-                              chunksize=None, step=None, output_spectrograms=None, y_limit=None):
+                              chunksize=None, step=None, output_spectrograms=None, y_limit=None, start=0):
     """
     Extracts deep spectrum features from a given wav-file using either the whole file or equally sized chunks as basis
     for the spectrogram plots.
@@ -139,8 +140,9 @@ def extract_features_from_wav(wav_file, input_transformer, caffe_net, nfft=256, 
     """
     for index, img_blob in enumerate(
             plot_spectrograms(wav_file, chunksize, step, nfft=nfft, cmap=cmap, size=size,
-                              output_folder=output_spectrograms, y_limit=y_limit)):
+                              output_folder=output_spectrograms, y_limit=y_limit, start=start)):
         if chunksize:
-            yield index * step, extract_features_from_image_blob(img_blob, input_transformer, caffe_net, layer=layer)
+            yield start + (index * step), extract_features_from_image_blob(img_blob, input_transformer, caffe_net,
+                                                                           layer=layer)
         else:
             yield None, extract_features_from_image_blob(img_blob, input_transformer, caffe_net, layer=layer)
