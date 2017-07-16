@@ -38,6 +38,7 @@ class Configuration:
         self.chunksize = None
         self.step = None
         self.start = 0
+        self.end = None
         self.nfft = 256
         self.y_limit = None
         self.reduced = None
@@ -83,8 +84,11 @@ class Configuration:
         # self.parser.add_argument('-step', default=None, type=int,
         #                         help='stepsize for creating the wav segments in ms. Defaults to the size of the chunks if -chunksize is given but -step is omitted.')
         self.parser.add_argument('-start',
-                                 help='Set a start time from which features should be exrtracted from the audio files.',
+                                 help='Set a start time from which features should be extracted from the audio files.',
                                  type=Decimal, default=0)
+        self.parser.add_argument('-end',
+                                 help='Set a end time until which features should be extracted from the audio files.',
+                                 type=Decimal, default=None)
         self.parser.add_argument('-t',
                                  help='Extract deep spectrum features from windows with specified length and hopsize in seconds.',
                                  nargs=2, type=Decimal, default=[None, None])
@@ -124,6 +128,7 @@ class Configuration:
         self.chunksize = args['t'][0]
         self.step = args['t'][1]
         self.start = args['start']
+        self.end = args['end']
         self.continuous_labels = self.chunksize and args['tc'] and self.label_file
         self.nfft = args['nfft']
         self.reduced = args['reduced']
