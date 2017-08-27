@@ -1,3 +1,4 @@
+import csv
 import multiprocessing as mp
 import pathlib
 from multiprocessing import JoinableQueue, Process, Value, Condition
@@ -6,17 +7,18 @@ from os.path import basename, join, commonpath, dirname
 
 from tqdm import tqdm
 
-import extract_deep_spectrum as eds
-import feature_reduction as fr
-from configuration import Configuration
-from feature_writer import FeatureWriter
+import deep_spectrum_extractor.backend.extract_deep_spectrum as eds
+import deep_spectrum_extractor.tools.feature_reduction as fr
+from deep_spectrum_extractor.cli.configuration import Configuration
+from deep_spectrum_extractor.tools.custom_arff import Writer
 
 environ['GLOG_minloglevel'] = '2'
 
 import caffe
 
 
-def extraction_worker(config, gpu=0, id=0):
+def extraction_worker(config, initialization, completed_inits, number_of_processes, job_queue, result_queue, gpu=0,
+                      id=0):
     print('Process ' + str(id) + ': ' + 'initializing...')
     directory = config.model_directory
 
@@ -77,7 +79,7 @@ def extract_file(file, config, net, transformer):
                                                          step=config.step, layer=config.layer,
                                                          cmap=config.cmap, size=config.size,
                                                          output_spectrograms=spectrogram_directory,
-                                                         y_limit=config.y_limit):
+                                                         y_limit=config.y_limit, start=config.start, end=config.end):
         if features.any():
             yield index, file_name, features
 
@@ -93,17 +95,33 @@ def get_spectrogram_path(file, folders):
     return spectrogram_path
 
 
-def writer_worker(writer):
+def writer_worker(config, initialization, completed_inits, total_num_of_files, number_of_processes, result_queue):
     with initialization:
         initialization.wait_for(lambda: completed_inits.value == number_of_processes.value, timeout=15)
     print('Starting extraction with {} processes...'.format(number_of_processes.value))
-    with tqdm(total=total_num_of_files) as pbar:
+    with tqdm(total=total_num_of_files) as pbar, open(config.output, 'w', newline='') as output_file:
         poison_pills = 0
+        writer = None
+        classes = [(class_name, '{' + ','.join(class_type) + '}') if class_type else (
+            class_name, 'numeric') for class_name, class_type in config.labels]
         while True:
             features = result_queue.get()
             if features:
-                for index, file_name, feature_vector in features:
-                    writer.write(feature_vector, file_name, index=index)
+                for timestamp, file_name, feature_vector in features:
+                    if not writer:
+                        attributes = _determine_attributes(timestamp, feature_vector, classes)
+                        if config.output.endswith('.arff'):
+                            writer = Writer(output_file, 'Deep Spectrum Features', attributes)
+                        else:
+                            writer = csv.writer(output_file, delimiter=',')
+                            writer.writerow([attribute[0] for attribute in attributes])
+                    if timestamp is not None:
+                        labels = config.label_dict[file_name][timestamp] if config.continuous_labels else \
+                            config.label_dict[file_name]
+                        row = [file_name] + [str(timestamp)] + list(map(str, feature_vector)) + labels
+                    else:
+                        row = [file_name] + list(map(str, feature_vector)) + config.label_dict[file_name]
+                    writer.writerow(row)
                 result_queue.task_done()
                 pbar.update(1)
             else:
@@ -114,19 +132,28 @@ def writer_worker(writer):
                 result_queue.task_done()
 
 
+def _determine_attributes(timestamp, feature_vector, classes):
+    if timestamp is not None:
+        attributes = [('name', 'string'), ('timeStamp', 'numeric')] + [
+            ('neuron_' + str(i), 'numeric') for i, _ in
+            enumerate(feature_vector)] + classes
+    else:
+        attributes = [('name', 'numeric')] + [
+            ('neuron_' + str(i), 'numeric') for i, _ in
+            enumerate(feature_vector)] + classes
+    return attributes
+
+
 def kill_inactive(process_list):
     for process in process_list:
         if not process.is_alive():
             process.terminate()
 
 
-if __name__ == '__main__':
+def main(args=None):
     # set up the configuration object and parse commandline arguments
     configuration = Configuration()
     configuration.parse_arguments()
-
-    # initialize feature writer and perform extraction
-    feature_writer = FeatureWriter(configuration.output, configuration.label_dict)
 
     # initialize job and result queues
     job_queue = JoinableQueue()
@@ -147,12 +174,14 @@ if __name__ == '__main__':
     completed_inits = Value('i', 0)
     for i in range(number_of_processes.value):
         p = Process(target=extraction_worker,
-                    args=(configuration, configuration.device_ids[i % len(configuration.device_ids)], i))
+                    args=(configuration, initialization, completed_inits, number_of_processes, job_queue, result_queue,
+                          configuration.device_ids[i % len(configuration.device_ids)], i))
         p.daemon = True
         processes.append(p)
         p.start()
 
-    writer_thread = Process(target=writer_worker, args=(feature_writer,))
+    writer_thread = Process(target=writer_worker, args=(
+        configuration, initialization, completed_inits, total_num_of_files, number_of_processes, result_queue))
     writer_thread.daemon = True
     writer_thread.start()
 
@@ -171,5 +200,9 @@ if __name__ == '__main__':
     result_queue.join()
 
     if configuration.reduced:
-        fr.reduce_features(configuration.output, configuration.reduced)
-        # extract(configuration, feature_writer)
+        print('Performing feature reduction...')
+        fr.reduce_file(configuration.output, configuration.reduced)
+
+
+if __name__ == '__main__':
+    main()

@@ -1,9 +1,15 @@
 import argparse
 import configparser
-import csv
+import fnmatch
+import re
+from decimal import *
 from itertools import chain
-from os import listdir, makedirs
-from os.path import join, isfile, basename, expanduser, dirname, isdir
+from os import listdir, makedirs, walk
+from os.path import abspath, join, isfile, basename, expanduser, dirname, isdir, realpath
+
+from deep_spectrum_extractor.tools.label_parser import LabelParser
+
+getcontext().prec = 6
 
 
 class Configuration:
@@ -25,11 +31,14 @@ class Configuration:
         self.output = ''
         self.cmap = 'viridis'
         self.label_file = None
+        self.continuous_labels = False
         self.labels = None
         self.label_dict = {}
         self.layer = 'fc7'
         self.chunksize = None
         self.step = None
+        self.start = 0
+        self.end = None
         self.nfft = 256
         self.y_limit = None
         self.reduced = None
@@ -54,23 +63,35 @@ class Configuration:
         required_named.add_argument('-o',
                                     help='the file which the features are written to. Supports csv and arff formats',
                                     required=True)
-        self.parser.add_argument('-lf',
+        self.parser.add_argument('-l',
                                  help='csv file with the labels for the wavs in the form: \'test_001.wav, label\'. If nothing is specified here or under -labels, the name(s) of the directory/directories are used as labels.',
                                  default=None)
-        self.parser.add_argument('-labels', nargs='+',
-                                 help='define labels for folders explicitly in format: labelForFirstFolder labelForSecondFolder ...',
+        self.parser.add_argument('-tc',
+                                 help='Set labeling of features to time continuous mode. Only works in conjunction with -t and the specified label file has to provide labels for the specified hops in its second column.',
+                                 nargs='?', default=False, const=True)
+        self.parser.add_argument('-el', nargs='+',
+                                 help='Define labels for folders explicitly in format: labelForFirstFolder labelForSecondFolder ...',
                                  default=None)
         self.parser.add_argument('-cmap', default='viridis',
                                  help='define the matplotlib colour map to use for the spectrograms')
         self.parser.add_argument('-config',
-                                 help='path to configuration file which specifies caffe model and weight files. If this file does not exist a new one is created and filled with the standard settings-',
-                                 default='deep.conf')
+                                 help='path to configuration file which specifies caffe model and weight files. If this file does not exist a new one is created and filled with the standard settings.',
+                                 default=join(dirname(realpath(__file__)), 'deep.conf'))
         self.parser.add_argument('-layer', default='fc7',
                                  help='name of CNN layer (as defined in caffe prototxt) from which to extract the features.')
-        self.parser.add_argument('-chunksize', default=None, type=int,
-                                 help='define a chunksize in ms. wav data is split into chunks of this length before feature extraction.')
-        self.parser.add_argument('-step', default=None, type=int,
-                                 help='stepsize for creating the wav segments in ms. Defaults to the size of the chunks if -chunksize is given but -step is omitted.')
+        # self.parser.add_argument('-chunksize', default=None, type=int,
+        #                         help='define a chunksize in ms. wav data is split into chunks of this length before feature extraction.')
+        # self.parser.add_argument('-step', default=None, type=int,
+        #                         help='stepsize for creating the wav segments in ms. Defaults to the size of the chunks if -chunksize is given but -step is omitted.')
+        self.parser.add_argument('-start',
+                                 help='Set a start time from which features should be extracted from the audio files.',
+                                 type=Decimal, default=0)
+        self.parser.add_argument('-end',
+                                 help='Set a end time until which features should be extracted from the audio files.',
+                                 type=Decimal, default=None)
+        self.parser.add_argument('-t',
+                                 help='Extract deep spectrum features from windows with specified length and hopsize in seconds.',
+                                 nargs=2, type=Decimal, default=[None, None])
         self.parser.add_argument('-nfft', default=256,
                                  help='specify the size for the FFT window in number of samples', type=int)
         self.parser.add_argument('-reduced', nargs='?',
@@ -93,19 +114,25 @@ class Configuration:
         args = vars(self.parser.parse_args())
         self.folders = args['f']
         self.cmap = args['cmap']
-        self.output = args['o']
+        self.output = abspath(args['o'])
         makedirs(dirname(self.output), exist_ok=True)
-        self.label_file = args['lf']
-        self.labels = args['labels']
+        self.label_file = args['l']
+        self.labels = args['el']
         self.layer = args['layer']
         self.number_of_processes = args['np']
 
         # if either chunksize or step are not given they default to the value of the other given parameter
-        self.chunksize = args['chunksize'] if args['chunksize'] else args['step']
-        self.step = args['step'] if args['step'] else self.chunksize
+        # self.chunksize = args['chunksize'] if args['chunksize'] else args['step']
+        # self.step = args['step'] if args['step'] else self.chunksize
+
+        self.chunksize = args['t'][0]
+        self.step = args['t'][1]
+        self.start = args['start']
+        self.end = args['end']
+        self.continuous_labels = self.chunksize and args['tc'] and self.label_file
         self.nfft = args['nfft']
         self.reduced = args['reduced']
-        self.output_spectrograms = args['specout']
+        self.output_spectrograms = abspath(args['specout']) if args['specout'] else None
         self.y_limit = args['ylim']
         self.net = args['net']
         self.config = args['config']
@@ -133,14 +160,12 @@ class Configuration:
 
     @staticmethod
     def _find_wav_files(folder):
-        if listdir(folder):
-            wavs = [join(folder, wav_file) for wav_file in listdir(folder) if
-                    isfile(join(folder, wav_file)) and (wav_file.endswith('.wav') or wav_file.endswith('.WAV'))]
-            return wavs + list(chain.from_iterable(
-                [Configuration._find_wav_files(join(folder, subfolder)) for subfolder in listdir(folder) if
-                 isdir(join(folder, subfolder))]))
-        else:
-            return []
+        globexpression = '*.wav'
+        reg_expr = re.compile(fnmatch.translate(globexpression), re.IGNORECASE)
+        wavs = []
+        for root, dirs, files in walk(folder, topdown=True):
+            wavs += [join(root, j) for j in files if re.match(reg_expr, j)]
+        return wavs
 
     def _read_label_file(self):
         """
@@ -151,19 +176,14 @@ class Configuration:
 
         # delimiters are decided by the extension of the labels file
         if self.label_file.endswith('.tsv'):
-            reader = csv.reader(open(self.label_file), delimiter="\t")
+            parser = LabelParser(self.label_file, delimiter='\t', timecontinuous=self.continuous_labels)
         else:
-            reader = csv.reader(open(self.label_file))
-        self.label_dict = {}
+            parser = LabelParser(self.label_file, delimiter=',', timecontinuous=self.continuous_labels)
 
-        # a list of distinct labels is needed for deciding on the nominal class values for .arff files
-        self.labels = set([])
+        parser.parse_labels()
+        self.label_dict = parser.label_dict
+        self.labels = parser.labels
 
-        # parse the label file line by line
-        for row in reader:
-            key = row[0]
-            self.label_dict[key] = row[1]
-            self.labels.add(row[1])
         file_names = set(map(basename, self.files))
 
         # check if labels are missing for specific files
@@ -171,19 +191,31 @@ class Configuration:
         if missing_labels:
             self.parser.error('No labels for: ' + ', '.join(missing_labels))
 
+    @staticmethod
+    def _is_number(s):
+        try:
+            complex(s)  # for int, long, float and complex
+        except ValueError:
+            return False
+
+        return True
+
     def _create_labels_from_folder_structure(self):
         """
         If no label file is given, either explicit labels or the folder structure is used as class values for the input.
         :return: Nothing
         """
         if self.labels is None:
-            self.label_dict = {basename(wav): basename(dirname(wav)) for wav in self.files}
+            self.label_dict = {basename(wav): [basename(dirname(wav))] for wav in self.files}
         else:
             # map the labels given on the commandline to all files in a given folder in the order both appear in the
             # parsed options.
-            self.label_dict = {wav: self.labels[folder_index] for folder_index, folder in enumerate(self.folders) for
+            self.label_dict = {basename(wav): [self.labels[folder_index]] for folder_index, folder in
+                               enumerate(self.folders) for
                                wav in
                                self._find_wav_files(folder)}
+        labels = list(map(lambda x: x[0], self.label_dict.values()))
+        self.labels = [('class', set(labels))]
 
     def _load_config(self):
         """
@@ -251,24 +283,3 @@ class Configuration:
             print('CaffeNet weights: ' + self.model_weights)
         else:
             self.parser.error('No model weights found in ' + directory + '.')
-
-            # # set mode to GPU or CPU computation
-            # if self.gpu_mode:
-            #     caffe.set_device(int(self.device_id))
-            #     caffe.set_mode_gpu()
-            #     print('Using GPU device ' + str(self.device_id))
-            # else:
-            #     print('Using CPU-Mode')
-            #     caffe.set_mode_cpu()
-            #
-            # print('Loading Net')
-            # self.net = caffe.Net(model_def, caffe.TEST, weights=model_weights)
-            # self.transformer = caffe.io.Transformer({'data': self.net.blobs['data'].data.shape})
-            # self.transformer.set_transpose('data', (2, 0, 1))
-            # self.transformer.set_raw_scale('data', 255)  # rescale from [0, 1] to [0, 255]
-            # self.transformer.set_channel_swap('data', (2, 1, 0))  # swap channels from RGB to BGR
-            #
-            # # reshape input layer as batch processing is not needed
-            # shape = self.net.blobs['data'].shape
-            # self.net.blobs['data'].reshape(1, shape[1], shape[2], shape[3])
-            # self.net.reshape()

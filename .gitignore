@@ -1,8 +1,11 @@
 .idea/*
 .ipynb_checkpoints/*
 .fuse*
-__pycache__/*
-
+__pycache__
+build/*
+dist/*
+*.egg-info
+venv/*
 win.conf
 extract_deep_spectrum_conflict-20170322-172750.py
 *.png
