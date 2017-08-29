@@ -62,7 +62,7 @@ def plot_spectrograms(wav_file, window, hop, nfft=256, cmap='viridis', size=227,
         ax.set_axis_off()
         fig.add_axes(ax)
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+            warnings.simplefilter('ignore')
             Pxx, freqs, bins, im = plt.specgram(chunk, NFFT=nfft, noverlap=int(nfft / 2), Fs=frame_rate,
                                                 cmap=cmap)
         extent = im.get_extent()
@@ -88,7 +88,8 @@ def plot_spectrograms(wav_file, window, hop, nfft=256, cmap='viridis', size=227,
 
 def _generate_chunks(sound_info, sr, window, hop):
     if not window and not hop:
-        return sound_info
+        yield sound_info
+        return
     window = int(window * sr)
     hop = int(hop * sr)
     for n in range(max(int((len(sound_info)) / hop), 1)):
