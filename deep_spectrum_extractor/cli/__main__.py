@@ -138,7 +138,7 @@ def _determine_attributes(timestamp, feature_vector, classes):
             ('neuron_' + str(i), 'numeric') for i, _ in
             enumerate(feature_vector)] + classes
     else:
-        attributes = [('name', 'numeric')] + [
+        attributes = [('name', 'string')] + [
             ('neuron_' + str(i), 'numeric') for i, _ in
             enumerate(feature_vector)] + classes
     return attributes
