@@ -15,7 +15,6 @@ from os.path import basename, join
 
 environ['GLOG_minloglevel'] = '2'
 
-import caffe
 
 
 def _read_wav_data(wav_file, start=0, end=None):
