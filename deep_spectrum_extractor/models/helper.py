@@ -7,7 +7,7 @@ import tensorflow as tf
 #sys.path.append(osp.realpath(osp.join(osp.dirname(__file__), '../../../')))
 
 #from googlenet import GoogleNet
-#from vgg import VGG16
+from  deep_spectrum_extractor.models.vgg import VGG16
 from deep_spectrum_extractor.models.alexnet import AlexNet
 #from caffenet import CaffeNet
 #from nin import NiN
@@ -55,7 +55,7 @@ def std_spec(batch_size, isotropic=True):
     return DataSpec(batch_size=batch_size, scale_size=256, crop_size=224, isotropic=isotropic)
 
 # Collection of sample auto-generated models
-MODELS = (AlexNet,) #CaffeNet, GoogleNet, NiN, ResNet50, ResNet101, ResNet152, VGG16)
+MODELS = (AlexNet, VGG16) #CaffeNet, GoogleNet, NiN, ResNet50, ResNet101, ResNet152)
 
 # The corresponding data specifications for the sample models
 # These specifications are based on how the models were trained.
@@ -68,7 +68,7 @@ MODEL_DATA_SPECS = {
     #ResNet101: std_spec(batch_size=25),
     #ResNet152: std_spec(batch_size=25),
     #NiN: std_spec(batch_size=500),
-    #VGG16: std_spec(batch_size=25)
+    VGG16: std_spec(batch_size=25)
 }
 
 
