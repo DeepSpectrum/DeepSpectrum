@@ -123,9 +123,11 @@ def get_spectrogram_path(file, folders):
     return spectrogram_path
 
 
-def writer_worker(config, total_num_of_files, number_of_processes, result_queue, coordinator):
+def writer_worker(config, total_num_of_files, number_of_processes, result_queue, coordinator, start_condition):
     # with initialization:
     #     initialization.wait_for(lambda: completed_inits.value == number_of_processes.value, timeout=15)
+    with start_condition:
+        start_condition.wait()
     print('Starting extraction with {} processes...'.format(number_of_processes))
     write_timestamp = config.window or config.hop
     with tqdm(total=total_num_of_files) as pbar, open(config.output, 'w', newline='') as output_file:
@@ -227,7 +229,7 @@ def main(args=None):
     if not number_of_processes:
         number_of_processes = mp.cpu_count()
 
-    # number_of_processes = Value('i', number_of_processes)
+    start_writer = mp.Condition()
     coordinator = tf.train.Coordinator()
     processes = []
     for i in range(number_of_processes):
@@ -238,7 +240,7 @@ def main(args=None):
         file_name_queue.put(None)
         p.start()
     writer_thread = Process(target=writer_worker, args=(
-        configuration, total_num_of_files, number_of_processes, result_queue, coordinator))
+        configuration, total_num_of_files, number_of_processes, result_queue, coordinator, start_writer))
     writer_thread.daemon = True
     writer_thread.start()
 
@@ -249,8 +251,10 @@ def main(args=None):
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     with tf.Session(config=config) as sess:
-
+        print('Loading model and weights...')
         net.load(configuration.model_weights, sess)
+        with start_writer:
+            start_writer.notify()
         # tf.local_variables_initializer().run()
         # threads = tf.train.start_queue_runners(sess, coord=coordinator)
         finished_processes = 0
