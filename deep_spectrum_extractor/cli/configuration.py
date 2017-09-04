@@ -2,6 +2,7 @@ import argparse
 import configparser
 import fnmatch
 import re
+import deep_spectrum_extractor.models as models
 from decimal import *
 from itertools import chain
 from os import listdir, makedirs, walk
@@ -21,11 +22,7 @@ class Configuration:
 
     def __init__(self):
         # set default values
-        self.model_directory = join(expanduser('~'), 'caffe-master/models/bvlc_alexnet')
-        self.model_def = ''
-        self.model_weights = ''
-        self.gpu_mode = True
-        self.device_ids = [0]
+        self.model_weights = join(expanduser('~'), 'models/bvlc_alexnet.npy')
         self.number_of_processes = None
         self.folders = []
         self.output = ''
@@ -35,8 +32,8 @@ class Configuration:
         self.labels = None
         self.label_dict = {}
         self.layer = 'fc7'
-        self.chunksize = None
-        self.step = None
+        self.window = None
+        self.hop = None
         self.start = 0
         self.end = None
         self.nfft = 256
@@ -76,7 +73,7 @@ class Configuration:
                                  help='define the matplotlib colour map to use for the spectrograms')
         self.parser.add_argument('-config',
                                  help='path to configuration file which specifies caffe model and weight files. If this file does not exist a new one is created and filled with the standard settings.',
-                                 default=join(dirname(realpath(__file__)), 'deep.conf'))
+                                 default=join(dirname(realpath(__file__)), 'tensorflow.conf'))
         self.parser.add_argument('-layer', default='fc7',
                                  help='name of CNN layer (as defined in caffe prototxt) from which to extract the features.')
         # self.parser.add_argument('-chunksize', default=None, type=int,
@@ -107,9 +104,10 @@ class Configuration:
         self.parser.add_argument('-specout',
                                  help='define an existing folder where spectrogram plots should be saved during feature extraction. By default, spectrograms are not saved on disk to speed up extraction.',
                                  default=None)
+
         self.parser.add_argument('-net',
-                                 help='specify the CNN that will be used for the feature extraction. This should be a key for which a model directory is assigned in the config file.',
-                                 default='alexnet')
+                                 help='specify the CNN that will be used for the feature extraction. You need to specify a valid weight file in .npy format in your configuration file for this network.',
+                                 default='AlexNet', choices=[model.__name__ for model in models.get_models()])
 
         args = vars(self.parser.parse_args())
         self.folders = args['f']
@@ -125,11 +123,11 @@ class Configuration:
         # self.chunksize = args['chunksize'] if args['chunksize'] else args['step']
         # self.step = args['step'] if args['step'] else self.chunksize
 
-        self.chunksize = args['t'][0]
-        self.step = args['t'][1]
+        self.window = args['t'][0]
+        self.hop = args['t'][1]
         self.start = args['start']
         self.end = args['end']
-        self.continuous_labels = self.chunksize and args['tc'] and self.label_file
+        self.continuous_labels = self.window and args['tc'] and self.label_file
         self.nfft = args['nfft']
         self.reduced = args['reduced']
         self.output_spectrograms = abspath(args['specout']) if args['specout'] else None
@@ -156,7 +154,6 @@ class Configuration:
             self._read_label_file()
 
         self._load_config()
-        self._configure_caffe()
 
     @staticmethod
     def _find_wav_files(folder):
@@ -231,55 +228,52 @@ class Configuration:
             print('Found config file ' + self.config)
             conf_parser.read(self.config)
             main_conf = conf_parser['main']
-            self.gpu_mode = int(main_conf['gpu']) == 1
-            self.device_ids = list(map(int, main_conf['device_ids'].split(',')))
             self.size = int(main_conf['size'])
 
             net_conf = conf_parser['nets']
             if self.net in net_conf:
-                self.model_directory = net_conf[self.net]
+                self.model_weights = net_conf[self.net]
             else:
-                self.parser.error('No model directory defined for {} in {}'.format(self.net, self.config))
+                self.parser.error('No model weights defined for {} in {}'.format(self.net, self.config))
 
 
         # if not, create it with standard settings
         else:
             print('Writing standard config to ' + self.config)
-            main_conf = {'gpu': '1' if self.gpu_mode else '0',
-                         'device_ids': str(','.join(map(str, self.device_ids))),
-                         'size': str(self.size)}
-            net_conf = {'alexnet': self.model_directory}
+            main_conf = {'size': str(self.size)}
+            net_conf = {model.__name__: '# Path to model weights (.npy) go here.' for model in models.get_models()}
             conf_parser['main'] = main_conf
             conf_parser['nets'] = net_conf
             with open(self.config, 'w') as configfile:
                 conf_parser.write(configfile)
+                self.parser.error('Please initialize your configuration file in {}'.format(self.config))
 
-    def _configure_caffe(self):
-        """
-        Sets up the pre-trained CNN used for extraction.
-        :param parser: commandline parser object used in the set up
-        :return: Nothing
-        """
-        directory = self.model_directory
-
-        if not isdir(self.model_directory):
-            self.parser.error(
-                'Directory {} specified in {} for net {} does not exist!'.format(self.model_directory, self.config,
-                                                                                 self.net))
-        # load model definition
-        model_defs = [join(directory, file) for file in listdir(directory) if file.endswith('deploy.prototxt')]
-        if model_defs:
-            self.model_def = model_defs[0]
-            print('CaffeNet definition: ' + self.model_def)
-        else:
-            self.model_def = ''
-            self.parser.error('No model definition found in ' + directory + '.')
-
-        # load model wights
-        possible_weights = [join(directory, file) for file in listdir(directory)
-                            if file.endswith('.caffemodel')]
-        if possible_weights:
-            self.model_weights = possible_weights[0]
-            print('CaffeNet weights: ' + self.model_weights)
-        else:
-            self.parser.error('No model weights found in ' + directory + '.')
+    # def _configure_caffe(self):
+    #     """
+    #     Sets up the pre-trained CNN used for extraction.
+    #     :param parser: commandline parser object used in the set up
+    #     :return: Nothing
+    #     """
+    #     directory = self.model_directory
+    #
+    #     if not isdir(self.model_directory):
+    #         self.parser.error(
+    #             'Directory {} specified in {} for net {} does not exist!'.format(self.model_directory, self.config,
+    #                                                                              self.net))
+    #     # load model definition
+    #     model_defs = [join(directory, file) for file in listdir(directory) if file.endswith('deploy.prototxt')]
+    #     if model_defs:
+    #         self.model_def = model_defs[0]
+    #         print('CaffeNet definition: ' + self.model_def)
+    #     # else:
+    #     #     self.model_def = ''
+    #     #     self.parser.error('No model definition found in ' + directory + '.')
+    #
+    #     # load model wights
+    #     possible_weights = [join(directory, file) for file in listdir(directory)
+    #                         if file.endswith('.npy')]
+    #     if possible_weights:
+    #         self.model_weights = possible_weights[0]
+    #         print('CaffeNet weights: ' + self.model_weights)
+    #     # else:
+    #     #     self.parser.error('No model weights found in ' + directory + '.')
