@@ -15,6 +15,20 @@
   [http://caffe.berkeleyvision.org/installation.html](http://caffe.berkeleyvision.org/installation.html). 
   Make sure you can do `import caffe` without errors from the python prompt in your commandline 
   of choice. 
+* alternatively, a tensorflow based version is available in a separate branch. 
+
+## Installation
+For the caffe version, all dependencies apart from caffe itself can be installed by running
+```pip install -e .``` from the project root directory.
+
+
+For the tensorflow version, simply run 
+```pip install -e .['gpu']```
+or 
+```pip install -e .['cpu']```
+if you prefer a cpu only version. Installing into a python virtual environment is recommended.
+
+
 
 ## Configuration
 Apart from the commandline options, the feature extractor is configured via a 
@@ -42,8 +56,19 @@ alexnet = ~/caffe-master/models/bvlc_alexnet
 googlenet = ~/caffe-master/models/bvlc_alexnet`
 
 
+If you use the tensorflow version, you only have to fill in paths to corresponding 
+model weight files (converted from caffe weights using caffe-tensorflow in .npy format). 
+You can still specify the size for the spectrogram plots.
+
+`[main]
+size = 227
 
 
+[nets]
+AlexNet = # Path to model weights (.npy) go here.
+VGG16 = # Path to model weights (.npy) go here.`
+
+Currently, AlexNet and VGG16 are supported.
 
 ## Usage
 ### Basics
@@ -96,13 +121,13 @@ A detailed description of the commandline options is given below. Apart from
 | -l | Specify a comma separated values file containing labels for each *.wav* file | None |
 | -el | Specify labels explicitly for each folder given after -f. Number of given labels has to match the number of specified folders. If both this and -lf are not specified, each .wav is assigned the name of its parent directory as label. | None |
 | -cmap | Choose a matplotlib colourmap for creating the spectrogram plots. | viridis |
-| -layer | Name of the layer from which features should be extracted as specified in your caffe .prototxt file. Only layers with 1-D output are supported | fc7 |
-| -step | Configure a stepsize for segmentation of the wavs in ms.  Defaults to *chunksize* if `-chunksize` is given but step is omitted. | None |
+| -layer | Name of the layer from which features should be extracted as specified in your caffe .prototxt file. For the tesorflow version, the available layers are displayed on the commandline help. | fc7 |
 | -t | Define window and hopsize. | None |
 | -nfft | The length of the FFT window used for creating the spectrograms in number of samples. Consider choosing smaller values when extracting from small segments. | 256 |
 | -reduced | If a filepath is given here, an additional reduced version of the output is computed after feature extraction and written to the path. The feature reduction simply removes attributes that have a value of zero for all instances. | None |
 | -config | The path to the configuration file used by the program can be given here. If the file does not exist yet, it is created and filled with standard settings. | deep.conf |
-| -specout | Specify an existing folder to save the spectrograms as .pngs | None |
+| -specout | Specify a folder to save the spectrograms as .pngs | None |
 | -net | Choose the net for feature extraction as specified in the config file | alexnet |
 | -ylim | Specify a limit for the y-axis in the spectrogram plot. | None |
 | -np | Specify the number of processes used for the extraction. Defaults to the number of available CPU cores | None |
+| -h | Show help. | None |
