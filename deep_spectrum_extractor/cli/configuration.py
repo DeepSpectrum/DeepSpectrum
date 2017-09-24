@@ -248,32 +248,3 @@ class Configuration:
                 conf_parser.write(configfile)
                 self.parser.error('Please initialize your configuration file in {}'.format(self.config))
 
-    # def _configure_caffe(self):
-    #     """
-    #     Sets up the pre-trained CNN used for extraction.
-    #     :param parser: commandline parser object used in the set up
-    #     :return: Nothing
-    #     """
-    #     directory = self.model_directory
-    #
-    #     if not isdir(self.model_directory):
-    #         self.parser.error(
-    #             'Directory {} specified in {} for net {} does not exist!'.format(self.model_directory, self.config,
-    #                                                                              self.net))
-    #     # load model definition
-    #     model_defs = [join(directory, file) for file in listdir(directory) if file.endswith('deploy.prototxt')]
-    #     if model_defs:
-    #         self.model_def = model_defs[0]
-    #         print('CaffeNet definition: ' + self.model_def)
-    #     # else:
-    #     #     self.model_def = ''
-    #     #     self.parser.error('No model definition found in ' + directory + '.')
-    #
-    #     # load model wights
-    #     possible_weights = [join(directory, file) for file in listdir(directory)
-    #                         if file.endswith('.npy')]
-    #     if possible_weights:
-    #         self.model_weights = possible_weights[0]
-    #         print('CaffeNet weights: ' + self.model_weights)
-    #     # else:
-    #     #     self.parser.error('No model weights found in ' + directory + '.')
