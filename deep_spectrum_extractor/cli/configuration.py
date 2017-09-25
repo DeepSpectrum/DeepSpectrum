@@ -7,6 +7,8 @@ from decimal import *
 from itertools import chain
 from os import listdir, makedirs, walk
 from os.path import abspath, join, isfile, basename, expanduser, dirname, isdir, realpath
+from deep_spectrum_extractor.backend.extract_deep_spectrum import PLOTTING_FUNCTIONS
+from matplotlib import cm
 
 from deep_spectrum_extractor.tools.label_parser import LabelParser
 
@@ -47,6 +49,9 @@ class Configuration:
         self.parser = None
         self.net = None
         self.config = None
+        self.mode = 'spectrogram'
+        self.delta = None
+        self.scale = 'linear'
 
     def parse_arguments(self):
         """
@@ -70,16 +75,12 @@ class Configuration:
                                  help='Define labels for folders explicitly in format: labelForFirstFolder labelForSecondFolder ...',
                                  default=None)
         self.parser.add_argument('-cmap', default='viridis',
-                                 help='define the matplotlib colour map to use for the spectrograms')
+                                 help='define the matplotlib colour map to use for the spectrograms', choices=sorted([m for m in cm.cmap_d if not m.endswith("_r")]))
         self.parser.add_argument('-config',
                                  help='path to configuration file which specifies caffe model and weight files. If this file does not exist a new one is created and filled with the standard settings.',
                                  default=join(dirname(realpath(__file__)), 'tensorflow.conf'))
         self.parser.add_argument('-layer', default='fc7',
                                  help='name of CNN layer (as defined in caffe prototxt) from which to extract the features.')
-        # self.parser.add_argument('-chunksize', default=None, type=int,
-        #                         help='define a chunksize in ms. wav data is split into chunks of this length before feature extraction.')
-        # self.parser.add_argument('-step', default=None, type=int,
-        #                         help='stepsize for creating the wav segments in ms. Defaults to the size of the chunks if -chunksize is given but -step is omitted.')
         self.parser.add_argument('-start',
                                  help='Set a start time from which features should be extracted from the audio files.',
                                  type=Decimal, default=0)
@@ -108,6 +109,12 @@ class Configuration:
         self.parser.add_argument('-net',
                                  help='specify the CNN that will be used for the feature extraction. You need to specify a valid weight file in .npy format in your configuration file for this network.',
                                  default='AlexNet', choices=[model.__name__ for model in models.get_models()])
+        self.parser.add_argument('-mode', help='Type of plot to use in the system.', default='spectrogram', choices=PLOTTING_FUNCTIONS.keys())
+        self.parser.add_argument('-scale', help='Scale for the y-axis of the plots used by the system. Defaults to \'chroma\' in chroma mode.', default='linear',
+                                 choices=['linear', 'log', 'mel'])
+        self.parser.add_argument('-delta', type=_check_positive,
+                                 help='If given, derivatives of the given order of the selected features are displayed in the plots used by the system.',
+                                 default=None)
 
         args = vars(self.parser.parse_args())
         self.folders = args['f']
@@ -118,6 +125,9 @@ class Configuration:
         self.labels = args['el']
         self.layer = args['layer']
         self.number_of_processes = args['np']
+        self.mode = args['mode']
+        self.delta = args['delta']
+        self.scale = args['scale']
 
         # if either chunksize or step are not given they default to the value of the other given parameter
         # self.chunksize = args['chunksize'] if args['chunksize'] else args['step']
@@ -248,3 +258,9 @@ class Configuration:
                 conf_parser.write(configfile)
                 self.parser.error('Please initialize your configuration file in {}'.format(self.config))
 
+
+def _check_positive(value):
+    ivalue = int(value)
+    if ivalue <= 0:
+         raise argparse.ArgumentTypeError("%s is an invalid positive int value" % value)
+    return ivalue

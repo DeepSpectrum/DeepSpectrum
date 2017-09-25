@@ -9,7 +9,7 @@ setup(name='deep_spectrum_extractor',
               'reduce_ds_features = deep_spectrum_extractor.tools.feature_reduction:main'
           ]
       },
-      install_requires=['numpy', 'scipy', 'imread', 'pysoundfile', 'tqdm', 'matplotlib', 'opencv-python'],
+      install_requires=['numpy', 'scipy', 'imread', 'pysoundfile', 'tqdm', 'matplotlib', 'opencv-python', 'librosa'],
       extras_require={'gpu': ['tensorflow-gpu'], 'cpu': ['tensorflow']},
       zip_safe=False
       )

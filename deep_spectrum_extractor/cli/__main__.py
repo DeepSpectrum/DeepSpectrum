@@ -105,11 +105,12 @@ def plot_file(file, config, data_spec):
     if config.output_spectrograms:
         spectrogram_directory = join(config.output_spectrograms, get_spectrogram_path(file, config.folders))
         makedirs(spectrogram_directory, exist_ok=True)
-    return np.asarray([plot for _, plot in
-                       eds.plot_spectrograms(file, config.window, config.hop, nfft=config.nfft, cmap=config.cmap,
-                                             size=config.size, output_folder=spectrogram_directory,
-                                             y_limit=config.y_limit, start=config.start, end=config.end,
-                                             data_spec=data_spec)])
+    return np.asarray([plot for plot in
+                       eds.plot(file, config.window, config.hop, scale=config.scale, mode=config.mode,
+                                delta=config.delta, nfft=config.nfft, cmap=config.cmap,
+                                size=config.size, output_folder=spectrogram_directory,
+                                y_limit=config.y_limit, start=config.start, end=config.end,
+                                data_spec=data_spec)])
 
 
 def get_spectrogram_path(file, folders):
@@ -213,7 +214,10 @@ def main(args=None):
     net = models.load_model(configuration.net)
     print('Using {} with weights found in {}.'.format(net.__class__.__name__, configuration.model_weights))
     if configuration.layer not in net.layers:
-        configuration.parser.error('\'{}\' is not a valid layer name for {}. Available layers are: {}'.format(configuration.layer, net.__class__.__name__, list(net.layers.keys())))
+        configuration.parser.error(
+            '\'{}\' is not a valid layer name for {}. Available layers are: {}'.format(configuration.layer,
+                                                                                       net.__class__.__name__,
+                                                                                       list(net.layers.keys())))
     data_spec = models.get_data_spec(model_instance=net)
 
     file_name_queue = JoinableQueue()

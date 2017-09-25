@@ -3,9 +3,11 @@ import warnings
 
 import matplotlib
 
+
 # force matplotlib to not use X-Windows backend. Needed for running the tool through an ssh connection.
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import librosa.display
 import numpy as np
 import soundfile as sf
 import deep_spectrum_extractor.models as models
@@ -14,6 +16,7 @@ from os import environ
 from os.path import basename, join
 
 environ['GLOG_minloglevel'] = '2'
+
 
 
 
@@ -38,8 +41,7 @@ def _read_wav_data(wav_file, start=0, end=None):
     return sound_info, frame_rate
 
 
-def plot_spectrograms(wav_file, window, hop, nfft=256, cmap='viridis', size=227, output_folder=None,
-                      y_limit=None, start=0, end=None, data_spec=None):
+def plot(wav_file, window, hop, mode='spectrogram', size=227, output_folder=None, start=0, end=None, data_spec=None, **kwargs):
     """
     Plot spectrograms for equally sized chunks of a wav-file using the described parameters.
     :param wav_file: path to an existing .wav file
@@ -62,16 +64,9 @@ def plot_spectrograms(wav_file, window, hop, nfft=256, cmap='viridis', size=227,
         fig.add_axes(ax)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
-            Pxx, freqs, bins, im = ax.specgram(chunk, NFFT=nfft, noverlap=int(nfft / 2), Fs=frame_rate,
-                                                cmap=cmap)
-        extent = im.get_extent()
+            spectrogram_axes = PLOTTING_FUNCTIONS[mode](chunk, frame_rate, **kwargs)
 
-        ax.set_xlim(extent[0], extent[1])
-
-        if y_limit:
-            ax.set_ylim(extent[2], y_limit)
-        else:
-            ax.set_ylim(extent[2], extent[3])
+        fig.add_axes(spectrogram_axes)
 
         if output_folder:
             file_name = basename(wav_file)[:-4]
@@ -89,12 +84,43 @@ def plot_spectrograms(wav_file, window, hop, nfft=256, cmap='viridis', size=227,
         except IOError:
             print('Error while reading the spectrogram blob.')
             return None
-        if write_index:
-            yield idx, models.process_image(img, data_spec)
 
-        else:
-            yield 0, models.process_image(img, data_spec)
+        yield models.process_image(img, data_spec)
 
+
+
+def plot_spectrogram(audio_data, sr, nfft=256, delta=None, **kwargs):
+    spectrogram = librosa.stft(audio_data, n_fft=nfft, hop_length=int(nfft / 2))
+    if delta:
+        spectrogram = librosa.feature.delta(spectrogram, order=delta)
+    spectrogram = librosa.amplitude_to_db(spectrogram, ref=np.max, top_db=None)
+    return _create_plot(spectrogram,sr, nfft, **kwargs)
+
+def plot_mel_spectrogram(audio_data, sr, nfft=256, melbands=64, delta=None, **kwargs):
+    spectrogram = librosa.feature.melspectrogram(y=audio_data, sr=sr, n_fft=nfft,
+                                                 hop_length=int(nfft / 2),
+                                                 n_mels=melbands, power=1)
+    if delta:
+        spectrogram = librosa.feature.delta(spectrogram, order=delta)
+    spectrogram = librosa.amplitude_to_db(spectrogram, ref=np.max, top_db=None)
+    return _create_plot(spectrogram, sr, nfft, **kwargs)
+
+def plot_chroma(audio_data, sr, nfft=256, delta=None, **kwargs):
+    spectrogram = librosa.feature.chroma_stft(audio_data, sr, n_fft=nfft, hop_length=int(nfft/2))
+    if delta:
+        spectrogram = librosa.feature.delta(spectrogram, order=delta)
+    return _create_plot(spectrogram, sr, nfft, scale='chroma', **kwargs)
+
+def _create_plot(spectrogram, sr, nfft, y_limit=None, cmap='viridis', scale='linear'):
+    if y_limit:
+        relative_limit = y_limit * 2 / sr
+        relative_limit = min(relative_limit, 1)
+        spectrogram = spectrogram[:int(relative_limit * (1 + nfft / 2)), :]
+    spectrogram_axes = librosa.display.specshow(spectrogram, hop_length=int(nfft / 2), sr=sr, cmap=cmap, y_axis=scale)
+    return spectrogram_axes
+
+PLOTTING_FUNCTIONS = {'spectrogram': plot_spectrogram,
+                      'mel': plot_mel_spectrogram, 'chroma': plot_chroma}
 
 def _generate_chunks(sound_info, sr, window, hop):
     if not window and not hop:
