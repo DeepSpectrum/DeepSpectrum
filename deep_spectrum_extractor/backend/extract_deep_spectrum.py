@@ -175,8 +175,8 @@ def extract_features_from_wav(wav_file, input_transformer, caffe_net, window=Non
     """
     for index, img_blob in enumerate(
             plot(wav_file, **kwargs)):
-        if chunksize:
-            yield start + (index * step), extract_features_from_image_blob(img_blob, input_transformer, caffe_net,
+        if window:
+            yield start + (index * hop), extract_features_from_image_blob(img_blob, input_transformer, caffe_net,
                                                                            layer)
         else:
             yield None, extract_features_from_image_blob(img_blob, input_transformer, caffe_net, layer)
