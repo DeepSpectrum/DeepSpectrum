@@ -32,7 +32,7 @@ def _read_wav_data(wav_file, start=0, end=None):
         sound_info = sound_info.sum(axis=1) / 2
         sound_info = np.array(sound_info)
     # remove zeros at beginning and end of audio file
-    # sound_info = np.trim_zeros(sound_info)
+    sound_info = np.trim_zeros(sound_info)
     start = int(start * frame_rate)
     end = int(end * frame_rate) if end else None
     sound_info = sound_info[start:end] if end else sound_info[start:]

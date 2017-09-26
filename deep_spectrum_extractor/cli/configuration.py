@@ -198,6 +198,7 @@ class Configuration:
 
         parser.parse_labels()
         self.label_dict = parser.label_dict
+        print()
         self.labels = parser.labels
 
         file_names = set(map(basename, self.files))
