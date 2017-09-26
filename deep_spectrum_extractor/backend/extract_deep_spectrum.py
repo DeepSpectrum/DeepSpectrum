@@ -39,7 +39,8 @@ def _read_wav_data(wav_file, start=0, end=None):
     return sound_info, frame_rate
 
 
-def plot(wav_file, window=None, hop=None, mode='spectrogram', size=227, output_folder=None, start=0, end=None, **kwargs):
+def plot(wav_file, window=None, hop=None, mode='spectrogram', size=227, output_folder=None, start=0, end=None,
+         **kwargs):
     """
     Plot spectrograms for equally sized chunks of a wav-file using the described parameters.
     :param wav_file: path to an existing .wav file
@@ -79,13 +80,13 @@ def plot(wav_file, window=None, hop=None, mode='spectrogram', size=227, output_f
         yield buf.read()
 
 
-
 def plot_spectrogram(audio_data, sr, nfft=256, delta=None, **kwargs):
     spectrogram = librosa.stft(audio_data, n_fft=nfft, hop_length=int(nfft / 2), center=False)
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
     spectrogram = librosa.power_to_db(spectrogram, top_db=None)
-    return _create_plot(spectrogram,sr, nfft, **kwargs)
+    return _create_plot(spectrogram, sr, nfft, **kwargs)
+
 
 def plot_mel_spectrogram(audio_data, sr, nfft=256, melbands=64, delta=None, **kwargs):
     spectrogram = librosa.feature.melspectrogram(y=audio_data, sr=sr, n_fft=nfft,
@@ -96,11 +97,13 @@ def plot_mel_spectrogram(audio_data, sr, nfft=256, melbands=64, delta=None, **kw
     spectrogram = librosa.amplitude_to_db(spectrogram, top_db=None)
     return _create_plot(spectrogram, sr, nfft, **kwargs)
 
+
 def plot_chroma(audio_data, sr, nfft=256, delta=None, **kwargs):
-    spectrogram = librosa.feature.chroma_stft(audio_data, sr, n_fft=nfft, hop_length=int(nfft/2))
+    spectrogram = librosa.feature.chroma_stft(audio_data, sr, n_fft=nfft, hop_length=int(nfft / 2))
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
     return _create_plot(spectrogram, sr, nfft, scale='chroma', **kwargs)
+
 
 def _create_plot(spectrogram, sr, nfft, y_limit=None, cmap='viridis', scale='linear'):
     if y_limit:
@@ -110,8 +113,10 @@ def _create_plot(spectrogram, sr, nfft, y_limit=None, cmap='viridis', scale='lin
     spectrogram_axes = librosa.display.specshow(spectrogram, hop_length=int(nfft / 2), sr=sr, cmap=cmap, y_axis=scale)
     return spectrogram_axes
 
+
 PLOTTING_FUNCTIONS = {'spectrogram': plot_spectrogram,
                       'mel': plot_mel_spectrogram, 'chroma': plot_chroma}
+
 
 def _generate_chunks(sound_info, sr, window=None, hop=None):
     if not window and not hop:
@@ -119,8 +124,8 @@ def _generate_chunks(sound_info, sr, window=None, hop=None):
         return
     window = int(window * sr)
     hop = int(hop * sr)
-    for n in range(max(int((len(sound_info)) / hop), 1)):
-        yield sound_info[n * hop:min(n * hop + window, len(sound_info))]
+    for n in range(max(int((len(sound_info)) / hop) - 1, 1)):
+        yield sound_info[n * hop:n * hop + window]
 
 
 def extract_features_from_image_blob(img_blob, input_transformer, caffe_net, layer='fc7'):
@@ -151,7 +156,8 @@ def extract_features_from_image_blob(img_blob, input_transformer, caffe_net, lay
     return np.ravel(features)
 
 
-def extract_features_from_wav(wav_file, input_transformer, caffe_net, chunksize=None, step=None, start=0, layer='fc7', **kwargs):
+def extract_features_from_wav(wav_file, input_transformer, caffe_net, chunksize=None, step=None, start=0, layer='fc7',
+                              **kwargs):
     """
     Extracts deep spectrum features from a given wav-file using either the whole file or equally sized chunks as basis
     for the spectrogram plots.
