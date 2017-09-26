@@ -6,6 +6,7 @@ import matplotlib
 # force matplotlib to not use X-Windows backend. Needed for running the tool through an ssh connection.
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import librosa.display
 import numpy as np
 import soundfile as sf
 from imread import imread_from_blob
@@ -38,8 +39,7 @@ def _read_wav_data(wav_file, start=0, end=None):
     return sound_info, frame_rate
 
 
-def plot_spectrograms(wav_file, window, hop, nfft=256, cmap='viridis', size=227, output_folder=None,
-                      y_limit=None, start=0, end=None):
+def plot(wav_file, window=None, hop=None, mode='spectrogram', size=227, output_folder=None, start=0, end=None, **kwargs):
     """
     Plot spectrograms for equally sized chunks of a wav-file using the described parameters.
     :param wav_file: path to an existing .wav file
@@ -63,30 +63,57 @@ def plot_spectrograms(wav_file, window, hop, nfft=256, cmap='viridis', size=227,
         fig.add_axes(ax)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
-            Pxx, freqs, bins, im = plt.specgram(chunk, NFFT=nfft, noverlap=int(nfft / 2), Fs=frame_rate,
-                                                cmap=cmap)
-        extent = im.get_extent()
+            spectrogram_axes = PLOTTING_FUNCTIONS[mode](chunk, frame_rate, **kwargs)
 
-        plt.xlim([extent[0], extent[1]])
-
-        if y_limit:
-            plt.ylim([extent[2], y_limit])
-        else:
-            plt.ylim([extent[2], extent[3]])
+        fig.add_axes(spectrogram_axes)
 
         if output_folder:
             file_name = basename(wav_file)[:-4]
             outfile = join(output_folder, file_name + '_' + str(idx) + '.png') if write_index else join(output_folder,
                                                                                                         file_name + '.png')
-            plt.savefig(outfile, format='png', dpi=size)
+            fig.savefig(outfile, format='png', dpi=size)
         buf = io.BytesIO()
-        plt.savefig(buf, format='png', dpi=size)
+        fig.savefig(buf, format='png', dpi=size)
         buf.seek(0)
         plt.close('all')
         yield buf.read()
 
 
-def _generate_chunks(sound_info, sr, window, hop):
+
+def plot_spectrogram(audio_data, sr, nfft=256, delta=None, **kwargs):
+    spectrogram = librosa.stft(audio_data, n_fft=nfft, hop_length=int(nfft / 2), center=False)
+    if delta:
+        spectrogram = librosa.feature.delta(spectrogram, order=delta)
+    spectrogram = librosa.power_to_db(spectrogram, top_db=None)
+    return _create_plot(spectrogram,sr, nfft, **kwargs)
+
+def plot_mel_spectrogram(audio_data, sr, nfft=256, melbands=64, delta=None, **kwargs):
+    spectrogram = librosa.feature.melspectrogram(y=audio_data, sr=sr, n_fft=nfft,
+                                                 hop_length=int(nfft / 2),
+                                                 n_mels=melbands, power=1)
+    if delta:
+        spectrogram = librosa.feature.delta(spectrogram, order=delta)
+    spectrogram = librosa.amplitude_to_db(spectrogram, top_db=None)
+    return _create_plot(spectrogram, sr, nfft, **kwargs)
+
+def plot_chroma(audio_data, sr, nfft=256, delta=None, **kwargs):
+    spectrogram = librosa.feature.chroma_stft(audio_data, sr, n_fft=nfft, hop_length=int(nfft/2))
+    if delta:
+        spectrogram = librosa.feature.delta(spectrogram, order=delta)
+    return _create_plot(spectrogram, sr, nfft, scale='chroma', **kwargs)
+
+def _create_plot(spectrogram, sr, nfft, y_limit=None, cmap='viridis', scale='linear'):
+    if y_limit:
+        relative_limit = y_limit * 2 / sr
+        relative_limit = min(relative_limit, 1)
+        spectrogram = spectrogram[:int(relative_limit * (1 + nfft / 2)), :]
+    spectrogram_axes = librosa.display.specshow(spectrogram, hop_length=int(nfft / 2), sr=sr, cmap=cmap, y_axis=scale)
+    return spectrogram_axes
+
+PLOTTING_FUNCTIONS = {'spectrogram': plot_spectrogram,
+                      'mel': plot_mel_spectrogram, 'chroma': plot_chroma}
+
+def _generate_chunks(sound_info, sr, window=None, hop=None):
     if not window and not hop:
         yield sound_info
         return
@@ -124,8 +151,7 @@ def extract_features_from_image_blob(img_blob, input_transformer, caffe_net, lay
     return np.ravel(features)
 
 
-def extract_features_from_wav(wav_file, input_transformer, caffe_net, nfft=256, layer='fc7', cmap='viridis', size=227,
-                              chunksize=None, step=None, output_spectrograms=None, y_limit=None, start=0, end=None):
+def extract_features_from_wav(wav_file, input_transformer, caffe_net, chunksize=None, step=None, start=0, layer='fc7', **kwargs):
     """
     Extracts deep spectrum features from a given wav-file using either the whole file or equally sized chunks as basis
     for the spectrogram plots.
@@ -142,10 +168,9 @@ def extract_features_from_wav(wav_file, input_transformer, caffe_net, nfft=256, 
     :return: index of the extracted feature vector (in the case of extracting from chunks), feature vector
     """
     for index, img_blob in enumerate(
-            plot_spectrograms(wav_file, chunksize, step, nfft=nfft, cmap=cmap, size=size,
-                              output_folder=output_spectrograms, y_limit=y_limit, start=start, end=end)):
+            plot(wav_file, **kwargs)):
         if chunksize:
             yield start + (index * step), extract_features_from_image_blob(img_blob, input_transformer, caffe_net,
-                                                                           layer=layer)
+                                                                           layer)
         else:
-            yield None, extract_features_from_image_blob(img_blob, input_transformer, caffe_net, layer=layer)
+            yield None, extract_features_from_image_blob(img_blob, input_transformer, caffe_net, layer)

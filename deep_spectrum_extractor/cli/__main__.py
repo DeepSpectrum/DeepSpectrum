@@ -3,8 +3,8 @@ import multiprocessing as mp
 import pathlib
 from multiprocessing import JoinableQueue, Process, Value, Condition
 from os import makedirs, environ
-from os.path import basename, join, commonpath, dirname
 
+from os.path import basename, join, commonpath, dirname
 from tqdm import tqdm
 
 import deep_spectrum_extractor.backend.extract_deep_spectrum as eds
@@ -78,8 +78,9 @@ def extract_file(file, config, net, transformer):
                                                          chunksize=config.chunksize,
                                                          step=config.step, layer=config.layer,
                                                          cmap=config.cmap, size=config.size,
-                                                         output_spectrograms=spectrogram_directory,
-                                                         y_limit=config.y_limit, start=config.start, end=config.end):
+                                                         output_folder=spectrogram_directory,
+                                                         y_limit=config.y_limit, start=config.start, end=config.end,
+                                                         delta=config.delta, scale=config.scale, mode=config.mode):
         if features.any():
             yield index, file_name, features
 

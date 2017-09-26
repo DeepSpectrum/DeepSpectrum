@@ -5,8 +5,11 @@ import re
 from decimal import *
 from itertools import chain
 from os import listdir, makedirs, walk
+
+from matplotlib import cm
 from os.path import abspath, join, isfile, basename, expanduser, dirname, isdir, realpath
 
+from deep_spectrum_extractor.backend.extract_deep_spectrum import PLOTTING_FUNCTIONS
 from deep_spectrum_extractor.tools.label_parser import LabelParser
 
 getcontext().prec = 6
@@ -50,6 +53,9 @@ class Configuration:
         self.parser = None
         self.net = None
         self.config = None
+        self.mode = 'spectrogram'
+        self.delta = None
+        self.scale = 'linear'
 
     def parse_arguments(self):
         """
@@ -73,7 +79,8 @@ class Configuration:
                                  help='Define labels for folders explicitly in format: labelForFirstFolder labelForSecondFolder ...',
                                  default=None)
         self.parser.add_argument('-cmap', default='viridis',
-                                 help='define the matplotlib colour map to use for the spectrograms')
+                                 help='define the matplotlib colour map to use for the spectrograms',
+                                 choices=sorted([m for m in cm.cmap_d if not m.endswith("_r")]))
         self.parser.add_argument('-config',
                                  help='path to configuration file which specifies caffe model and weight files. If this file does not exist a new one is created and filled with the standard settings.',
                                  default=join(dirname(realpath(__file__)), 'deep.conf'))
@@ -108,8 +115,17 @@ class Configuration:
                                  help='define an existing folder where spectrogram plots should be saved during feature extraction. By default, spectrograms are not saved on disk to speed up extraction.',
                                  default=None)
         self.parser.add_argument('-net',
-                                 help='specify the CNN that will be used for the feature extraction. This should be a key for which a model directory is assigned in the config file.',
+                                 help='specify the CNN that will be used for the feature extraction. You need to specify a valid weight file in .npy format in your configuration file for this network.',
                                  default='alexnet')
+        self.parser.add_argument('-mode', help='Type of plot to use in the system.', default='spectrogram',
+                                 choices=PLOTTING_FUNCTIONS.keys())
+        self.parser.add_argument('-scale',
+                                 help='Scale for the y-axis of the plots used by the system. Defaults to \'chroma\' in chroma mode.',
+                                 default='linear',
+                                 choices=['linear', 'log', 'mel'])
+        self.parser.add_argument('-delta', type=_check_positive,
+                                 help='If given, derivatives of the given order of the selected features are displayed in the plots used by the system.',
+                                 default=None)
 
         args = vars(self.parser.parse_args())
         self.folders = args['f']
@@ -283,3 +299,10 @@ class Configuration:
             print('CaffeNet weights: ' + self.model_weights)
         else:
             self.parser.error('No model weights found in ' + directory + '.')
+
+
+def _check_positive(value):
+    ivalue = int(value)
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError("%s is an invalid positive int value" % value)
+    return ivalue
