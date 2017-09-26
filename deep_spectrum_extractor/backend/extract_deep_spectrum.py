@@ -174,7 +174,7 @@ def extract_features_from_wav(wav_file, input_transformer, caffe_net, window=Non
     :return: index of the extracted feature vector (in the case of extracting from chunks), feature vector
     """
     for index, img_blob in enumerate(
-            plot(wav_file, **kwargs)):
+            plot(wav_file, window=window, hop=hop, start=start, **kwargs)):
         if window:
             yield start + (index * hop), extract_features_from_image_blob(img_blob, input_transformer, caffe_net,
                                                                            layer)
