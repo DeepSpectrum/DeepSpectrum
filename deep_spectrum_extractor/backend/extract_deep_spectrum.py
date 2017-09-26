@@ -124,8 +124,8 @@ def _generate_chunks(sound_info, sr, window=None, hop=None):
         return
     window = int(window * sr)
     hop = int(hop * sr)
-    for n in range(max(int((len(sound_info)) / hop) - 1, 1)):
-        yield sound_info[n * hop:n * hop + window]
+    for n in range(max(int((len(sound_info)) / hop), 1)):
+        yield sound_info[n * hop:min((n * hop + window), len(sound_info))]
 
 
 def extract_features_from_image_blob(img_blob, input_transformer, caffe_net, layer='fc7'):
