@@ -75,8 +75,8 @@ def extract_file(file, config, net, transformer):
         makedirs(spectrogram_directory, exist_ok=True)
     for index, features in eds.extract_features_from_wav(file, transformer, net,
                                                          nfft=config.nfft,
-                                                         chunksize=config.chunksize,
-                                                         step=config.step, layer=config.layer,
+                                                         window=config.chunksize,
+                                                         hop=config.step, layer=config.layer,
                                                          cmap=config.cmap, size=config.size,
                                                          output_folder=spectrogram_directory,
                                                          y_limit=config.y_limit, start=config.start, end=config.end,

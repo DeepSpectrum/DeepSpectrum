@@ -156,7 +156,7 @@ def extract_features_from_image_blob(img_blob, input_transformer, caffe_net, lay
     return np.ravel(features)
 
 
-def extract_features_from_wav(wav_file, input_transformer, caffe_net, chunksize=None, step=None, start=0, layer='fc7',
+def extract_features_from_wav(wav_file, input_transformer, caffe_net, window=None, hop=None, start=0, layer='fc7',
                               **kwargs):
     """
     Extracts deep spectrum features from a given wav-file using either the whole file or equally sized chunks as basis
