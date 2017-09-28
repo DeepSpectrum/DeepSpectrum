@@ -88,7 +88,7 @@ def plot(wav_file, window, hop, mode='spectrogram', size=227, output_folder=None
 
 
 def plot_spectrogram(audio_data, sr, nfft=256, delta=None, **kwargs):
-    spectrogram = librosa.stft(audio_data, n_fft=nfft, hop_length=int(nfft / 2))
+    spectrogram = librosa.stft(audio_data, n_fft=nfft, hop_length=int(nfft / 2), center=False)
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
     spectrogram = librosa.amplitude_to_db(spectrogram, ref=np.max, top_db=None)

@@ -108,6 +108,9 @@ class Configuration:
                                  default=None)
         self.parser.add_argument('--no_timestamps', action='store_true',
                                  help='Remove timestamps from the output.')
+        self.parser.add_argument('-nmel', type=int,
+                                 help='Number of melbands used for computing the melspectrogram.',
+                                 default=64)
 
         args = vars(self.parser.parse_args())
         self.folders = args['f']
@@ -131,6 +134,7 @@ class Configuration:
         self.plotting_args['end'] = args['end']
         self.plotting_args['window'] = args['t'][0]
         self.plotting_args['hop'] = args['t'][1]
+        self.plotting_args['melbands'] = args['nmel']
 
         # arguments for extraction functions
         self.extraction_args['layer'] = args['layer']
