@@ -40,7 +40,7 @@ def _read_wav_data(wav_file, start=0, end=None):
     return sound_info, frame_rate
 
 
-def plot(wav_file, window, hop, mode='spectrogram', size=227, output_folder=None, start=0, end=None, data_spec=None, **kwargs):
+def plot(wav_file, window, hop, mode='spectrogram', size=227, output_folder=None, start=0, end=None, **kwargs):
     """
     Plot spectrograms for equally sized chunks of a wav-file using the described parameters.
     :param wav_file: path to an existing .wav file
@@ -84,8 +84,7 @@ def plot(wav_file, window, hop, mode='spectrogram', size=227, output_folder=None
             print('Error while reading the spectrogram blob.')
             return None
 
-        yield models.process_image(img, data_spec)
-
+        yield img
 
 
 def plot_spectrogram(audio_data, sr, nfft=256, delta=None, **kwargs):
@@ -94,6 +93,7 @@ def plot_spectrogram(audio_data, sr, nfft=256, delta=None, **kwargs):
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
     spectrogram = librosa.amplitude_to_db(spectrogram, ref=np.max, top_db=None)
     return _create_plot(spectrogram,sr, nfft, **kwargs)
+
 
 def plot_mel_spectrogram(audio_data, sr, nfft=256, melbands=64, delta=None, **kwargs):
     spectrogram = librosa.feature.melspectrogram(y=audio_data, sr=sr, n_fft=nfft,
@@ -104,20 +104,21 @@ def plot_mel_spectrogram(audio_data, sr, nfft=256, melbands=64, delta=None, **kw
     spectrogram = librosa.logamplitude(spectrogram, ref=np.max, top_db=None)
     return _create_plot(spectrogram, sr, nfft, **kwargs)
 
+
 def plot_chroma(audio_data, sr, nfft=256, delta=None, **kwargs):
     spectrogram = librosa.feature.chroma_stft(audio_data, sr, n_fft=nfft, hop_length=int(nfft/2))
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
     return _create_plot(spectrogram, sr, nfft, **kwargs)
 
-def _create_plot(spectrogram, sr, nfft, y_limit=None, cmap='viridis', scale='linear'):
-    if y_limit:
-        relative_limit = y_limit * 2 / sr
+
+def _create_plot(spectrogram, sr, nfft, ylim=None, cmap='viridis', scale='linear'):
+    if ylim:
+        relative_limit = ylim * 2 / sr
         relative_limit = min(relative_limit, 1)
         spectrogram = spectrogram[:int(relative_limit * (1 + nfft / 2)), :]
     spectrogram_axes = librosa.display.specshow(spectrogram, hop_length=int(nfft / 2), sr=sr, cmap=cmap, y_axis=scale)
     return spectrogram_axes
-
 
 
 def _generate_chunks(sound_info, sr, window, hop):

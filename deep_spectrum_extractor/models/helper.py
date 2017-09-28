@@ -1,7 +1,6 @@
 import sys
 import os.path as osp
 import numpy as np
-import tensorflow as tf
 
 # Add the kaffe module to the import path
 #sys.path.append(osp.realpath(osp.join(osp.dirname(__file__), '../../../')))
@@ -81,36 +80,3 @@ def get_data_spec(model_instance=None, model_class=None):
     '''Returns the data specifications for the given network.'''
     model_class = model_class or model_instance.__class__
     return MODEL_DATA_SPECS[model_class]
-
-def load_model(name):
-    '''Creates and returns an instance of the model given its class name.
-    The created model has a single placeholder node for feeding images.
-    '''
-    # Find the model class from its name
-    all_models = get_models()
-    lut = {model.__name__: model for model in all_models}
-    if name not in lut:
-        print('Invalid model index. Options are:')
-        # Display a list of valid model names
-        for model in all_models:
-            print('\t* {}'.format(model.__name__))
-        return None
-    NetClass = lut[name]
-
-    # Create a placeholder for the input image
-    spec = get_data_spec(model_class=NetClass)
-    data_node = tf.placeholder(tf.float32,
-                               shape=(None, spec.crop_size, spec.crop_size, spec.channels))
-
-    # Construct and return the model
-    return NetClass({'data': data_node})
-
-def process_image(img, data_spec):
-
-    if data_spec.expects_bgr:
-        # Convert from RGB channel ordering to BGR
-        # This matches, for instance, how OpenCV orders the channels.
-        img = img[:,:,::-1]
-    # Rescale
-    img = resize(img, (data_spec.crop_size, data_spec.crop_size))
-    return img.astype(np.float32)
