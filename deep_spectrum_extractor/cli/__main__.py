@@ -9,7 +9,7 @@ import tensorflow as tf
 from os.path import basename, join, commonpath, dirname
 from tqdm import tqdm
 
-import deep_spectrum_extractor.backend.extract_deep_spectrum as eds
+import deep_spectrum_extractor.backend.plotting as eds
 import deep_spectrum_extractor.models as models
 import deep_spectrum_extractor.tools.feature_reduction as fr
 from deep_spectrum_extractor.cli.configuration import Configuration

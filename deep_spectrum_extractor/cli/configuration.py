@@ -7,7 +7,7 @@ from decimal import *
 from itertools import chain
 from os import listdir, makedirs, walk
 from os.path import abspath, join, isfile, basename, expanduser, dirname, isdir, realpath
-from deep_spectrum_extractor.backend.extract_deep_spectrum import PLOTTING_FUNCTIONS
+from deep_spectrum_extractor.backend.plotting import PLOTTING_FUNCTIONS
 from matplotlib import cm
 
 from deep_spectrum_extractor.tools.label_parser import LabelParser
