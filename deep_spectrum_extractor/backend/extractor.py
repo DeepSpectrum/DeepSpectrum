@@ -63,7 +63,6 @@ class CaffeExtractor():
         self.net = self.caffe.Net(def_path, self.caffe.TEST, weights=weights_path)
         self.transformer = self.caffe.io.Transformer({'data': self.net.blobs['data'].data.shape})
         self.transformer.set_transpose('data', (2, 0, 1))
-        self.transformer.set_raw_scale('data', 255)  # rescale from [0, 1] to [0, 255]
         self.transformer.set_channel_swap('data', (2, 1, 0))  # swap channels from RGB to BGR
         self.layers = list(self.net.blobs.keys())
 
@@ -75,7 +74,6 @@ class CaffeExtractor():
         shape = self.net.blobs['data'].shape
         self.net.blobs['data'].reshape(images.shape[0], shape[1], shape[2], shape[3])
         self.net.reshape()
-
         images = list(map(lambda x: self.transformer.preprocess('data', x), images))
         self.net.blobs['data'].data[...] = images
         self.net.forward()
