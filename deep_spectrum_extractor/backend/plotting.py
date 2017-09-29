@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import librosa.display
 import numpy as np
 import soundfile as sf
-import deep_spectrum_extractor.models as models
 from imread import imread_from_blob
 from os import environ
 from os.path import basename, join
@@ -40,7 +39,7 @@ def _read_wav_data(wav_file, start=0, end=None):
     return sound_info, frame_rate
 
 
-def plot(wav_file, window, hop, mode='spectrogram', size=227, output_folder=None, start=0, end=None, **kwargs):
+def plot(wav_file, window, hop, mode='spectrogram', size=227, output_folder=None, wav_folder=None, start=0, end=None, **kwargs):
     """
     Plot spectrograms for equally sized chunks of a wav-file using the described parameters.
     :param wav_file: path to an existing .wav file
@@ -54,8 +53,8 @@ def plot(wav_file, window, hop, mode='spectrogram', size=227, output_folder=None
     """
     sound_info, frame_rate = _read_wav_data(wav_file, start=start, end=end)
     write_index = window or hop
-
-    for idx, chunk in enumerate(_generate_chunks(sound_info, frame_rate, window, hop)):
+    wav_out = join(wav_folder, basename(wav_file)) if wav_folder else None
+    for idx, chunk in enumerate(_generate_chunks(sound_info, frame_rate, window, hop, wav_out=wav_out)):
         fig = plt.figure(frameon=False)
         fig.set_size_inches(1, 1)
         ax = plt.Axes(fig, [0., 0., 1., 1.], )
@@ -87,7 +86,9 @@ def plot(wav_file, window, hop, mode='spectrogram', size=227, output_folder=None
         yield img
 
 
-def plot_spectrogram(audio_data, sr, nfft=256, delta=None, **kwargs):
+def plot_spectrogram(audio_data, sr, nfft=None, delta=None, **kwargs):
+    if not nfft:
+        nfft = _next_power_of_two(int(sr*0.025))
     spectrogram = librosa.stft(audio_data, n_fft=nfft, hop_length=int(nfft / 2), center=False)
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
@@ -95,17 +96,21 @@ def plot_spectrogram(audio_data, sr, nfft=256, delta=None, **kwargs):
     return _create_plot(spectrogram,sr, nfft, **kwargs)
 
 
-def plot_mel_spectrogram(audio_data, sr, nfft=256, melbands=64, delta=None, **kwargs):
+def plot_mel_spectrogram(audio_data, sr, nfft=None, melbands=64, delta=None, **kwargs):
+    if not nfft:
+        nfft = _next_power_of_two(int(sr*0.025))
     spectrogram = librosa.feature.melspectrogram(y=audio_data, sr=sr, n_fft=nfft,
                                                  hop_length=int(nfft / 2),
-                                                 n_mels=melbands, power=1)
+                                                 n_mels=melbands)
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
     spectrogram = librosa.logamplitude(spectrogram, ref=np.max, top_db=None)
     return _create_plot(spectrogram, sr, nfft, **kwargs)
 
 
-def plot_chroma(audio_data, sr, nfft=256, delta=None, **kwargs):
+def plot_chroma(audio_data, sr, nfft=None, delta=None, **kwargs):
+    if not nfft:
+        nfft = _next_power_of_two(int(sr*0.025))
     spectrogram = librosa.feature.chroma_stft(audio_data, sr, n_fft=nfft, hop_length=int(nfft/2))
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
@@ -121,15 +126,21 @@ def _create_plot(spectrogram, sr, nfft, ylim=None, cmap='viridis', scale='linear
     return spectrogram_axes
 
 
-def _generate_chunks(sound_info, sr, window, hop):
+def _generate_chunks(sound_info, sr, window, hop, wav_out=None):
     if not window and not hop:
         yield sound_info
         return
     window = int(window * sr)
     hop = int(hop * sr)
     for n in range(max(int((len(sound_info)) / hop), 1)):
-        yield sound_info[n * hop:min(n * hop + window, len(sound_info))]
+        chunk = sound_info[n * hop:min(n * hop + window, len(sound_info))]
+        if wav_out:
+            chunk_out = wav_out[:-4] + '_' + str(n) + '.wav'
+            sf.write(chunk_out, chunk, sr)
+        yield chunk
 
+def _next_power_of_two(x):
+    return 1 << (x - 1).bit_length()
 
 PLOTTING_FUNCTIONS = {'spectrogram': plot_spectrogram,
                       'mel': plot_mel_spectrogram, 'chroma': plot_chroma}

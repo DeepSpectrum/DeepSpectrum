@@ -1,13 +1,11 @@
-import sys
-import os.path as osp
 import numpy as np
 
 # Add the kaffe module to the import path
 #sys.path.append(osp.realpath(osp.join(osp.dirname(__file__), '../../../')))
 
 #from googlenet import GoogleNet
-from  deep_spectrum_extractor.models.vgg import VGG16
-from deep_spectrum_extractor.models.alexnet import AlexNet
+from  deep_spectrum_extractor.tf_models.vgg import VGG16
+from deep_spectrum_extractor.tf_models.alexnet import AlexNet
 #from caffenet import CaffeNet
 #from nin import NiN
 #from resnet import ResNet50, ResNet101, ResNet152
@@ -36,8 +34,8 @@ class DataSpec(object):
         # The number of channels in the input image expected by this model
         self.channels = channels
         # The mean to be subtracted from each image. By default, the per-channel ImageNet mean.
-        # The values below are ordered BGR, as many Caffe models are trained in this order.
-        # Some of the earlier models (like AlexNet) used a spatial three-channeled mean.
+        # The values below are ordered BGR, as many Caffe tf_models are trained in this order.
+        # Some of the earlier tf_models (like AlexNet) used a spatial three-channeled mean.
         # However, using just the per-channel mean values instead doesn't affect things too much.
         self.mean = mean if mean is not None else np.array([104., 117., 124.])
         # Whether this model expects images to be in BGR order
@@ -53,11 +51,11 @@ def std_spec(batch_size, isotropic=True):
     '''Parameters commonly used by "post-AlexNet" architectures.'''
     return DataSpec(batch_size=batch_size, scale_size=256, crop_size=224, isotropic=isotropic)
 
-# Collection of sample auto-generated models
+# Collection of sample auto-generated tf_models
 MODELS = (AlexNet, VGG16) #CaffeNet, GoogleNet, NiN, ResNet50, ResNet101, ResNet152)
 
-# The corresponding data specifications for the sample models
-# These specifications are based on how the models were trained.
+# The corresponding data specifications for the sample tf_models
+# These specifications are based on how the tf_models were trained.
 # The recommended batch size is based on a Titan X (12GB).
 MODEL_DATA_SPECS = {
     AlexNet: alexnet_spec(),
@@ -72,7 +70,7 @@ MODEL_DATA_SPECS = {
 
 
 def get_models():
-    '''Returns a tuple of sample models.'''
+    '''Returns a tuple of sample tf_models.'''
     return MODELS
 
 

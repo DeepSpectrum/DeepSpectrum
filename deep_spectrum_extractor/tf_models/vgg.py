@@ -1,4 +1,4 @@
-from deep_spectrum_extractor.models.network import Network
+from deep_spectrum_extractor.tf_models.network import Network
 
 class VGG16(Network):
     def setup(self):

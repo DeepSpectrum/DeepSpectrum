@@ -209,7 +209,7 @@ class Network(object):
     def softmax(self, input, name):
         input_shape = list(map(lambda v: v.value, input.get_shape()))
         if len(input_shape) > 2:
-            # For certain models (like NiN), the singleton spatial dimensions
+            # For certain tf_models (like NiN), the singleton spatial dimensions
             # need to be explicitly squeezed, since they're not broadcast-able
             # in TensorFlow's NHWC ordering (unlike Caffe's NCHW).
             if input_shape[1] == 1 and input_shape[2] == 1:

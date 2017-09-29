@@ -9,7 +9,7 @@ from os import listdir, makedirs, walk
 from matplotlib import cm
 from os.path import abspath, join, isfile, basename, expanduser, dirname, isdir, realpath
 
-import deep_spectrum_extractor.models as models
+import deep_spectrum_extractor.tf_models as tf_models
 from deep_spectrum_extractor.backend.plotting import PLOTTING_FUNCTIONS
 from deep_spectrum_extractor.tools.label_parser import LabelParser
 
@@ -25,7 +25,7 @@ class Configuration:
 
     def __init__(self):
         # set default values
-        self.model_weights = join(expanduser('~'), 'models/bvlc_alexnet.npy')
+        self.model_weights = join(expanduser('~'), 'tf_models/bvlc_alexnet.npy')
         self.number_of_processes = None
         self.folders = []
         self.label_file = None
@@ -78,7 +78,7 @@ class Configuration:
         self.parser.add_argument('-t',
                                  help='Extract deep spectrum features from windows with specified length and hopsize in seconds.',
                                  nargs=2, type=Decimal, default=[None, None])
-        self.parser.add_argument('-nfft', default=256,
+        self.parser.add_argument('-nfft', default=None,
                                  help='specify the size for the FFT window in number of samples', type=int)
         self.parser.add_argument('-reduced', nargs='?',
                                  help='a reduced version of the feature set is written to the given location.',
@@ -93,10 +93,13 @@ class Configuration:
         self.parser.add_argument('-specout',
                                  help='define an existing folder where spectrogram plots should be saved during feature extraction. By default, spectrograms are not saved on disk to speed up extraction.',
                                  default=None)
+        self.parser.add_argument('-wavout',
+                                 help='Convenience function to write the chunks of audio data used in the extraction to the specified folder.',
+                                 default=None)
 
         self.parser.add_argument('-net',
                                  help='specify the CNN that will be used for the feature extraction. You need to specify a valid weight file in .npy format in your configuration file for this network.',
-                                 default='AlexNet', choices=[model.__name__ for model in models.get_models()])
+                                 default='AlexNet')
         self.parser.add_argument('-mode', help='Type of plot to use in the system.', default='spectrogram',
                                  choices=PLOTTING_FUNCTIONS.keys())
         self.parser.add_argument('-scale',
@@ -110,7 +113,7 @@ class Configuration:
                                  help='Remove timestamps from the output.')
         self.parser.add_argument('-nmel', type=int,
                                  help='Number of melbands used for computing the melspectrogram.',
-                                 default=64)
+                                 default=128)
 
         args = vars(self.parser.parse_args())
         self.folders = args['f']
@@ -118,6 +121,7 @@ class Configuration:
         self.config = args['config']
         self.reduced = args['reduced']
         self.output_spectrograms = abspath(args['specout']) if args['specout'] else None
+        self.output_wavs = abspath(args['wavout']) if args['wavout'] else None
         self.label_file = args['l']
 
         self.number_of_processes = args['np']
@@ -134,7 +138,10 @@ class Configuration:
         self.plotting_args['end'] = args['end']
         self.plotting_args['window'] = args['t'][0]
         self.plotting_args['hop'] = args['t'][1]
-        self.plotting_args['melbands'] = args['nmel']
+        if self.plotting_args['mode'] == 'mel':
+            self.plotting_args['melbands'] = args['nmel']
+        if self.plotting_args['mode'] == 'chroma':
+            self.plotting_args['scale'] = 'chroma'
 
         # arguments for extraction functions
         self.extraction_args['layer'] = args['layer']
@@ -265,17 +272,17 @@ class Configuration:
             elif self.backend == 'tensorflow':
                 print('Using tensorflow backend as specified in {}'.format(self.config))
                 net_conf = conf_parser['tensorflow-nets']
-                if self.net in [model.__name__ for model in models.get_models()]:
+                if self.net in [model.__name__ for model in tf_models.get_models()]:
                     self.extraction_args['net_name'] = self.net
                     if self.net in net_conf:
                         self.extraction_args['weights_path'] = net_conf[self.net]
                     else:
                         self.parser.error('No model weights defined for {} in {}'.format(self.net, self.config))
                 else:
-                    self.parser.error('No model definition exists for {}. Available models: {}'.format(self.net,
+                    self.parser.error('No model definition exists for {}. Available tf_models: {}'.format(self.net,
                                                                                                        [model.__name__
                                                                                                         for model in
-                                                                                                        models.get_models()]))
+                                                                                                        tf_models.get_models()]))
             else:
                 self.parser.error(
                     'Unknown backend \'{}\' defined in {}. Available backends: tensorflow, caffe'.format(self.backend,
@@ -286,9 +293,9 @@ class Configuration:
             print('Writing standard config to ' + self.config)
             main_conf = {'size': str(227), 'gpu': str(1), 'backend': 'caffe'}
             tensorflow_net_conf = {model.__name__: '# Path to model weights (.npy) go here.' for model in
-                                   models.get_models()}
+                                   tf_models.get_models()}
             caffe_net_conf = {model.__name__: '# Path to model folder containing model definition (.prototxt) and weights (.caffemodel) go here.' for model in
-                                   models.get_models()}
+                              tf_models.get_models()}
             conf_parser['main'] = main_conf
             conf_parser['tensorflow-nets'] = tensorflow_net_conf
             conf_parser['caffe-nets'] = caffe_net_conf
@@ -325,3 +332,5 @@ def _check_positive(value):
     if ivalue <= 0:
         raise argparse.ArgumentTypeError("%s is an invalid positive int value" % value)
     return ivalue
+
+

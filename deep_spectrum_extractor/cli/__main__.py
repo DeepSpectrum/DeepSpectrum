@@ -41,14 +41,18 @@ def plotting_worker(config, job_queue, result_queue, **kwargs):
 
 def plot_file(file, config, **kwargs):
     spectrogram_directory = None
+    wav_directory = None
     if config.output_spectrograms:
-        spectrogram_directory = join(config.output_spectrograms, get_spectrogram_path(file, config.folders))
+        spectrogram_directory = join(config.output_spectrograms, get_relative_path(file, config.folders))
         makedirs(spectrogram_directory, exist_ok=True)
+    if config.output_wavs:
+        wav_directory = join(config.output_wavs, get_relative_path(file, config.folders))
+        makedirs(wav_directory, exist_ok=True)
     return np.asarray([plot for plot in
-                       eds.plot(file, output_folder=spectrogram_directory, **kwargs)])
+                       eds.plot(file, output_folder=spectrogram_directory, wav_folder=wav_directory, **kwargs)])
 
 
-def get_spectrogram_path(file, folders):
+def get_relative_path(file, folders):
     filepath = pathlib.PurePath(dirname(file))
     prefixes = [commonpath([file] + [folder]) for folder in folders]
     ml = max(len(s) for s in prefixes)
@@ -117,14 +121,14 @@ def main(args=None):
     # set up the configuration object and parse commandline arguments
     configuration = Configuration()
     configuration.parse_arguments()
-    # net = models.load_model(configuration.net)
+    # net = tf_models.load_model(configuration.net)
     # print('Using {} with weights found in {}.'.format(net.__class__.__name__, configuration.model_weights))
     # if configuration.layer not in net.layers:
     #     configuration.parser.error(
     #         '\'{}\' is not a valid layer name for {}. Available layers are: {}'.format(configuration.layer,
     #                                                                                    net.__class__.__name__,
     #                                                                                    list(net.layers.keys())))
-    # data_spec = models.get_data_spec(model_instance=net)
+    # data_spec = tf_models.get_data_spec(model_instance=net)
 
     file_name_queue = JoinableQueue()
 
@@ -160,7 +164,7 @@ def main(args=None):
 
     if configuration.extraction_args['layer'] not in extractor.layers:
         configuration.parser.error(
-            '\'{}\' is not a valid layer name for {}. Available layers are: {}'.format(configuration.extraction_args['layer'], extractor.layers))
+            '\'{}\' is not a valid layer name for {}. Available layers are: {}'.format(configuration.extraction_args['layer'], configuration.net, extractor.layers))
 
     with start_writer:
         start_writer.notify()

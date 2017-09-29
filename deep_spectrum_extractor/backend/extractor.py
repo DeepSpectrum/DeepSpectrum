@@ -1,10 +1,15 @@
+from functools import reduce
+from operator import mul
 class TensorFlowExtractor():
     import tensorflow as tf
-    from deep_spectrum_extractor import models
+    from deep_spectrum_extractor import tf_models
 
     def __init__(self, net_name, weights_path, layer, gpu=True):
-        self.input, self.data_spec, self.net = self.__load_model(net_name)
+        self.input, self.net = self.__load_model(net_name)
         self.layer = layer
+        net_output = self.net.layers[self.layer]
+        dim = self.tf.reduce_prod(self.tf.shape(net_output)[1:])
+        self.features = self.tf.reshape(net_output, [-1, dim])
         config = self.tf.ConfigProto()
         config.gpu_options.allow_growth = True
         self.session = self.tf.Session(config=config)
@@ -16,7 +21,7 @@ class TensorFlowExtractor():
         The created model has a single placeholder node for feeding images.
         '''
         # Find the model class from its name
-        all_models = self.models.get_models()
+        all_models = self.tf_models.get_models()
         lut = {model.__name__: model for model in all_models}
         if name not in lut:
             print('Invalid model index. Options are:')
@@ -27,13 +32,12 @@ class TensorFlowExtractor():
         NetClass = lut[name]
 
         # Create a placeholder for the input image
-        data_spec = self.models.get_data_spec(model_class=NetClass)
+        data_spec = self.tf_models.get_data_spec(model_class=NetClass)
         input = self.tf.placeholder(self.tf.float32,
                                          shape=(None, data_spec.crop_size, data_spec.crop_size, data_spec.channels))
         processed_images = self.__process_images(input, data_spec)
-
         # Construct and return the model
-        return input, data_spec, NetClass({'data': processed_images})
+        return input, NetClass({'data': processed_images})
 
     def __process_images(self, images, data_spec):
 
@@ -46,7 +50,7 @@ class TensorFlowExtractor():
         return self.tf.to_float(images)
 
     def extract_features(self, images):
-        return self.session.run(self.net.layers[self.layer], feed_dict={self.input: images})
+        return self.session.run(self.features, feed_dict={self.input: images})
 
 class CaffeExtractor():
     import caffe
@@ -80,8 +84,8 @@ class CaffeExtractor():
 
         # extract features from the specified layer
         features = self.net.blobs[self.layer].data
-        vfunc = self.np.vectorize(self.np.ravel)
-        return vfunc(features)
+
+        return self.np.reshape(features, (features.shape[0], -1))
 
 
 
