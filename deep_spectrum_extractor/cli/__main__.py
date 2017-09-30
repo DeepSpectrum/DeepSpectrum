@@ -1,91 +1,58 @@
 import csv
 import multiprocessing as mp
 import pathlib
-from multiprocessing import JoinableQueue, Process, Value, Condition
+from multiprocessing import JoinableQueue, Process
 from os import makedirs, environ
 
+
+import numpy as np
 from os.path import basename, join, commonpath, dirname
 from tqdm import tqdm
 
-import deep_spectrum_extractor.backend.extract_deep_spectrum as eds
+import deep_spectrum_extractor.backend.plotting as eds
 import deep_spectrum_extractor.tools.feature_reduction as fr
 from deep_spectrum_extractor.cli.configuration import Configuration
 from deep_spectrum_extractor.tools.custom_arff import Writer
 
 environ['GLOG_minloglevel'] = '2'
+environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-import caffe
 
 
-def extraction_worker(config, initialization, completed_inits, number_of_processes, job_queue, result_queue, gpu=0,
-                      id=0):
-    print('Process ' + str(id) + ': ' + 'initializing...')
-    directory = config.model_directory
-
-    # load model definition
-    model_def = config.model_def
-    model_weights = config.model_weights
-
-    # set mode to GPU or CPU computation
-    if config.gpu_mode:
-        caffe.set_device(gpu)
-        caffe.set_mode_gpu()
-        print('Process ' + str(id) + ': ' + 'Using GPU device ' + str(gpu))
-    else:
-        print('Process ' + str(id) + ': ' + 'Using CPU-Mode')
-        caffe.set_mode_cpu()
-
-    print('Process ' + str(id) + ': ' + 'Loading Net')
-    net = caffe.Net(model_def, caffe.TEST, weights=model_weights)
-    transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
-    transformer.set_transpose('data', (2, 0, 1))
-    transformer.set_raw_scale('data', 255)  # rescale from [0, 1] to [0, 255]
-    transformer.set_channel_swap('data', (2, 1, 0))  # swap channels from RGB to BGR
-
-    # reshape input layer as batch processing is not needed
-    shape = net.blobs['data'].shape
-    net.blobs['data'].reshape(1, shape[1], shape[2], shape[3])
-    net.reshape()
-
+def plotting_worker(config, job_queue, result_queue, **kwargs):
+    # print('Process ' + str(id) + ': ' + 'initializing...')
     # wait for all threads to be initialized
-    with initialization:
-        completed_inits.value += 1
-        initialization.notify_all()
-        initialization.wait_for(lambda: completed_inits.value == number_of_processes.value, timeout=15)
+    try:
+        while True:
+            file = job_queue.get()
+            if file:
+                plots = plot_file(file, config, **kwargs)
+                if plots is not None:
+                    filename = basename(file)
+                    result_queue.put((filename, plots))
+                job_queue.task_done()
+            else:
+                job_queue.task_done()
+                # poison pilling for extractor
+                result_queue.put((None, None))
+                break
+    except KeyboardInterrupt:
+        pass
 
-    while True:
-        file = job_queue.get()
-        if file:
-            features = [(i, fn, list(fv)) for i, fn, fv in extract_file(file, config, net, transformer)]
-            if features:
-                result_queue.put(features)
-            job_queue.task_done()
-        else:
-            job_queue.task_done()
-            # poison pilling for writer
-            result_queue.put(None)
-            break
-
-
-def extract_file(file, config, net, transformer):
-    file_name = basename(file)
+def plot_file(file, config, **kwargs):
     spectrogram_directory = None
+    wav_directory = None
     if config.output_spectrograms:
-        spectrogram_directory = join(config.output_spectrograms, get_spectrogram_path(file, config.folders))
+        spectrogram_directory = join(config.output_spectrograms, get_relative_path(file, config.folders))
         makedirs(spectrogram_directory, exist_ok=True)
-    for index, features in eds.extract_features_from_wav(file, transformer, net,
-                                                         nfft=config.nfft,
-                                                         window=config.chunksize,
-                                                         hop=config.step, layer=config.layer,
-                                                         cmap=config.cmap, size=config.size,
-                                                         output_folder=spectrogram_directory,
-                                                         y_limit=config.y_limit, start=config.start, end=config.end,
-                                                         delta=config.delta, scale=config.scale, mode=config.mode):
-        if features.any():
-            yield index, file_name, features
+    if config.output_wavs:
+        wav_directory = join(config.output_wavs, get_relative_path(file, config.folders))
+        makedirs(wav_directory, exist_ok=True)
+    return np.asarray([plot for plot in
+                       eds.plot(file, output_folder=spectrogram_directory, wav_folder=wav_directory, **kwargs)])
 
 
-def get_spectrogram_path(file, folders):
+def get_relative_path(file, folders):
     filepath = pathlib.PurePath(dirname(file))
     prefixes = [commonpath([file] + [folder]) for folder in folders]
     ml = max(len(s) for s in prefixes)
@@ -96,45 +63,49 @@ def get_spectrogram_path(file, folders):
     return spectrogram_path
 
 
-def writer_worker(config, initialization, completed_inits, total_num_of_files, number_of_processes, result_queue):
-    with initialization:
-        initialization.wait_for(lambda: completed_inits.value == number_of_processes.value, timeout=15)
-    print('Starting extraction with {} processes...'.format(number_of_processes.value))
-    with tqdm(total=total_num_of_files) as pbar, open(config.output, 'w', newline='') as output_file:
-        poison_pills = 0
+def writer_worker(total_num_of_files, number_of_processes, result_queue, start_condition, output, label_dict, labels, continuous_labels, window, hop, start, no_timestamps):
+
+    with start_condition:
+        start_condition.wait()
+    print('Starting extraction with {} processes...'.format(number_of_processes))
+    write_timestamp = window and not no_timestamps
+    with tqdm(total=total_num_of_files) as pbar, open(output, 'w', newline='') as output_file:
         writer = None
         classes = [(class_name, '{' + ','.join(class_type) + '}') if class_type else (
-            class_name, 'numeric') for class_name, class_type in config.labels]
-        while True:
-            features = result_queue.get()
-            if features:
-                for timestamp, file_name, feature_vector in features:
-                    if not writer:
-                        attributes = _determine_attributes(timestamp, feature_vector, classes)
-                        if config.output.endswith('.arff'):
-                            writer = Writer(output_file, 'Deep Spectrum Features', attributes)
+            class_name, 'numeric') for class_name, class_type in labels]
+        try:
+            while True:
+                file_name, features = result_queue.get()
+
+                if features is not None:
+                    file_name = basename(file_name)
+                    for idx, feature_vector in enumerate(features):
+                        if not writer:
+                            attributes = _determine_attributes(write_timestamp, feature_vector, classes)
+                            if output.endswith('.arff'):
+                                writer = Writer(output_file, 'Deep Spectrum Features', attributes)
+                            else:
+                                writer = csv.writer(output_file, delimiter=',')
+                                writer.writerow([attribute[0] for attribute in attributes])
+                        if write_timestamp:
+                            timestamp = start + (idx * hop)
+                            labels = label_dict[file_name][write_timestamp] if continuous_labels else \
+                                label_dict[file_name]
+                            row = [file_name] + [str(timestamp)] + list(map(str, feature_vector)) + labels
                         else:
-                            writer = csv.writer(output_file, delimiter=',')
-                            writer.writerow([attribute[0] for attribute in attributes])
-                    if timestamp is not None:
-                        labels = config.label_dict[file_name][timestamp] if config.continuous_labels else \
-                            config.label_dict[file_name]
-                        row = [file_name] + [str(timestamp)] + list(map(str, feature_vector)) + labels
-                    else:
-                        row = [file_name] + list(map(str, feature_vector)) + config.label_dict[file_name]
-                    writer.writerow(row)
-                result_queue.task_done()
-                pbar.update(1)
-            else:
-                poison_pills += 1
-                if poison_pills == number_of_processes.value:
+                            row = [file_name] + list(map(str, feature_vector)) + label_dict[file_name]
+                        writer.writerow(row)
+                    result_queue.task_done()
+                    pbar.update(1)
+                else:
                     result_queue.task_done()
                     break
-                result_queue.task_done()
+        except KeyboardInterrupt:
+            pass
 
 
 def _determine_attributes(timestamp, feature_vector, classes):
-    if timestamp is not None:
+    if timestamp:
         attributes = [('name', 'string'), ('timeStamp', 'numeric')] + [
             ('neuron_' + str(i), 'numeric') for i, _ in
             enumerate(feature_vector)] + classes
@@ -145,19 +116,18 @@ def _determine_attributes(timestamp, feature_vector, classes):
     return attributes
 
 
-def kill_inactive(process_list):
-    for process in process_list:
-        if not process.is_alive():
-            process.terminate()
-
 
 def main(args=None):
     # set up the configuration object and parse commandline arguments
     configuration = Configuration()
     configuration.parse_arguments()
 
-    # initialize job and result queues
-    job_queue = JoinableQueue()
+    file_name_queue = JoinableQueue()
+
+    for file in configuration.files:
+        file_name_queue.put(file)
+
+    plot_queue = JoinableQueue()
     result_queue = JoinableQueue()
     total_num_of_files = len(configuration.files)
     number_of_processes = configuration.number_of_processes
@@ -165,40 +135,57 @@ def main(args=None):
     if not number_of_processes:
         number_of_processes = mp.cpu_count()
 
-    number_of_processes = Value('i', number_of_processes)
-
-    for f in configuration.files:
-        job_queue.put(f)
-
+    start_writer = mp.Condition()
     processes = []
-    initialization = Condition()
-    completed_inits = Value('i', 0)
-    for i in range(number_of_processes.value):
-        p = Process(target=extraction_worker,
-                    args=(configuration, initialization, completed_inits, number_of_processes, job_queue, result_queue,
-                          configuration.device_ids[i % len(configuration.device_ids)], i))
+    for i in range(number_of_processes):
+        p = Process(target=plotting_worker,
+                    args=(configuration, file_name_queue, plot_queue), kwargs=configuration.plotting_args)
         p.daemon = True
         processes.append(p)
+        file_name_queue.put(None)
         p.start()
-
-    writer_thread = Process(target=writer_worker, args=(
-        configuration, initialization, completed_inits, total_num_of_files, number_of_processes, result_queue))
+    writer_thread = Process(target=writer_worker, args=(total_num_of_files, number_of_processes, result_queue, start_writer), kwargs=configuration.writer_args)
     writer_thread.daemon = True
     writer_thread.start()
 
-    with initialization:
-        initialization.wait_for(lambda: completed_inits.value == number_of_processes.value, timeout=15)
-        number_of_processes.value = sum(map(lambda x: x.is_alive(), processes))
+    print('Loading model and weights...')
+    if configuration.backend == 'caffe':
+        from deep_spectrum_extractor.backend.extractor import CaffeExtractor
+        extractor = CaffeExtractor(**configuration.extraction_args)
+    elif configuration.backend == 'tensorflow':
+        from deep_spectrum_extractor.backend.extractor import TensorFlowExtractor
+        extractor = TensorFlowExtractor(**configuration.extraction_args)
 
-    # kill dead processes
-    kill_inactive(processes)
+    if configuration.extraction_args['layer'] not in extractor.layers:
+        configuration.parser.error(
+            '\'{}\' is not a valid layer name for {}. Available layers are: {}'.format(configuration.extraction_args['layer'], configuration.net, extractor.layers))
 
-    # poison pilling for extraction workers
-    for i in range(number_of_processes.value):
-        job_queue.put(None)
+    with start_writer:
+        start_writer.notify()
 
-    job_queue.join()
-    result_queue.join()
+    finished_processes = 0
+    try:
+        while True:
+            file_name, plots = plot_queue.get()
+            if plots is not None:
+                feature_vectors = extractor.extract_features(plots)
+                result_queue.put((file_name, feature_vectors))
+                plot_queue.task_done()
+            else:
+                finished_processes += 1
+                if finished_processes == number_of_processes:
+                    plot_queue.task_done()
+                    result_queue.put((None, None))
+                    break
+                plot_queue.task_done()
+    except KeyboardInterrupt:
+        result_queue.put((None, None))
+
+    for p in processes:
+        p.join()
+    writer_thread.join()
+    plot_queue.close()
+    result_queue.close()
 
     if configuration.reduced:
         print('Performing feature reduction...')

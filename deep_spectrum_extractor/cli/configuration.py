@@ -9,7 +9,9 @@ from os import listdir, makedirs, walk
 from matplotlib import cm
 from os.path import abspath, join, isfile, basename, expanduser, dirname, isdir, realpath
 
-from deep_spectrum_extractor.backend.extract_deep_spectrum import PLOTTING_FUNCTIONS
+import deep_spectrum_extractor.tf_models as tf_models
+from deep_spectrum_extractor.backend.plotting import PLOTTING_FUNCTIONS
+
 from deep_spectrum_extractor.tools.label_parser import LabelParser
 
 getcontext().prec = 6
@@ -24,38 +26,21 @@ class Configuration:
 
     def __init__(self):
         # set default values
-        self.model_directory = join(expanduser('~'), 'caffe-master/models/bvlc_alexnet')
-        self.model_def = ''
-        self.model_weights = ''
-        self.gpu_mode = True
-        self.device_ids = [0]
+        self.model_weights = join(expanduser('~'), 'tf_models/bvlc_alexnet.npy')
         self.number_of_processes = None
         self.folders = []
-        self.output = ''
-        self.cmap = 'viridis'
         self.label_file = None
-        self.continuous_labels = False
-        self.labels = None
-        self.label_dict = {}
-        self.layer = 'fc7'
-        self.chunksize = None
-        self.step = None
-        self.start = 0
-        self.end = None
-        self.nfft = 256
-        self.y_limit = None
         self.reduced = None
-        self.size = 227
         self.files = []
         self.output_spectrograms = None
         self.net = None
-        self.transformer = None
         self.parser = None
-        self.net = None
         self.config = None
-        self.mode = 'spectrogram'
-        self.delta = None
-        self.scale = 'linear'
+        self.plotting_args = {}
+        self.extraction_args = {}
+        self.writer_args = {}
+        self.backend = 'caffe'
+
 
     def parse_arguments(self):
         """
@@ -86,10 +71,6 @@ class Configuration:
                                  default=join(dirname(realpath(__file__)), 'deep.conf'))
         self.parser.add_argument('-layer', default='fc7',
                                  help='name of CNN layer (as defined in caffe prototxt) from which to extract the features.')
-        # self.parser.add_argument('-chunksize', default=None, type=int,
-        #                         help='define a chunksize in ms. wav data is split into chunks of this length before feature extraction.')
-        # self.parser.add_argument('-step', default=None, type=int,
-        #                         help='stepsize for creating the wav segments in ms. Defaults to the size of the chunks if -chunksize is given but -step is omitted.')
         self.parser.add_argument('-start',
                                  help='Set a start time from which features should be extracted from the audio files.',
                                  type=Decimal, default=0)
@@ -99,7 +80,7 @@ class Configuration:
         self.parser.add_argument('-t',
                                  help='Extract deep spectrum features from windows with specified length and hopsize in seconds.',
                                  nargs=2, type=Decimal, default=[None, None])
-        self.parser.add_argument('-nfft', default=256,
+        self.parser.add_argument('-nfft', default=None,
                                  help='specify the size for the FFT window in number of samples', type=int)
         self.parser.add_argument('-reduced', nargs='?',
                                  help='a reduced version of the feature set is written to the given location.',
@@ -114,9 +95,14 @@ class Configuration:
         self.parser.add_argument('-specout',
                                  help='define an existing folder where spectrogram plots should be saved during feature extraction. By default, spectrograms are not saved on disk to speed up extraction.',
                                  default=None)
+        self.parser.add_argument('-wavout',
+                                 help='Convenience function to write the chunks of audio data used in the extraction to the specified folder.',
+                                 default=None)
+
         self.parser.add_argument('-net',
                                  help='specify the CNN that will be used for the feature extraction. You need to specify a valid weight file in .npy format in your configuration file for this network.',
-                                 default='alexnet')
+                                 default='AlexNet')
+
         self.parser.add_argument('-mode', help='Type of plot to use in the system.', default='spectrogram',
                                  choices=PLOTTING_FUNCTIONS.keys())
         self.parser.add_argument('-scale',
@@ -126,32 +112,55 @@ class Configuration:
         self.parser.add_argument('-delta', type=_check_positive,
                                  help='If given, derivatives of the given order of the selected features are displayed in the plots used by the system.',
                                  default=None)
+        self.parser.add_argument('--no_timestamps', action='store_true',
+                                 help='Remove timestamps from the output.')
+        self.parser.add_argument('-nmel', type=int,
+                                 help='Number of melbands used for computing the melspectrogram.',
+                                 default=128)
 
         args = vars(self.parser.parse_args())
         self.folders = args['f']
-        self.cmap = args['cmap']
-        self.output = abspath(args['o'])
-        makedirs(dirname(self.output), exist_ok=True)
-        self.label_file = args['l']
-        self.labels = args['el']
-        self.layer = args['layer']
-        self.number_of_processes = args['np']
-
-        # if either chunksize or step are not given they default to the value of the other given parameter
-        # self.chunksize = args['chunksize'] if args['chunksize'] else args['step']
-        # self.step = args['step'] if args['step'] else self.chunksize
-
-        self.chunksize = args['t'][0]
-        self.step = args['t'][1]
-        self.start = args['start']
-        self.end = args['end']
-        self.continuous_labels = self.chunksize and args['tc'] and self.label_file
-        self.nfft = args['nfft']
-        self.reduced = args['reduced']
-        self.output_spectrograms = abspath(args['specout']) if args['specout'] else None
-        self.y_limit = args['ylim']
         self.net = args['net']
         self.config = args['config']
+        self.reduced = args['reduced']
+        self.output_spectrograms = abspath(args['specout']) if args['specout'] else None
+        self.output_wavs = abspath(args['wavout']) if args['wavout'] else None
+        self.label_file = args['l']
+
+        self.number_of_processes = args['np']
+
+        # arguments for the plotting functions
+        self.plotting_args['cmap'] = args['cmap']
+        self.plotting_args['mode'] = args['mode']
+        self.plotting_args['scale'] = args['scale']
+        self.plotting_args['delta'] = args['delta']
+        self.plotting_args['cmap'] = args['cmap']
+        self.plotting_args['ylim'] = args['ylim']
+        self.plotting_args['nfft'] = args['nfft']
+        self.plotting_args['start'] = args['start']
+        self.plotting_args['end'] = args['end']
+        self.plotting_args['window'] = args['t'][0]
+        self.plotting_args['hop'] = args['t'][1]
+        if self.plotting_args['mode'] == 'mel':
+            self.plotting_args['melbands'] = args['nmel']
+        if self.plotting_args['mode'] == 'chroma':
+            self.plotting_args['scale'] = 'chroma'
+
+        # arguments for extraction functions
+        self.extraction_args['layer'] = args['layer']
+
+        # arguments for writer
+        self.writer_args['output'] = abspath(args['o'])
+        makedirs(dirname(self.writer_args['output']), exist_ok=True)
+        self.writer_args['window'] = args['t'][0]
+        self.writer_args['hop'] = args['t'][1]
+        self.writer_args['start'] = args['start']
+        self.writer_args['continuous_labels'] = ('window' in self.plotting_args) and args['tc'] and self.label_file
+        self.writer_args['labels'] = args['el']
+        self.writer_args['no_timestamps'] = args['no_timestamps']
+
+
+
 
         # list all .wavs for the extraction found in the given folders
         self.files = list(chain.from_iterable([self._find_wav_files(folder) for folder in self.folders]))
@@ -161,10 +170,10 @@ class Configuration:
         if self.output_spectrograms:
             makedirs(self.output_spectrograms, exist_ok=True)
 
-        if self.labels is not None and len(self.folders) != len(self.labels):
+        if self.writer_args['labels'] is not None and len(self.folders) != len(self.writer_args['labels']):
             self.parser.error(
                 'Labels have to be specified for each folder: ' + str(len(self.folders)) + ' expected, ' + str(
-                    len(self.labels)) + ' received.')
+                    len(self.writer_args['labels'])) + ' received.')
         print('Parsing labels...')
         if self.label_file is None:
             self._create_labels_from_folder_structure()
@@ -172,7 +181,6 @@ class Configuration:
             self._read_label_file()
 
         self._load_config()
-        self._configure_caffe()
 
     @staticmethod
     def _find_wav_files(folder):
@@ -192,47 +200,42 @@ class Configuration:
 
         # delimiters are decided by the extension of the labels file
         if self.label_file.endswith('.tsv'):
-            parser = LabelParser(self.label_file, delimiter='\t', timecontinuous=self.continuous_labels)
+            parser = LabelParser(self.label_file, delimiter='\t', timecontinuous=self.writer_args['continuous_labels'])
         else:
-            parser = LabelParser(self.label_file, delimiter=',', timecontinuous=self.continuous_labels)
+            parser = LabelParser(self.label_file, delimiter=',', timecontinuous=self.writer_args['continuous_labels'])
 
         parser.parse_labels()
-        self.label_dict = parser.label_dict
-        print()
-        self.labels = parser.labels
+
+
+        self.writer_args['label_dict'] = parser.label_dict
+        self.writer_args['labels'] = parser.labels
+
 
         file_names = set(map(basename, self.files))
 
         # check if labels are missing for specific files
-        missing_labels = file_names.difference(self.label_dict)
+        missing_labels = file_names.difference(self.writer_args['label_dict'])
         if missing_labels:
             self.parser.error('No labels for: ' + ', '.join(missing_labels))
 
-    @staticmethod
-    def _is_number(s):
-        try:
-            complex(s)  # for int, long, float and complex
-        except ValueError:
-            return False
 
-        return True
 
     def _create_labels_from_folder_structure(self):
         """
         If no label file is given, either explicit labels or the folder structure is used as class values for the input.
         :return: Nothing
         """
-        if self.labels is None:
-            self.label_dict = {basename(wav): [basename(dirname(wav))] for wav in self.files}
+        if self.writer_args['labels'] is None:
+            self.writer_args['label_dict'] = {basename(wav): [basename(dirname(wav))] for wav in self.files}
         else:
             # map the labels given on the commandline to all files in a given folder in the order both appear in the
             # parsed options.
-            self.label_dict = {basename(wav): [self.labels[folder_index]] for folder_index, folder in
+            self.writer_args['label_dict'] = {basename(wav): [self.writer_args['labels'][folder_index]] for folder_index, folder in
                                enumerate(self.folders) for
                                wav in
                                self._find_wav_files(folder)}
-        labels = list(map(lambda x: x[0], self.label_dict.values()))
-        self.labels = [('class', set(labels))]
+        labels = list(map(lambda x: x[0], self.writer_args['label_dict'].values()))
+        self.writer_args['labels'] = [('class', set(labels))]
 
     def _load_config(self):
         """
@@ -248,58 +251,87 @@ class Configuration:
             print('Found config file ' + self.config)
             conf_parser.read(self.config)
             main_conf = conf_parser['main']
-            self.gpu_mode = int(main_conf['gpu']) == 1
-            self.device_ids = list(map(int, main_conf['device_ids'].split(',')))
-            self.size = int(main_conf['size'])
+            self.plotting_args['size'] = int(main_conf['size'])
+            self.backend = main_conf['backend']
+            self.extraction_args['gpu'] = int(main_conf['gpu']) == 1
 
-            net_conf = conf_parser['nets']
-            if self.net in net_conf:
-                self.model_directory = net_conf[self.net]
+            if self.backend == 'caffe':
+                print('Using caffe backend as specified in {}'.format(self.config))
+                try:
+                    import caffe
+                except ImportError:
+                    self.parser.error('No caffe installation found!')
+                net_conf = conf_parser['caffe-nets']
+                if self.net in net_conf:
+                    self.extraction_args['def_path'], self.extraction_args['weights_path'] = _find_caffe_files(
+                        net_conf[self.net])
+                    if not self.extraction_args['def_path']:
+                        self.parser.error('No model definition for {} found in {}'.format(self.net, net_conf[self.net]))
+                    if not self.extraction_args['weights_path']:
+                        self.parser.error('No model weights for {} found in {}'.format(self.net, net_conf[self.net]))
+                else:
+                    self.parser.error('No model weights defined for {} in {}'.format(self.net, self.config))
+
+            elif self.backend == 'tensorflow':
+                print('Using tensorflow backend as specified in {}'.format(self.config))
+                try:
+                    import tensorflow
+                except ImportError:
+                    self.parser.error('No tensorflow installation found!')
+                net_conf = conf_parser['tensorflow-nets']
+                if self.net in [model.__name__ for model in tf_models.get_models()]:
+                    self.extraction_args['net_name'] = self.net
+                    if self.net in net_conf:
+                        self.extraction_args['weights_path'] = net_conf[self.net]
+                    else:
+                        self.parser.error('No model weights defined for {} in {}'.format(self.net, self.config))
+                else:
+                    self.parser.error('No model definition exists for {}. Available tf_models: {}'.format(self.net,
+                                                                                                       [model.__name__
+                                                                                                        for model in
+                                                                                                        tf_models.get_models()]))
             else:
-                self.parser.error('No model directory defined for {} in {}'.format(self.net, self.config))
-
+                self.parser.error(
+                    'Unknown backend \'{}\' defined in {}. Available backends: tensorflow, caffe'.format(self.backend,
+                                                                                                         self.config))
 
         # if not, create it with standard settings
         else:
             print('Writing standard config to ' + self.config)
-            main_conf = {'gpu': '1' if self.gpu_mode else '0',
-                         'device_ids': str(','.join(map(str, self.device_ids))),
-                         'size': str(self.size)}
-            net_conf = {'alexnet': self.model_directory}
+            main_conf = {'size': str(227), 'gpu': str(1), 'backend': 'caffe'}
+            tensorflow_net_conf = {model.__name__: '# Path to model weights (.npy) go here.' for model in
+                                   tf_models.get_models()}
+            caffe_net_conf = {model.__name__: '# Path to model folder containing model definition (.prototxt) and weights (.caffemodel) go here.' for model in
+                              tf_models.get_models()}
             conf_parser['main'] = main_conf
-            conf_parser['nets'] = net_conf
+            conf_parser['tensorflow-nets'] = tensorflow_net_conf
+            conf_parser['caffe-nets'] = caffe_net_conf
             with open(self.config, 'w') as configfile:
                 conf_parser.write(configfile)
+                self.parser.error('Please initialize your configuration file in {}'.format(self.config))
 
-    def _configure_caffe(self):
-        """
-        Sets up the pre-trained CNN used for extraction.
-        :param parser: commandline parser object used in the set up
-        :return: Nothing
-        """
-        directory = self.model_directory
 
-        if not isdir(self.model_directory):
-            self.parser.error(
-                'Directory {} specified in {} for net {} does not exist!'.format(self.model_directory, self.config,
-                                                                                 self.net))
-        # load model definition
-        model_defs = [join(directory, file) for file in listdir(directory) if file.endswith('deploy.prototxt')]
-        if model_defs:
-            self.model_def = model_defs[0]
-            print('CaffeNet definition: ' + self.model_def)
-        else:
-            self.model_def = ''
-            self.parser.error('No model definition found in ' + directory + '.')
+def _find_caffe_files(directory):
+    if not isdir(directory):
+        return None, None
+    # load model definition
+    model_defs = [join(directory, file) for file in listdir(directory) if file.endswith('deploy.prototxt')]
+    if model_defs:
+        model_def = model_defs[0]
+        print('CaffeNet definition: ' + model_def)
+    else:
+        model_def = None
 
-        # load model wights
-        possible_weights = [join(directory, file) for file in listdir(directory)
-                            if file.endswith('.caffemodel')]
-        if possible_weights:
-            self.model_weights = possible_weights[0]
-            print('CaffeNet weights: ' + self.model_weights)
-        else:
-            self.parser.error('No model weights found in ' + directory + '.')
+    # load model wights
+    possible_weights = [join(directory, file) for file in listdir(directory)
+                        if file.endswith('.caffemodel')]
+    if possible_weights:
+        model_weights = possible_weights[0]
+        print('CaffeNet weights: ' + model_weights)
+    else:
+        model_weights = None
+
+    return model_def, model_weights
 
 
 def _check_positive(value):
