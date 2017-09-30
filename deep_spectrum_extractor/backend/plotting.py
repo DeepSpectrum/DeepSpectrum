@@ -39,7 +39,7 @@ def _read_wav_data(wav_file, start=0, end=None):
     return sound_info, frame_rate
 
 
-def plot(wav_file, window, hop, mode='spectrogram', size=227, output_folder=None, wav_folder=None, start=0, end=None, **kwargs):
+def plot(wav_file, window, hop, mode='spectrogram', size=227, output_folder=None, wav_folder=None, start=0, end=None, nfft=None, **kwargs):
     """
     Plot spectrograms for equally sized chunks of a wav-file using the described parameters.
     :param wav_file: path to an existing .wav file
@@ -51,10 +51,12 @@ def plot(wav_file, window, hop, mode='spectrogram', size=227, output_folder=None
     :param output_folder: if given, the plot is saved to this existing folder in .png format (Default: None)
     :return: blob of the spectrogram plot
     """
-    sound_info, frame_rate = _read_wav_data(wav_file, start=start, end=end)
+    sound_info, sr = _read_wav_data(wav_file, start=start, end=end)
+    if not nfft:
+        nfft = _next_power_of_two(int(sr*0.025))
     write_index = window or hop
     wav_out = join(wav_folder, basename(wav_file)) if wav_folder else None
-    for idx, chunk in enumerate(_generate_chunks(sound_info, frame_rate, window, hop, wav_out=wav_out)):
+    for idx, chunk in enumerate(_generate_chunks(sound_info, sr, window, hop, wav_out=wav_out)):
         fig = plt.figure(frameon=False)
         fig.set_size_inches(1, 1)
         ax = plt.Axes(fig, [0., 0., 1., 1.], )
@@ -62,7 +64,7 @@ def plot(wav_file, window, hop, mode='spectrogram', size=227, output_folder=None
         fig.add_axes(ax)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
-            spectrogram_axes = PLOTTING_FUNCTIONS[mode](chunk, frame_rate, **kwargs)
+            spectrogram_axes = PLOTTING_FUNCTIONS[mode](chunk, sr, nfft, **kwargs)
 
         fig.add_axes(spectrogram_axes)
 
@@ -87,8 +89,6 @@ def plot(wav_file, window, hop, mode='spectrogram', size=227, output_folder=None
 
 
 def plot_spectrogram(audio_data, sr, nfft=None, delta=None, **kwargs):
-    if not nfft:
-        nfft = _next_power_of_two(int(sr*0.025))
     spectrogram = librosa.stft(audio_data, n_fft=nfft, hop_length=int(nfft / 2), center=False)
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
@@ -97,8 +97,6 @@ def plot_spectrogram(audio_data, sr, nfft=None, delta=None, **kwargs):
 
 
 def plot_mel_spectrogram(audio_data, sr, nfft=None, melbands=64, delta=None, **kwargs):
-    if not nfft:
-        nfft = _next_power_of_two(int(sr*0.025))
     spectrogram = librosa.feature.melspectrogram(y=audio_data, sr=sr, n_fft=nfft,
                                                  hop_length=int(nfft / 2),
                                                  n_mels=melbands)
@@ -109,8 +107,6 @@ def plot_mel_spectrogram(audio_data, sr, nfft=None, melbands=64, delta=None, **k
 
 
 def plot_chroma(audio_data, sr, nfft=None, delta=None, **kwargs):
-    if not nfft:
-        nfft = _next_power_of_two(int(sr*0.025))
     spectrogram = librosa.feature.chroma_stft(audio_data, sr, n_fft=nfft, hop_length=int(nfft/2))
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)

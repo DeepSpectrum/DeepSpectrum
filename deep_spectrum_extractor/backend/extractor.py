@@ -47,8 +47,7 @@ class TensorFlowExtractor():
     def __process_images(self, images, data_spec):
 
         if data_spec.expects_bgr:
-            # Convert from RGB channel ordering to BGR
-            # This matches, for instance, how OpenCV orders the channels.
+            # convert from RGB to BGR
             images = images[:, :, :, ::-1]
         # Rescale
         images = self.tf.image.resize_images(images, (data_spec.crop_size, data_spec.crop_size))

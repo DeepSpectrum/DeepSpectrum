@@ -3,14 +3,12 @@ import numpy as np
 # Add the kaffe module to the import path
 #sys.path.append(osp.realpath(osp.join(osp.dirname(__file__), '../../../')))
 
-#from googlenet import GoogleNet
-from  deep_spectrum_extractor.tf_models.vgg import VGG16
-from deep_spectrum_extractor.tf_models.alexnet import AlexNet
-#from caffenet import CaffeNet
-#from nin import NiN
-#from resnet import ResNet50, ResNet101, ResNet152
-
-from cv2 import resize
+from .googlenet import GoogleNet
+from .vgg import VGG16
+from .alexnet import AlexNet
+from .caffenet import CaffeNet
+from .nin import NiN
+from .resnet import ResNet50, ResNet101, ResNet152
 
 class DataSpec(object):
     '''Input data specifications for an ImageNet model.'''
@@ -52,19 +50,19 @@ def std_spec(batch_size, isotropic=True):
     return DataSpec(batch_size=batch_size, scale_size=256, crop_size=224, isotropic=isotropic)
 
 # Collection of sample auto-generated tf_models
-MODELS = (AlexNet, VGG16) #CaffeNet, GoogleNet, NiN, ResNet50, ResNet101, ResNet152)
+MODELS = (AlexNet, VGG16, CaffeNet, GoogleNet, NiN, ResNet50, ResNet101, ResNet152)
 
 # The corresponding data specifications for the sample tf_models
 # These specifications are based on how the tf_models were trained.
 # The recommended batch size is based on a Titan X (12GB).
 MODEL_DATA_SPECS = {
     AlexNet: alexnet_spec(),
-    #CaffeNet: alexnet_spec(),
-    #GoogleNet: std_spec(batch_size=200, isotropic=False),
-    #ResNet50: std_spec(batch_size=25),
-    #ResNet101: std_spec(batch_size=25),
-    #ResNet152: std_spec(batch_size=25),
-    #NiN: std_spec(batch_size=500),
+    CaffeNet: alexnet_spec(),
+    GoogleNet: std_spec(batch_size=200, isotropic=False),
+    ResNet50: std_spec(batch_size=25),
+    ResNet101: std_spec(batch_size=25),
+    ResNet152: std_spec(batch_size=25),
+    NiN: std_spec(batch_size=500),
     VGG16: std_spec(batch_size=25)
 }
 

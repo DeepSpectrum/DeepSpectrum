@@ -57,15 +57,15 @@ class Configuration:
         self.parser.add_argument('-l',
                                  help='csv file with the labels for the wavs in the form: \'test_001.wav, label\'. If nothing is specified here or under -labels, the name(s) of the directory/directories are used as labels.',
                                  default=None)
-        self.parser.add_argument('-tc',
+        self.parser.add_argument('--tc',
                                  help='Set labeling of features to time continuous mode. Only works in conjunction with -t and the specified label file has to provide labels for the specified hops in its second column.',
-                                 nargs='?', default=False, const=True)
+                                 action='store_true')
         self.parser.add_argument('-el', nargs='+',
                                  help='Define labels for folders explicitly in format: labelForFirstFolder labelForSecondFolder ...',
                                  default=None)
         self.parser.add_argument('-cmap', default='viridis',
                                  help='define the matplotlib colour map to use for the spectrograms',
-                                 choices=sorted([m for m in cm.cmap_d if not m.endswith("_r")]))
+                                 choices=sorted([m for m in cm.cmap_d]))
         self.parser.add_argument('-config',
                                  help='path to configuration file which specifies caffe model and weight files. If this file does not exist a new one is created and filled with the standard settings.',
                                  default=join(dirname(realpath(__file__)), 'deep.conf'))
@@ -270,7 +270,7 @@ class Configuration:
                     if not self.extraction_args['weights_path']:
                         self.parser.error('No model weights for {} found in {}'.format(self.net, net_conf[self.net]))
                 else:
-                    self.parser.error('No model weights defined for {} in {}'.format(self.net, self.config))
+                    self.parser.error('No model path defined for {} in {}'.format(self.net, self.config))
 
             elif self.backend == 'tensorflow':
                 print('Using tensorflow backend as specified in {}'.format(self.config))
