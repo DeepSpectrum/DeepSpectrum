@@ -10,6 +10,6 @@ setup(name='deep_spectrum_extractor',
           ]
       },
       install_requires=['numpy', 'scipy', 'imread', 'pysoundfile', 'tqdm', 'matplotlib', 'opencv-python', 'librosa'],
-      extras_require={'gpu': ['tensorflow-gpu'], 'cpu': ['tensorflow']},
+      extras_require={'tensorflow-gpu': ['tensorflow-gpu'], 'tensorflow': ['tensorflow']},
       zip_safe=False
       )

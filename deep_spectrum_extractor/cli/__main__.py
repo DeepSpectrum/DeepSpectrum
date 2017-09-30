@@ -9,7 +9,6 @@ from os.path import basename, join, commonpath, dirname
 from tqdm import tqdm
 
 import deep_spectrum_extractor.backend.plotting as eds
-import deep_spectrum_extractor.backend.extractor as extractors
 import deep_spectrum_extractor.tools.feature_reduction as fr
 from deep_spectrum_extractor.cli.configuration import Configuration
 from deep_spectrum_extractor.tools.custom_arff import Writer
@@ -121,14 +120,6 @@ def main(args=None):
     # set up the configuration object and parse commandline arguments
     configuration = Configuration()
     configuration.parse_arguments()
-    # net = tf_models.load_model(configuration.net)
-    # print('Using {} with weights found in {}.'.format(net.__class__.__name__, configuration.model_weights))
-    # if configuration.layer not in net.layers:
-    #     configuration.parser.error(
-    #         '\'{}\' is not a valid layer name for {}. Available layers are: {}'.format(configuration.layer,
-    #                                                                                    net.__class__.__name__,
-    #                                                                                    list(net.layers.keys())))
-    # data_spec = tf_models.get_data_spec(model_instance=net)
 
     file_name_queue = JoinableQueue()
 
@@ -158,9 +149,11 @@ def main(args=None):
 
     print('Loading model and weights...')
     if configuration.backend == 'caffe':
-        extractor = extractors.CaffeExtractor(**configuration.extraction_args)
+        from deep_spectrum_extractor.backend.extractor import CaffeExtractor
+        extractor = CaffeExtractor(**configuration.extraction_args)
     elif configuration.backend == 'tensorflow':
-        extractor = extractors.TensorFlowExtractor(**configuration.extraction_args)
+        from deep_spectrum_extractor.backend.extractor import TensorFlowExtractor
+        extractor = TensorFlowExtractor(**configuration.extraction_args)
 
     if configuration.extraction_args['layer'] not in extractor.layers:
         configuration.parser.error(

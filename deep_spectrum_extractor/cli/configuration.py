@@ -66,7 +66,7 @@ class Configuration:
                                  choices=sorted([m for m in cm.cmap_d if not m.endswith("_r")]))
         self.parser.add_argument('-config',
                                  help='path to configuration file which specifies caffe model and weight files. If this file does not exist a new one is created and filled with the standard settings.',
-                                 default=join(dirname(realpath(__file__)), 'unified.conf'))
+                                 default=join(dirname(realpath(__file__)), 'deep.conf'))
         self.parser.add_argument('-layer', default='fc7',
                                  help='name of CNN layer (as defined in caffe prototxt) from which to extract the features.')
         self.parser.add_argument('-start',
@@ -258,6 +258,10 @@ class Configuration:
 
             if self.backend == 'caffe':
                 print('Using caffe backend as specified in {}'.format(self.config))
+                try:
+                    import caffe
+                except ImportError:
+                    self.parser.error('No caffe installation found!')
                 net_conf = conf_parser['caffe-nets']
                 if self.net in net_conf:
                     self.extraction_args['def_path'], self.extraction_args['weights_path'] = _find_caffe_files(
@@ -271,6 +275,10 @@ class Configuration:
 
             elif self.backend == 'tensorflow':
                 print('Using tensorflow backend as specified in {}'.format(self.config))
+                try:
+                    import tensorflow
+                except ImportError:
+                    self.parser.error('No tensorflow installation found!')
                 net_conf = conf_parser['tensorflow-nets']
                 if self.net in [model.__name__ for model in tf_models.get_models()]:
                     self.extraction_args['net_name'] = self.net

@@ -1,6 +1,8 @@
 import numpy as np
-import tensorflow as tf
-
+try:
+    import tensorflow as tf
+except:
+    pass
 DEFAULT_PADDING = 'SAME'
 
 
