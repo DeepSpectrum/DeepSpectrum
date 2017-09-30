@@ -10,12 +10,13 @@
 * tqdm
 * pandas
 * liac-arff (imports as 'arff')
+* librosa
 * caffe with all dependencies. For installation instructions: 
   [https://github.com/BVLC/caffe/wiki/Ubuntu-16.04-or-15.10-Installation-Guide](https://github.com/BVLC/caffe/wiki/Ubuntu-16.04-or-15.10-Installation-Guide) or 
   [http://caffe.berkeleyvision.org/installation.html](http://caffe.berkeleyvision.org/installation.html). 
   Make sure you can do `import caffe` without errors from the python prompt in your commandline 
   of choice. 
-* alternatively, a tensorflow based version is available in a separate branch. 
+* alternatively, the tool can also be run with a tensorflow backend based on (https://github.com/ethereon/caffe-tensorflow). 
 
 ## Installation
 For the caffe version, all dependencies apart from caffe itself can be installed by running
@@ -23,10 +24,12 @@ For the caffe version, all dependencies apart from caffe itself can be installed
 
 
 For the tensorflow version, simply run 
-```pip install -e .['gpu']```
+```pip install -e .['tensorflow-gpu']```
 or 
-```pip install -e .['cpu']```
-if you prefer a cpu only version. Installing into a python virtual environment is recommended.
+```pip install -e .['tensorflow']```
+if you prefer a cpu only version. 
+
+Installing into a python virtual environment is recommended in both cases (for caffe, the virtualenvironment has to be created with the `--system-site-packages` option).
 
 
 
@@ -34,41 +37,51 @@ if you prefer a cpu only version. Installing into a python virtual environment i
 Apart from the commandline options, the feature extractor is configured via a 
 configuration file. This file specifies 4 things:
 
-1. The ids of the devices used for computation. In a multi GPU system, multiple IDs can be specified separated by commas.
-2. Whether you would like to use your GPU for computation (recommended).
-3. The width and height of the spectrograms plotted during the feature extraction
+1. Whether you would like to use your GPU for computation (recommended).
+2. The width and height of the spectrograms plotted during the feature extraction
    in pixels. Specify only one integer here, as the plots used by the system 
    have equal height and width. This parameter heavily impacts performance:
    if set to the input dimensions of your CNN (look at your *.prototxt for this)
    the speed of the feature extraction can be nearly doubled as the spectrogram
    plots don't have to be rescaled.
-4. The directories of your caffe CNN models. These directory should contain the 
+3. The backend you would like to use for the feature extraction. Caffe and tensorflow are available.
+4. Depending on the backend:
+    * Caffe: The directories of your caffe CNN models. These directories should contain the 
    model specification (a file that ends with *deploy.prototxt*) and weights 
    (a larger file that ends with *.caffemodel*) and can be specified after keys that are then accessible from the commandline.
+    * Tensorflow: The paths to model weights (.npy) for the caffe-tensorflow models. These can be obtained by converting corresponding .caffemodel files with https://github.com/ethereon/caffe-tensorflow (no caffe installation is needed dfor this). 
 
 
-`[main] 
-device_ids = 0,1
+
+
+```
+[main]
+size = 227
 gpu = 1
-size = 227
-[net]
-alexnet = ~/caffe-master/models/bvlc_alexnet
-googlenet = ~/caffe-master/models/bvlc_alexnet`
+backend = caffe
 
+[tensorflow-nets]
+vgg16 = # Path to model weights (.npy) go here.
+resnet50 = # Path to model weights (.npy) go here.
+nin = # Path to model weights (.npy) go here.
+resnet101 = # Path to model weights (.npy) go here.
+alexnet = # Path to model weights (.npy) go here.
+googlenet = # Path to model weights (.npy) go here.
+caffenet = # Path to model weights (.npy) go here.
+resnet152 = # Path to model weights (.npy) go here.
 
-If you use the tensorflow version, you only have to fill in paths to corresponding 
-model weight files (converted from caffe weights using caffe-tensorflow in .npy format). 
-You can still specify the size for the spectrogram plots.
+[caffe-nets]
+vgg16 = # Path to model folder containing model definition (.prototxt) and weights (.caffemodel) go here.
+resnet50 = # Path to model folder containing model definition (.prototxt) and weights (.caffemodel) go here.
+nin = # Path to model folder containing model definition (.prototxt) and weights (.caffemodel) go here.
+resnet101 = # Path to model folder containing model definition (.prototxt) and weights (.caffemodel) go here.
+alexnet = # Path to model folder containing model definition (.prototxt) and weights (.caffemodel) go here.
+googlenet = # Path to model folder containing model definition (.prototxt) and weights (.caffemodel) go here.
+caffenet = # Path to model folder containing model definition (.prototxt) and weights (.caffemodel) go here.
+resnet152 = # Path to model folder containing model definition (.prototxt) and weights (.caffemodel) go here.
+```
 
-`[main]
-size = 227
-
-
-[nets]
-AlexNet = # Path to model weights (.npy) go here.
-VGG16 = # Path to model weights (.npy) go here.`
-
-Currently, AlexNet and VGG16 are supported.
+The above configuration file is created upon first launching the system or specifying a nonexistent config file on the commandline.
 
 ## Usage
 ### Basics
@@ -102,11 +115,7 @@ Instead of using the whole audio file to create a single feature vector,
 features can also be extracted from equally sized chunks of the audio file
 resulting in indexed time series features. This is controlled from the 
 commandline by the parameter -t windowSize hopSize, where windowSize and hopSize
-should be given in seconds
-
-Additionally, when extracting from audio segments, `-nfft`should also be set 
-accordingly as for small segments the default of 256 samples used for the FFT is
-often too large. 
+should be given in seconds.
 
 ### Commandline options
 A detailed description of the commandline options is given below. Apart from 
@@ -119,15 +128,24 @@ A detailed description of the commandline options is given below. Apart from
 | **-f**   | Specify the directory/directories containing your *.wav* files here | None |
 | **-o** | The location of the output feature file. Supported output formats are: Comma separated value files and arff files. If the specified output file's extension is *.arff*, arff is chosen as format, otherwise the output will be in comma separated value format. | None |
 | -l | Specify a comma separated values file containing labels for each *.wav* file | None |
+| -tc | Set labeling of features to time continuous mode. Only works in conjunction with -t and the specified label file has to provide labels for the specified hops in its second column. | False |
 | -el | Specify labels explicitly for each folder given after -f. Number of given labels has to match the number of specified folders. If both this and -lf are not specified, each .wav is assigned the name of its parent directory as label. | None |
+| --no_timestamps | Remove timestamps from the output. | Write timestamps in feature file. |
+| -mode | Type of plot to use in the system (Choose from: 'spectrogram', 'mel', 'chroma'). | spectrogram |
+| -scale | Scale for the y-axis of the plots used by the system. Defaults to 'chroma' in chroma mode. (default: linear)
+| -ylim | Specify a limit for the y-axis in the spectrogram plot in frequency. | None |
+| -delta | If specified, derivatives of the given order of the selected features are displayed in the plots used by the system. | None |
+| -nmel | Number of melbands used for computing the melspectrogram. | 128 |
+| -nfft | The length of the FFT window used for creating the spectrograms in number of samples. Consider choosing smaller values when extracting from small segments. | The next power of two from 0.025*sampling_rate_of_wav |
 | -cmap | Choose a matplotlib colourmap for creating the spectrogram plots. | viridis |
-| -layer | Name of the layer from which features should be extracted as specified in your caffe .prototxt file. For the tesorflow version, the available layers are displayed on the commandline help. | fc7 |
-| -t | Define window and hopsize. | None |
-| -nfft | The length of the FFT window used for creating the spectrograms in number of samples. Consider choosing smaller values when extracting from small segments. | 256 |
-| -reduced | If a filepath is given here, an additional reduced version of the output is computed after feature extraction and written to the path. The feature reduction simply removes attributes that have a value of zero for all instances. | None |
-| -config | The path to the configuration file used by the program can be given here. If the file does not exist yet, it is created and filled with standard settings. | deep.conf |
-| -specout | Specify a folder to save the spectrograms as .pngs | None |
 | -net | Choose the net for feature extraction as specified in the config file | alexnet |
-| -ylim | Specify a limit for the y-axis in the spectrogram plot. | None |
+| -layer | Name of the layer from which features should be extracted as specified in your caffe .prototxt file. | fc7 |
+| -start | Set a start time (in seconds) from which features should be extracted from the audio files. | 0 |
+| -end | Set a end time until which features should be extracted from the audio files. | None |
+| -t | Define window and hopsize. | None |
+| -specout | Specify a folder to save the plots used during extraction as .pngs | None |
+| -wavout | Convenience function to write the chunks of audio data used in the extraction to the specified folder. | None |
+| -reduced | If a filepath is given here, an additional reduced version of the output is computed after feature extraction and written to the path. The feature reduction simply removes attributes that have a value of zero for all instances. | None |
 | -np | Specify the number of processes used for the extraction. Defaults to the number of available CPU cores | None |
+| -config | The path to the configuration file used by the program can be given here. If the file does not exist yet, it is created and filled with standard settings. | deep.conf |
 | -h | Show help. | None |
