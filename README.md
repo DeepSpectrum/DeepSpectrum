@@ -125,12 +125,13 @@ A detailed description of the commandline options is given below. Apart from
 
 | Option   | Description | Default |
 |----------|-------------|---------|
-| **-f**   | Specify the directory/directories containing your *.wav* files here | None |
+| **-f**   | Specify the directory containing your *.wav* files here | None |
 | **-o** | The location of the output feature file. Supported output formats are: Comma separated value files and arff files. If the specified output file's extension is *.arff*, arff is chosen as format, otherwise the output will be in comma separated value format. | None |
 | -l | Specify a comma separated values file containing labels for each *.wav* file | None |
 | -tc | Set labeling of features to time continuous mode. Only works in conjunction with -t and the specified label file has to provide labels for the specified hops in its second column. | False |
-| -el | Specify labels explicitly for each folder given after -f. Number of given labels has to match the number of specified folders. If both this and -lf are not specified, each .wav is assigned the name of its parent directory as label. | None |
+| -el | Specify a label explicitly for the input files. | None |
 | --no_timestamps | Remove timestamps from the output. | Write timestamps in feature file. |
+| --no_labels | Remove labels from the output. | Write labels in feature file. |
 | -mode | Type of plot to use in the system (Choose from: 'spectrogram', 'mel', 'chroma'). | spectrogram |
 | -scale | Scale for the y-axis of the plots used by the system. Defaults to 'chroma' in chroma mode. (default: linear)
 | -ylim | Specify a limit for the y-axis in the spectrogram plot in frequency. | None |
