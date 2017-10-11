@@ -3,7 +3,6 @@ import warnings
 
 import matplotlib
 
-
 # force matplotlib to not use X-Windows backend. Needed for running the tool through an ssh connection.
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -56,7 +55,7 @@ def plot(wav_file, window, hop, mode='spectrogram', size=227, output_folder=None
         nfft = _next_power_of_two(int(sr*0.025))
     write_index = window or hop
     wav_out = join(wav_folder, basename(wav_file)) if wav_folder else None
-    for idx, chunk in enumerate(_generate_chunks(sound_info, sr, window, hop, wav_out=wav_out)):
+    for idx, chunk in enumerate(_generate_chunks(sound_info, sr, window, hop, start, wav_out=wav_out)):
         fig = plt.figure(frameon=False)
         fig.set_size_inches(1, 1)
         ax = plt.Axes(fig, [0., 0., 1., 1.], )
@@ -66,12 +65,13 @@ def plot(wav_file, window, hop, mode='spectrogram', size=227, output_folder=None
             warnings.simplefilter('ignore')
             spectrogram_axes = PLOTTING_FUNCTIONS[mode](chunk, sr, nfft, **kwargs)
 
-        fig.add_axes(spectrogram_axes)
+        fig.add_axes(spectrogram_axes, id='spectrogram')
 
         if output_folder:
             file_name = basename(wav_file)[:-4]
-            outfile = join(output_folder, file_name + '_' + str(idx) + '.png') if write_index else join(output_folder,
-                                                                                                        file_name + '.png')
+            outfile = join(output_folder, '{}_{:.4f}'.format(file_name, start + idx * hop).rstrip('0').rstrip(
+                '.') + '.png') if write_index else join(output_folder,
+                                                        file_name + '.png')
             fig.savefig(outfile, format='png', dpi=size)
         buf = io.BytesIO()
         fig.savefig(buf, format='png', dpi=size)
@@ -122,16 +122,16 @@ def _create_plot(spectrogram, sr, nfft, ylim=None, cmap='viridis', scale='linear
     return spectrogram_axes
 
 
-def _generate_chunks(sound_info, sr, window, hop, wav_out=None):
+def _generate_chunks(sound_info, sr, window, hop, start=0, wav_out=None):
     if not window and not hop:
         yield sound_info
         return
-    window = int(window * sr)
-    hop = int(hop * sr)
-    for n in range(max(int((len(sound_info)) / hop), 1)):
-        chunk = sound_info[n * hop:min(n * hop + window, len(sound_info))]
+    window_samples = int(window * sr)
+    hop_samples = int(hop * sr)
+    for n in range(max(int((len(sound_info)) / hop_samples), 1)):
+        chunk = sound_info[n * hop_samples:min(n * hop_samples + window_samples, len(sound_info))]
         if wav_out:
-            chunk_out = wav_out[:-4] + '_' + str(n) + '.wav'
+            chunk_out = '{}_{:.4f}'.format(wav_out[:-4], start + n * hop).rstrip('0').rstrip('.') + '.wav'
             sf.write(chunk_out, chunk, sr)
         yield chunk
 

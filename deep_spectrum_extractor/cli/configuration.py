@@ -3,7 +3,6 @@ import configparser
 import fnmatch
 import re
 from decimal import *
-from itertools import chain
 from os import listdir, makedirs, walk
 
 from matplotlib import cm
@@ -11,7 +10,6 @@ from os.path import abspath, join, isfile, basename, expanduser, dirname, isdir,
 
 import deep_spectrum_extractor.tf_models as tf_models
 from deep_spectrum_extractor.backend.plotting import PLOTTING_FUNCTIONS
-
 from deep_spectrum_extractor.tools.label_parser import LabelParser
 
 getcontext().prec = 6
@@ -28,7 +26,7 @@ class Configuration:
         # set default values
         self.model_weights = join(expanduser('~'), 'tf_models/bvlc_alexnet.npy')
         self.number_of_processes = None
-        self.folders = []
+        self.input = []
         self.label_file = None
         self.reduced = None
         self.files = []
@@ -41,7 +39,6 @@ class Configuration:
         self.writer_args = {}
         self.backend = 'caffe'
 
-
     def parse_arguments(self):
         """
         Creates a commandline parser and handles the given options.
@@ -50,7 +47,7 @@ class Configuration:
         self.parser = argparse.ArgumentParser(description='Extract deep spectrum features from wav files',
                                               formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         required_named = self.parser.add_argument_group('Required named arguments')
-        required_named.add_argument('-f', nargs='+', help='folder(s) where your wavs reside', required=True)
+        required_named.add_argument('-f', help='folder(s) where your wavs reside', required=True)
         required_named.add_argument('-o',
                                     help='the file which the features are written to. Supports csv and arff formats',
                                     required=True)
@@ -60,8 +57,8 @@ class Configuration:
         self.parser.add_argument('--tc',
                                  help='Set labeling of features to time continuous mode. Only works in conjunction with -t and the specified label file has to provide labels for the specified hops in its second column.',
                                  action='store_true')
-        self.parser.add_argument('-el', nargs='+',
-                                 help='Define labels for folders explicitly in format: labelForFirstFolder labelForSecondFolder ...',
+        self.parser.add_argument('-el', nargs=1,
+                                 help='Define an explicit label for the input wavs.',
                                  default=None)
         self.parser.add_argument('-cmap', default='viridis',
                                  help='define the matplotlib colour map to use for the spectrograms',
@@ -119,7 +116,7 @@ class Configuration:
                                  default=128)
 
         args = vars(self.parser.parse_args())
-        self.folders = args['f']
+        self.input = args['f']
         self.net = args['net']
         self.config = args['config']
         self.reduced = args['reduced']
@@ -159,21 +156,18 @@ class Configuration:
         self.writer_args['labels'] = args['el']
         self.writer_args['no_timestamps'] = args['no_timestamps']
 
-
-
-
         # list all .wavs for the extraction found in the given folders
-        self.files = list(chain.from_iterable([self._find_wav_files(folder) for folder in self.folders]))
+        self.files = self._find_wav_files(self.input)
         if not self.files:
-            self.parser.error('No .wavs were found. Check the specified input paths.')
+            self.parser.error('No .wavs were found. Check the specified input path.')
 
         if self.output_spectrograms:
             makedirs(self.output_spectrograms, exist_ok=True)
 
-        if self.writer_args['labels'] is not None and len(self.folders) != len(self.writer_args['labels']):
-            self.parser.error(
-                'Labels have to be specified for each folder: ' + str(len(self.folders)) + ' expected, ' + str(
-                    len(self.writer_args['labels'])) + ' received.')
+        # if self.writer_args['labels'] is not None and len(self.input) != len(self.writer_args['labels']):
+        #     self.parser.error(
+        #         'Labels have to be specified for each folder: ' + str(len(self.input)) + ' expected, ' + str(
+        #             len(self.writer_args['labels'])) + ' received.')
         print('Parsing labels...')
         if self.label_file is None:
             self._create_labels_from_folder_structure()
@@ -206,10 +200,8 @@ class Configuration:
 
         parser.parse_labels()
 
-
         self.writer_args['label_dict'] = parser.label_dict
         self.writer_args['labels'] = parser.labels
-
 
         file_names = set(map(basename, self.files))
 
@@ -217,8 +209,6 @@ class Configuration:
         missing_labels = file_names.difference(self.writer_args['label_dict'])
         if missing_labels:
             self.parser.error('No labels for: ' + ', '.join(missing_labels))
-
-
 
     def _create_labels_from_folder_structure(self):
         """
@@ -230,11 +220,10 @@ class Configuration:
         else:
             # map the labels given on the commandline to all files in a given folder in the order both appear in the
             # parsed options.
-            self.writer_args['label_dict'] = {basename(wav): [self.writer_args['labels'][folder_index]] for folder_index, folder in
-                               enumerate(self.folders) for
-                               wav in
-                               self._find_wav_files(folder)}
+            self.writer_args['label_dict'] = {basename(wav): self.writer_args['labels'] for wav in
+                                              self.files}
         labels = list(map(lambda x: x[0], self.writer_args['label_dict'].values()))
+        print(labels)
         self.writer_args['labels'] = [('class', set(labels))]
 
     def _load_config(self):
@@ -287,9 +276,11 @@ class Configuration:
                         self.parser.error('No model weights defined for {} in {}'.format(self.net, self.config))
                 else:
                     self.parser.error('No model definition exists for {}. Available tf_models: {}'.format(self.net,
-                                                                                                       [model.__name__
-                                                                                                        for model in
-                                                                                                        tf_models.get_models()]))
+                                                                                                          [
+                                                                                                              model.__name__
+                                                                                                              for model
+                                                                                                              in
+                                                                                                              tf_models.get_models()]))
             else:
                 self.parser.error(
                     'Unknown backend \'{}\' defined in {}. Available backends: tensorflow, caffe'.format(self.backend,
@@ -301,8 +292,10 @@ class Configuration:
             main_conf = {'size': str(227), 'gpu': str(1), 'backend': 'caffe'}
             tensorflow_net_conf = {model.__name__: '# Path to model weights (.npy) go here.' for model in
                                    tf_models.get_models()}
-            caffe_net_conf = {model.__name__: '# Path to model folder containing model definition (.prototxt) and weights (.caffemodel) go here.' for model in
-                              tf_models.get_models()}
+            caffe_net_conf = {
+                model.__name__: '# Path to model folder containing model definition (.prototxt) and weights (.caffemodel) go here.'
+                for model in
+                tf_models.get_models()}
             conf_parser['main'] = main_conf
             conf_parser['tensorflow-nets'] = tensorflow_net_conf
             conf_parser['caffe-nets'] = caffe_net_conf

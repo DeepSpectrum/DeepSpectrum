@@ -4,9 +4,8 @@ import pathlib
 from multiprocessing import JoinableQueue, Process
 from os import makedirs, environ
 
-
 import numpy as np
-from os.path import basename, join, commonpath, dirname
+from os.path import basename, join, dirname
 from tqdm import tqdm
 
 import deep_spectrum_extractor.backend.plotting as eds
@@ -43,24 +42,20 @@ def plot_file(file, config, **kwargs):
     spectrogram_directory = None
     wav_directory = None
     if config.output_spectrograms:
-        spectrogram_directory = join(config.output_spectrograms, get_relative_path(file, config.folders))
+        spectrogram_directory = join(config.output_spectrograms, get_relative_path(file, config.input))
         makedirs(spectrogram_directory, exist_ok=True)
     if config.output_wavs:
-        wav_directory = join(config.output_wavs, get_relative_path(file, config.folders))
+        wav_directory = join(config.output_wavs, get_relative_path(file, config.input))
         makedirs(wav_directory, exist_ok=True)
     return np.asarray([plot for plot in
                        eds.plot(file, output_folder=spectrogram_directory, wav_folder=wav_directory, **kwargs)])
 
 
-def get_relative_path(file, folders):
+def get_relative_path(file, prefix):
     filepath = pathlib.PurePath(dirname(file))
-    prefixes = [commonpath([file] + [folder]) for folder in folders]
-    ml = max(len(s) for s in prefixes)
-    prefix = list(set(s for s in prefixes if len(s) == ml))[0]
-    folder_index = prefixes.index(prefix)
     filepath = filepath.relative_to(prefix)
-    spectrogram_path = join('folder{}'.format(folder_index), str(filepath))
-    return spectrogram_path
+
+    return str(filepath)
 
 
 def writer_worker(total_num_of_files, number_of_processes, result_queue, start_condition, output, label_dict, labels, continuous_labels, window, hop, start, no_timestamps):
