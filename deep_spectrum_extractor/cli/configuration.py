@@ -114,6 +114,8 @@ class Configuration:
         self.parser.add_argument('-nmel', type=int,
                                  help='Number of melbands used for computing the melspectrogram.',
                                  default=128)
+        self.parser.add_argument('--no_labels', action='store_true',
+                                 help='Do not write class labels to the output.')
 
         args = vars(self.parser.parse_args())
         self.input = args['f']
@@ -155,6 +157,7 @@ class Configuration:
         self.writer_args['continuous_labels'] = ('window' in self.plotting_args) and args['tc'] and self.label_file
         self.writer_args['labels'] = args['el']
         self.writer_args['no_timestamps'] = args['no_timestamps']
+        self.writer_args['no_labels'] = args['no_labels']
 
         # list all .wavs for the extraction found in the given folders
         self.files = self._find_wav_files(self.input)

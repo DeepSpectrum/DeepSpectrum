@@ -58,7 +58,8 @@ def get_relative_path(file, prefix):
     return str(filepath)
 
 
-def writer_worker(total_num_of_files, number_of_processes, result_queue, start_condition, output, label_dict, labels, continuous_labels, window, hop, start, no_timestamps):
+def writer_worker(total_num_of_files, number_of_processes, result_queue, start_condition, output, label_dict, labels,
+                  continuous_labels, window, hop, start, no_timestamps, no_labels):
 
     with start_condition:
         start_condition.wait()
@@ -66,8 +67,11 @@ def writer_worker(total_num_of_files, number_of_processes, result_queue, start_c
     write_timestamp = window and not no_timestamps
     with tqdm(total=total_num_of_files) as pbar, open(output, 'w', newline='') as output_file:
         writer = None
-        classes = [(class_name, '{' + ','.join(class_type) + '}') if class_type else (
-            class_name, 'numeric') for class_name, class_type in labels]
+        if no_labels:
+            classes = None
+        else:
+            classes = [(class_name, '{' + ','.join(class_type) + '}') if class_type else (
+                class_name, 'numeric') for class_name, class_type in labels]
         try:
             while True:
                 file_name, features = result_queue.get()
@@ -86,9 +90,13 @@ def writer_worker(total_num_of_files, number_of_processes, result_queue, start_c
                             timestamp = start + (idx * hop)
                             labels = label_dict[file_name][write_timestamp] if continuous_labels else \
                                 label_dict[file_name]
-                            row = [file_name] + [str(timestamp)] + list(map(str, feature_vector)) + labels
+                            row = [file_name] + [str(timestamp)] + list(map(str, feature_vector))
+                            if not no_labels:
+                                row += labels
                         else:
-                            row = [file_name] + list(map(str, feature_vector)) + label_dict[file_name]
+                            row = [file_name] + list(map(str, feature_vector))
+                            if not no_labels:
+                                row += label_dict[file_name]
                         writer.writerow(row)
                     result_queue.task_done()
                     pbar.update(1)
@@ -103,11 +111,13 @@ def _determine_attributes(timestamp, feature_vector, classes):
     if timestamp:
         attributes = [('name', 'string'), ('timeStamp', 'numeric')] + [
             ('neuron_' + str(i), 'numeric') for i, _ in
-            enumerate(feature_vector)] + classes
+            enumerate(feature_vector)]
     else:
         attributes = [('name', 'string')] + [
             ('neuron_' + str(i), 'numeric') for i, _ in
-            enumerate(feature_vector)] + classes
+            enumerate(feature_vector)]
+    if classes:
+        attributes += classes
     return attributes
 
 
