@@ -1,5 +1,4 @@
-from functools import reduce
-from operator import mul
+import numpy as np
 
 
 class TensorFlowExtractor():
@@ -9,7 +8,8 @@ class TensorFlowExtractor():
     except ImportError:
         pass
 
-    def __init__(self, net_name, weights_path, layer, gpu=True):
+    def __init__(self, net_name, weights_path, layer, batch_size=256, gpu=True):
+        self.batch_size = batch_size
         self.input, self.net = self.__load_model(net_name)
         self.layer = layer
         net_output = self.net.layers[self.layer]
@@ -54,7 +54,14 @@ class TensorFlowExtractor():
         return self.tf.to_float(images)
 
     def extract_features(self, images):
-        return self.session.run(self.features, feed_dict={self.input: images})
+        image_batches = batch_images(images, self.batch_size)
+        all_features = []
+        for images in image_batches:
+            features = self.session.run(self.features, feed_dict={self.input: images})
+            all_features.append(np.array(features))
+
+        all_features = np.concatenate(all_features)
+        return all_features
 
 
 class CaffeExtractor():
@@ -62,8 +69,9 @@ class CaffeExtractor():
         import caffe
     except ImportError:
         pass
-    import numpy as np
-    def __init__(self, def_path, weights_path, layer, gpu=True):
+
+    def __init__(self, def_path, weights_path, layer, batch_size=256, gpu=True):
+        self.batch_size = batch_size
         self.layer = layer
         # set mode to GPU or CPU computation
         if gpu:
@@ -82,18 +90,26 @@ class CaffeExtractor():
 
 
     def extract_features(self, images):
-        # reshape input layer as batch processing is not needed
-        shape = self.net.blobs['data'].shape
-        self.net.blobs['data'].reshape(images.shape[0], shape[1], shape[2], shape[3])
-        self.net.reshape()
-        images = list(map(lambda x: self.transformer.preprocess('data', x), images))
-        self.net.blobs['data'].data[...] = images
-        self.net.forward()
+        image_batches = batch_images(images, self.batch_size)
+        all_features = []
+        for images in image_batches:
+            shape = self.net.blobs['data'].shape
+            self.net.blobs['data'].reshape(images.shape[0], shape[1], shape[2], shape[3])
+            self.net.reshape()
+            images = list(map(lambda x: self.transformer.preprocess('data', x), images))
+            self.net.blobs['data'].data[...] = images
+            self.net.forward()
 
-        # extract features from the specified layer
-        features = self.net.blobs[self.layer].data
+            # extract features from the specified layer
+            features = self.net.blobs[self.layer].data
+            all_features.append(np.array(features))
 
-        return self.np.reshape(features, (features.shape[0], -1))
+        all_features = np.concatenate(all_features)
+        return self.np.reshape(all_features, (all_features.shape[0], -1))
 
 
-
+def batch_images(images, batch_size=256):
+    if images.shape[0] <= batch_size:
+        return [images]
+    else:
+        return np.array_split(images, batch_size)

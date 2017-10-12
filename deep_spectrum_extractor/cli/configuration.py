@@ -114,6 +114,9 @@ class Configuration:
         self.parser.add_argument('-nmel', type=int,
                                  help='Number of melbands used for computing the melspectrogram.',
                                  default=128)
+        self.parser.add_argument('-batch_size', type=int,
+                                 help='Maximum batch size for feature extraction. Adjust according to your gpu memory size.',
+                                 default=128)
         self.parser.add_argument('--no_labels', action='store_true',
                                  help='Do not write class labels to the output.')
 
@@ -147,6 +150,7 @@ class Configuration:
 
         # arguments for extraction functions
         self.extraction_args['layer'] = args['layer']
+        self.extraction_args['batch_size'] = args['batch_size']
 
         # arguments for writer
         self.writer_args['output'] = abspath(args['o'])
@@ -226,7 +230,6 @@ class Configuration:
             self.writer_args['label_dict'] = {basename(wav): self.writer_args['labels'] for wav in
                                               self.files}
         labels = list(map(lambda x: x[0], self.writer_args['label_dict'].values()))
-        print(labels)
         self.writer_args['labels'] = [('class', set(labels))]
 
     def _load_config(self):
