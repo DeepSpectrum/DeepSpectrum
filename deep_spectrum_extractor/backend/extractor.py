@@ -105,7 +105,7 @@ class CaffeExtractor():
             all_features.append(np.array(features))
 
         all_features = np.concatenate(all_features)
-        return self.np.reshape(all_features, (all_features.shape[0], -1))
+        return np.reshape(all_features, (all_features.shape[0], -1))
 
 
 def batch_images(images, batch_size=256):
