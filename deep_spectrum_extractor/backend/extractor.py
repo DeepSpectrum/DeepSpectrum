@@ -55,8 +55,7 @@ class TensorFlowExtractor(Extractor):
 
         # Create a placeholder for the input image
         data_spec = self.tf_models.get_data_spec(model_class=NetClass)
-        input = self.tf.placeholder(self.tf.float32,
-                                         shape=(None, data_spec.crop_size, data_spec.crop_size, data_spec.channels))
+        input = self.tf.placeholder(self.tf.float32, shape=(None, None, None, 3)) 
         processed_images = self.__process_images(input, data_spec)
         # Construct and return the model
         return input, NetClass({'data': processed_images})
