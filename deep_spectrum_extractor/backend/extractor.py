@@ -1,4 +1,5 @@
 import numpy as np
+import re
 
 class Extractor():
     def __init__(self, images):
@@ -24,41 +25,41 @@ class TensorFlowExtractor(Extractor):
     except ImportError:
         pass
 
-    def __init__(self, images, net_name, weights_path, layer, batch_size=256, gpu=True):
+    def __init__(self, images, model_path, layer, batch_size=256, gpu=True):
         super().__init__(images)
         self.batch_size = batch_size
-        self.input, self.net = self.__load_model(net_name)
+        self.graph = self.__load_graph(model_path)
         self.layer = layer
-        net_output = self.net.layers[self.layer]
-        dim = self.tf.reduce_prod(self.tf.shape(net_output)[1:])
-        self.features = self.tf.reshape(net_output, [-1, dim])
+        with self.graph.as_default() as g:
+            self.input, self.layers = self.__input_and_layers()
+            assert self.layer in self.layers, '\'{}\' is not a valid layer. Available layers are: {}'.format(
+                self.layer, sorted(list(self.layers.keys())))
+            net_output = self.layers[self.layer]
+            dim = self.tf.reduce_prod(self.tf.shape(net_output)[1:])
+            self.features = self.tf.reshape(net_output, [-1, dim])
         config = self.tf.ConfigProto()
         config.gpu_options.allow_growth = True
-        self.session = self.tf.Session(config=config)
-        self.net.load(weights_path, self.session)
-        self.layers = self.net.layers.keys()
+        self.session = self.tf.Session(graph=self.graph, config=config)
+        self.layers = self.layers.keys()
 
-    def __load_model(self, name):
-        '''Creates and returns an instance of the model given its class name.
-        The created model has a single placeholder node for feeding images.
-        '''
-        # Find the model class from its name
-        all_models = self.tf_models.get_models()
-        lut = {model.__name__: model for model in all_models}
-        if name not in lut:
-            print('Invalid model index. Options are:')
-            # Display a list of valid model names
-            for model in all_models:
-                print('\t* {}'.format(model.__name__))
-            return None
-        NetClass = lut[name]
+    def __load_graph(self, frozen_graph_filename):
+        with self.tf.gfile.GFile(frozen_graph_filename, "rb") as f:
+            graph_def = self.tf.GraphDef()
+            graph_def.ParseFromString(f.read())
 
-        # Create a placeholder for the input image
-        data_spec = self.tf_models.get_data_spec(model_class=NetClass)
-        input = self.tf.placeholder(self.tf.float32, shape=(None, None, None, 3)) 
-        processed_images = self.__process_images(input, data_spec)
-        # Construct and return the model
-        return input, NetClass({'data': processed_images})
+        with self.tf.Graph().as_default() as graph:
+            self.tf.import_graph_def(graph_def, name="extractor")
+        return graph
+
+    def __input_and_layers(self):
+        tensor_names = [op.name+':0' for op in self.graph.get_operations()]
+        prefix_re = r'^(\w+)/*'
+        prefix = re.match(prefix_re, tensor_names[0]).group(1)
+        layer_re = r'\b(\w+)/\1\b'
+        layer_names = set(re.search(layer_re, tensor).group(1) for tensor in tensor_names if re.search(layer_re, tensor))
+        layer_dict = {layer: self.graph.get_tensor_by_name('/'.join([prefix]+[layer]*2)+':0') for layer in layer_names}
+        input = self.graph.get_tensor_by_name(prefix+'/input:0')
+        return input, layer_dict
 
     def __process_images(self, images, data_spec):
 
