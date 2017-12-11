@@ -18,3 +18,4 @@ extract_deep_spectrum_conflict-20170322-172750.py
 convert_wav_to_mono.py
 *.conf
 SOS_googlenet.confonf
+*.pdf

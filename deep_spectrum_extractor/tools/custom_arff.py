@@ -1,4 +1,4 @@
-class Reader():
+class ArffReader():
     def __init__(self, file_object):
         self.arff_file = file_object
         self.attributes = []
@@ -25,7 +25,7 @@ class Reader():
             return self.__next__()
 
 
-class Writer():
+class ArffWriter():
     def __init__(self, file_object, relation_name, attributes):
         self.arff_file = file_object
         self.relation_name = relation_name

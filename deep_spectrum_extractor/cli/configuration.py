@@ -229,7 +229,7 @@ class Configuration:
             # parsed options.
             self.writer_args['label_dict'] = {basename(wav): self.writer_args['labels'] for wav in
                                               self.files}
-        labels = list(map(lambda x: x[0], self.writer_args['label_dict'].values()))
+        labels = sorted(list(map(lambda x: x[0], self.writer_args['label_dict'].values())))
         self.writer_args['labels'] = [('class', set(labels))]
 
     def _load_config(self):

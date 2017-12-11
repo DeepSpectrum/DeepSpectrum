@@ -23,7 +23,7 @@ class LabelParser():
         classes = header[first_class_index:]
 
         # a list of distinct labels is needed for deciding on the nominal class values for .arff files
-        self.labels = [(class_name, set([])) for class_name in classes]
+        self.labels = [[class_name, []] for class_name in classes]
 
         # parse the label file line by line
         for row in reader:
@@ -34,13 +34,12 @@ class LabelParser():
                 self.label_dict[name][Decimal(row[1])] = row[first_class_index:]
             else:
                 self.label_dict[name] = row[first_class_index:]
-
             for i, label in enumerate(row[first_class_index:]):
                 if self._is_number(label):
                     self.labels[i] = (self.labels[i][0], None)
                 else:
-                    self.labels[i][1].add(label)
-
+                    self.labels[i][1].append(label)
+                    self.labels[i] = [self.labels[i][0], sorted(list(set(self.labels[i][1])))]
     @staticmethod
     def _is_number(s):
         try:

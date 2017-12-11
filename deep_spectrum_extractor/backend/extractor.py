@@ -1,14 +1,31 @@
 import numpy as np
 
+class Extractor():
+    def __init__(self, images):
+        self.images = images
 
-class TensorFlowExtractor():
+    def __len__(self):
+        return len(self.images)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.extract_features(next(self.images))
+
+    def extract_features(self, images):
+        raise NotImplementedError('Feature extractor must implement \'extract_features(self, images\' !')
+
+class TensorFlowExtractor(Extractor):
+
     try:
         import tensorflow as tf
         from deep_spectrum_extractor import tf_models
     except ImportError:
         pass
 
-    def __init__(self, net_name, weights_path, layer, batch_size=256, gpu=True):
+    def __init__(self, images, net_name, weights_path, layer, batch_size=256, gpu=True):
+        super().__init__(images)
         self.batch_size = batch_size
         self.input, self.net = self.__load_model(net_name)
         self.layer = layer
@@ -64,13 +81,14 @@ class TensorFlowExtractor():
         return all_features
 
 
-class CaffeExtractor():
+class CaffeExtractor(Extractor):
     try:
         import caffe
     except ImportError:
         pass
 
-    def __init__(self, def_path, weights_path, layer, batch_size=256, gpu=True):
+    def __init__(self, images, def_path, weights_path, layer, batch_size=256, gpu=True):
+        super().__init__(images)
         self.batch_size = batch_size
         self.layer = layer
         # set mode to GPU or CPU computation
