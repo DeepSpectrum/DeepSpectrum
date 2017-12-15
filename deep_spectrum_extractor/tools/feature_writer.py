@@ -41,7 +41,7 @@ class ArffFeatureWriter(FeatureWriter):
             writer = None
             for file_name, features in tqdm(
                     zip(names, features),
-                    total=len(features),
+                    total=len(names),
                     disable=hide_progress):
                 if self.no_labels:
                     classes = None
@@ -75,7 +75,7 @@ class CsvFeatureWriter(FeatureWriter):
             writer = None
             for file_name, features in tqdm(
                     zip(names, features),
-                    total=len(features),
+                    total=len(names),
                     disable=hide_progress):
                 if self.no_labels:
                     classes = None
@@ -107,7 +107,7 @@ class NumpyFeatureWriter(FeatureWriter):
     def write_features(self, names, features, hide_progress=False):
         file_names, timestamps, data, labels = ([], [], [], [])
         for file_name, features in tqdm(
-                zip(names, features), total=len(features),
+                zip(names, features), total=len(names),
                 disable=hide_progress):
 
             file_name = basename(file_name)
@@ -143,7 +143,7 @@ class TfFeatureWriter(FeatureWriter):
         with self.tf.python_io.TFRecordWriter(self.output) as writer:
             for file_name, features in tqdm(
                     zip(names, features),
-                    total=len(features),
+                    total=len(names),
                     disable=hide_progress):
                 file_name = basename(file_name)
                 for idx, feature_vector in enumerate(features):

@@ -10,8 +10,10 @@ import librosa.display
 import numpy as np
 import soundfile as sf
 import pathlib
+import re
+import fnmatch
 from imread import imread_from_blob
-from os import environ, makedirs
+from os import environ, makedirs, walk
 from os.path import basename, join, dirname
 from multiprocessing import cpu_count, Pool
 from functools import partial
@@ -167,21 +169,17 @@ def get_relative_path(file, prefix):
     return str(filepath)
 
 
-class PlotGenerator():
-    def __init__(self, files, input_path, output_spectrograms=None, output_wavs=None, number_of_processes=None,
-                 **kwargs):
-        # self.input_path = input_path
-        # self.output_spectrograms = output_spectrograms
-        # self.output_wavs = output_wavs
-        # self.file_name_queue = JoinableQueue()
-        # for file in files:
-        #     self.file_name_queue.put(file)
-        #
-        # self.plot_queue = JoinableQueue()
-        # self.length = len(files)
-        self.files = files
-        self.number_of_processes = number_of_processes
 
+
+class PlotGenerator():
+    def __init__(self, input_path, output_spectrograms=None, output_wavs=None, number_of_processes=None,
+                 **kwargs):
+        self.files = self._find_wav_files(input_path)
+        self.number_of_processes = number_of_processes
+        if output_spectrograms:
+            makedirs(output_spectrograms, exist_ok=True)
+        if output_wavs:
+            makedirs(output_wavs, exist_ok=True)
         if not self.number_of_processes:
             self.number_of_processes = cpu_count()
         plotting_func = partial(
@@ -190,14 +188,6 @@ class PlotGenerator():
 
         self.pool =  Pool(processes=self.number_of_processes)
         self.plots = self.pool.imap(plotting_func, self.files)
-            # self.processes = []
-            # self.finished_processes = Value('i', 0)
-            # for i in range(number_of_processes):
-            #     p = Process(target=self.plotting_worker, args=self.finished_processes, kwargs=kwargs)
-            #     p.daemon = True
-            #     self.processes.append(p)
-            #     self.file_name_queue.put(None)
-            #     p.start()
 
     def __len__(self):
         return len(self.files)
@@ -211,34 +201,12 @@ class PlotGenerator():
         except StopIteration:
             self.pool.close()
             raise StopIteration
-        # if self.plot_queue.empty() and self.finished_processes.value:
-        #     for p in self.processes:
-        #         p.join()
-        #     self.file_name_queue.close()
-        #     self.plot_queue.close()
-        #     self.file_name_queue.join()
-        #     self.plot_queue.join()
-        #     raise StopIteration
-        # else:
-        #     return self.plot_queue.get()
 
-        # def plotting_worker(self, finished_processes, **kwargs):
-        #     # print('Process ' + str(id) + ': ' + 'initializing...')
-        #     # wait for all threads to be initialized
-        #     try:
-        #         while True:
-        #             file = self.file_name_queue.get()
-        #             if file:
-        #                 plots = plot_file(file, input_path=self.input_path, output_spectrograms=self.output_spectrograms,
-        #                                   output_wavs=self.output_wavs, **kwargs)
-        #                 if plots is not None:
-        #                     filename = basename(file)
-        #                     self.plot_queue.put((filename, plots))
-        #                 self.file_name_queue.task_done()
-        #             else:
-        #                 self.file_name_queue.task_done()
-        #                 with finished_processes.get_lock():
-        #                     finished_processes.value += 1
-        #                 break
-        #     except KeyboardInterrupt:
-        #         pass
+    @staticmethod
+    def _find_wav_files(folder):
+        globexpression = '*.wav'
+        reg_expr = re.compile(fnmatch.translate(globexpression), re.IGNORECASE)
+        wavs = []
+        for root, dirs, files in walk(folder, topdown=True):
+            wavs += [join(root, j) for j in files if re.match(reg_expr, j)]
+        return wavs
