@@ -125,7 +125,7 @@ A detailed description of the commandline options is given below. Apart from
 For convenience, a extractor for traditional CNN-descriptors is also included. 
 The tool works on collections of .png images and can be used with the main 
 tool's arguments - except for those specific to creating audio plots:
-* `image_cnn_features -f ~/Desktop/spectrograms -o ~/Desktop/train.arff  -net AlexNet -layer fc7 -l ~/Desktop/labels.csv`
+* `image_cnn_features -f ~/Desktop/spectrograms -o ~/Desktop/train.arff -net AlexNet -layer fc7 -l ~/Desktop/labels.csv`
 
 
 | Option   | Description | Default |
