@@ -123,15 +123,14 @@ def parameter_search_train_devel(train_X,
             clf = LinearSVC(
                 C=C,
                 class_weight='balanced',
-                random_state=RANDOM_SEED,
-                scoring='recall_macro')
+                random_state=RANDOM_SEED)
             if standardize:
                 print('Standardizing input...')
                 scaler = StandardScaler().fit(train_X)
                 train_X = scaler.transform(train_X)
                 devel_X = scaler.transform(devel_X)
 
-            scores = cross_val_score(clf, train_X, train_y, cv=10)
+            scores = cross_val_score(clf, train_X, train_y, cv=10, scoring='recall_macro')
             predicted_devel = clf.predict(devel_X)
             UAR_train = scores.mean()
             UAR_devel = recall_score(devel_y, predicted_devel, average='macro')
