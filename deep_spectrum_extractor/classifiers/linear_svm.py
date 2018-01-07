@@ -142,7 +142,7 @@ def parameter_search_train_devel(train_X,
                        scores.std() * 2, UAR_devel))
             if csv_writer:
                 csv_writer.writerow([
-                    '{:.1E}'.format(Decimal(C)), '{:.2%}'.format(UAR_devel),
+                    '{:.1E}'.format(Decimal(C)), '{:.2%}'.format(UAR_train),
                     '{:.2%}'.format(UAR_devel)
                 ])
             if UAR_devel > best_uar:
