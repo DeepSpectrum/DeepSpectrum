@@ -33,7 +33,7 @@ def layer(op):
 
 class Network(object):
 
-    def __init__(self, inputs, trainable=True):
+    def __init__(self, inputs, trainable=True, skip_layers=[], num_classes=1000, keep_prob=0.5):
         # The input nodes for this network
         self.inputs = inputs
         # The current list of terminal nodes
@@ -46,6 +46,12 @@ class Network(object):
         self.use_dropout = tf.placeholder_with_default(tf.constant(1.0),
                                                        shape=[],
                                                        name='use_dropout')
+        # Layers that should be reinitialized from scratch
+        self.skip_layers = skip_layers
+        # number of classes
+        self.num_classes = num_classes
+        # dropout
+        self.keep_prob = keep_prob
         self.setup()
 
     def setup(self):
@@ -64,14 +70,15 @@ class Network(object):
         else:
             data_dict = np.load(data_path, encoding='latin1')
         for op_name in data_dict:
-            with tf.variable_scope(op_name, reuse=True):
-                for param_name, data in data_dict[op_name].items():
-                    try:
-                        var = tf.get_variable(param_name)
-                        session.run(var.assign(data))
-                    except ValueError:
-                        if not ignore_missing:
-                            raise
+            if op_name not in self.skip_layers:
+                with tf.variable_scope(op_name, reuse=True):
+                    for param_name, data in data_dict[op_name].items():
+                        try:
+                            var = tf.get_variable(param_name)
+                            session.run(var.assign(data))
+                        except ValueError:
+                            if not ignore_missing:
+                                raise
 
     def feed(self, *args):
         '''Set the input(s) for the next operation by replacing the terminal nodes.

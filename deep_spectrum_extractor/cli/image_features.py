@@ -12,8 +12,7 @@ environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 def image_reader(files):
     for image in files:
         img = cv2.imread(image, cv2.IMREAD_COLOR)
-        b,g,r = cv2.split(img)
-        img = cv2.merge([r,g,b])
+        img = img[:,:,::-1]
         yield np.array([img])
 
 def main():
