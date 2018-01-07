@@ -151,7 +151,7 @@ def main(args=None):
     # for file_name, features in tqdm(zip(configuration.files, extractor), total=len(configuration.files)):
     #     pass
     writer = get_writer(**configuration.writer_args)
-    writer.write_features(configuration.files, extractor)
+    writer.write_features(plots.files, extractor, hide_progress=True)
     # writer_thread.daemon = True
     # writer_thread.start()
 

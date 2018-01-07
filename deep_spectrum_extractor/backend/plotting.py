@@ -174,7 +174,7 @@ def get_relative_path(file, prefix):
 class PlotGenerator():
     def __init__(self, input_path, output_spectrograms=None, output_wavs=None, number_of_processes=None,
                  **kwargs):
-        self.files = self._find_wav_files(input_path)
+        self.files = sorted(self._find_wav_files(input_path))
         self.number_of_processes = number_of_processes
         if output_spectrograms:
             makedirs(output_spectrograms, exist_ok=True)

@@ -50,6 +50,7 @@ class ArffFeatureWriter(FeatureWriter):
                                if class_type else (class_name, 'numeric')
                                for class_name, class_type in self.labels]
 
+                print(file_name)
                 file_name = basename(file_name)
                 for idx, feature_vector in enumerate(features):
                     if not writer:
@@ -60,7 +61,7 @@ class ArffFeatureWriter(FeatureWriter):
                     time_stamp, label = self.timestamp_and_label(
                         file_name, idx)
                     row = [file_name]
-                    if time_stamp:
+                    if time_stamp is not None:
                         row.append(str(time_stamp))
                     row += (list(map(str, feature_vector)))
                     if not self.no_labels:
@@ -95,7 +96,7 @@ class CsvFeatureWriter(FeatureWriter):
                     time_stamp, label = self.timestamp_and_label(
                         file_name, idx)
                     row = [file_name]
-                    if time_stamp:
+                    if time_stamp is not None:
                         row.append(time_stamp)
                     row += (list(map(str, feature_vector)))
                     if not self.no_labels:
