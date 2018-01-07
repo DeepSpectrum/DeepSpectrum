@@ -131,9 +131,9 @@ def parameter_search_train_devel(train_X,
                 devel_X = scaler.transform(devel_X)
 
             scores = cross_val_score(clf, train_X, train_y, cv=10, scoring='recall_macro')
+            UAR_train = scores.mean()
             clf.fit(train_X, train_y)
             predicted_devel = clf.predict(devel_X)
-            UAR_train = scores.mean()
             UAR_devel = recall_score(devel_y, predicted_devel, average='macro')
 
             print(
