@@ -94,7 +94,7 @@ def plot(wav_file, window, hop, mode='spectrogram', size=227, output_folder=None
 
 
 def plot_spectrogram(audio_data, sr, nfft=None, delta=None, **kwargs):
-    spectrogram = librosa.stft(audio_data, n_fft=nfft, hop_length=int(nfft / 2), center=False)
+    spectrogram = y_limited_spectrogram(audio_data, sr, nfft, ylim=kwargs['ylim'])
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
     spectrogram = librosa.amplitude_to_db(spectrogram, ref=np.max, top_db=None)
@@ -102,9 +102,8 @@ def plot_spectrogram(audio_data, sr, nfft=None, delta=None, **kwargs):
 
 
 def plot_mel_spectrogram(audio_data, sr, nfft=None, melbands=64, delta=None, **kwargs):
-    spectrogram = librosa.feature.melspectrogram(y=audio_data, sr=sr, n_fft=nfft,
-                                                 hop_length=int(nfft / 2),
-                                                 n_mels=melbands)
+    spectrogram = y_limited_spectrogram(audio_data, sr, nfft, ylim=kwargs['ylim'])
+    spectrogram = librosa.feature.melspectrogram(S=np.abs(spectrogram)**2, sr=sr, n_mels=melbands)
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
     spectrogram = librosa.logamplitude(spectrogram, ref=np.max, top_db=None)
@@ -112,17 +111,21 @@ def plot_mel_spectrogram(audio_data, sr, nfft=None, melbands=64, delta=None, **k
 
 
 def plot_chroma(audio_data, sr, nfft=None, delta=None, **kwargs):
-    spectrogram = librosa.feature.chroma_stft(audio_data, sr, n_fft=nfft, hop_length=int(nfft / 2))
+    spectrogram = y_limited_spectrogram(audio_data, sr, nfft, ylim=kwargs['ylim'])
+    spectrogram = librosa.feature.chroma_stft(S=np.abs(spectrogram)**2, sr=sr)
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
     return _create_plot(spectrogram, sr, nfft, **kwargs)
 
-
-def _create_plot(spectrogram, sr, nfft, ylim=None, cmap='viridis', scale='linear'):
+def y_limited_spectrogram(audio_data, sr, nfft=None, ylim=None):
+    spectrogram = librosa.stft(audio_data, n_fft=nfft, hop_length=int(nfft / 2), center=False)
     if ylim:
         relative_limit = ylim * 2 / sr
         relative_limit = min(relative_limit, 1)
         spectrogram = spectrogram[:int(relative_limit * (1 + nfft / 2)), :]
+    return spectrogram
+
+def _create_plot(spectrogram, sr, nfft, ylim=None, cmap='viridis', scale='linear'):
     spectrogram_axes = librosa.display.specshow(spectrogram, hop_length=int(nfft / 2), sr=sr, cmap=cmap, y_axis=scale)
     return spectrogram_axes
 

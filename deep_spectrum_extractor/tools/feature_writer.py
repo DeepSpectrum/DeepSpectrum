@@ -49,8 +49,6 @@ class ArffFeatureWriter(FeatureWriter):
                     classes = [(class_name, '{' + ','.join(class_type) + '}')
                                if class_type else (class_name, 'numeric')
                                for class_name, class_type in self.labels]
-
-                print(file_name)
                 file_name = basename(file_name)
                 for idx, feature_vector in enumerate(features):
                     if not writer:
