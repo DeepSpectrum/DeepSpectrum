@@ -2,6 +2,7 @@ import argparse
 import csv
 import arff
 import numpy as np
+import pandas as pd
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import recall_score, confusion_matrix
@@ -32,9 +33,25 @@ def _load_arff(file):
     with open(file) as input:
         dataset = arff.load(input)
     data = np.array(dataset['data'])
+    names = data[:, 0]
     features = data[:, 1:-1].astype(float)
     labels = data[:, -1]
-    return features, labels
+    return names, features, labels
+
+def write_predictions(filepath, predictions, names=None, true_labels=None):
+    columns = []
+    if names is not None:
+        columns.append('name')
+    columns.append('prediction')
+    if true_labels is not None:
+        columns.append('true')
+    prediction_frame = pd.DataFrame(columns=columns)
+    prediction_frame['prediction'] = predictions
+    if names is not None:
+        prediction_frame['name'] = names
+    if true_labels is not None:
+        prediction_frame['true'] = true_labels
+    prediction_frame.to_csv(filepath, index=False)
 
 
 def parameter_search_train_devel_test(train_X,
@@ -49,7 +66,6 @@ def parameter_search_train_devel_test(train_X,
     csv_writer = None
     csv_file = None
     best_uar = 0
-    labels = sorted(set(train_y))
     traindevel_X = np.append(train_X, devel_X, axis=0)
     traindevel_y = np.append(train_y, devel_y)
     try:
@@ -91,8 +107,7 @@ def parameter_search_train_devel_test(train_X,
             if UAR_test > best_uar:
                 best_uar = UAR_test
                 best_prediction = predicted_test
-        cm = confusion_matrix(test_y, best_prediction, labels=labels)
-        return best_uar, cm
+        return best_uar, best_prediction
 
     finally:
         if csv_file:
@@ -109,7 +124,6 @@ def parameter_search_train_devel(train_X,
     csv_writer = None
     csv_file = None
     best_uar = 0
-    labels = sorted(set(train_y))
     try:
 
         if output:
@@ -148,8 +162,7 @@ def parameter_search_train_devel(train_X,
             if UAR_devel > best_uar:
                 best_uar = UAR_devel
                 best_prediction = predicted_devel
-        cm = confusion_matrix(devel_y, best_prediction, labels=labels)
-        return best_uar, cm
+        return best_uar, best_prediction
     finally:
         if csv_file:
             csv_file.close()
@@ -181,16 +194,18 @@ def main():
         help=
         'Standardize input data. Standardization parameters are determined on the training partition and applied to the test set.',
         action='store_true')
+    parser.add_argument(
+        '-pred', help='Filepath for prediction output in csv format.', required=False, default=None)
     args = vars(parser.parse_args())
     if len(args['i']) > 1:
         print('Loading input...')
-        train_X, train_y = _load(args['i'][0])
-        devel_X, devel_y = _load(args['i'][1])
+        train_names, train_X, train_y = _load(args['i'][0])
+        devel_names, devel_X, devel_y = _load(args['i'][1])
         labels = sorted(set(train_y))
         if len(args['i']) > 2:
-            test_X, test_y = _load(args['i'][2])
+            test_names, test_X, test_y = _load(args['i'][2])
             print('Starting training...')
-            UAR, cm = parameter_search_train_devel_test(
+            UAR, best_prediction = parameter_search_train_devel_test(
                 train_X,
                 train_y,
                 devel_X,
@@ -200,9 +215,12 @@ def main():
                 args['C'],
                 output=args['o'],
                 standardize=args['standardize'])
+            cm = confusion_matrix(test_y, best_prediction, labels=labels)
+            true_labels = test_y
+            names = test_names
         else:
             print('Starting training...')
-            UAR, cm = parameter_search_train_devel(
+            UAR, best_prediction = parameter_search_train_devel(
                 train_X,
                 train_y,
                 devel_X,
@@ -210,7 +228,9 @@ def main():
                 args['C'],
                 output=args['o'],
                 standardize=args['standardize'])
-
+            cm = confusion_matrix(devel_y, best_prediction, labels=labels)
+            true_labels = devel_y
+            names = devel_names
         if args['cm']:
             cm_path = abspath(args['cm'])
             makedirs(dirname(cm_path), exist_ok=True)
@@ -220,7 +240,10 @@ def main():
                 normalize=True,
                 title='UAR {:.1%}'.format(UAR),
                 save_path=cm_path)
-
+        if args['pred']:
+            prediction_path = abspath(args['pred'])
+            makedirs(dirname(prediction_path), exist_ok=True)
+            write_predictions(prediction_path, best_prediction, names=names, true_labels=true_labels)
     else:
         parser.error('Unsupported number of partitions.')
 
