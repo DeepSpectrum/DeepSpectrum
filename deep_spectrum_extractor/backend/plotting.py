@@ -106,7 +106,7 @@ def plot_mel_spectrogram(audio_data, sr, nfft=None, melbands=64, delta=None, **k
     spectrogram = librosa.feature.melspectrogram(S=np.abs(spectrogram)**2, sr=sr, n_mels=melbands)
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
-    spectrogram = librosa.logamplitude(spectrogram, ref=np.max, top_db=None)
+    spectrogram = librosa.power_to_db(spectrogram, ref=np.max, top_db=None)
     return _create_plot(spectrogram, sr, nfft, **kwargs)
 
 
