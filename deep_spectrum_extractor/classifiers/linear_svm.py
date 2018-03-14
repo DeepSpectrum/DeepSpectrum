@@ -11,7 +11,7 @@ from sklearn.svm import LinearSVC
 from decimal import Decimal
 from os.path import abspath, dirname
 from os import makedirs
-from ..tools.performance_stats import plot_confusion_matrix
+from ..tools.performance_stats import plot_confusion_matrix, save_fig
 
 RANDOM_SEED = 42
 
@@ -21,6 +21,15 @@ def _load(file):
         return _load_arff(file)
     elif file.endswith('.npz'):
         return _load_npz(file)
+    elif file.endswith('.csv'):
+        return _load_csv(file)
+
+def _load_csv(file):
+    df = pd.read_csv(file, sep=';', header=None)
+    names = df.iloc[:, 0].astype(str)
+    features = df.iloc[:, 1:-1].astype(float)
+    labels = df.iloc[:, -1].astype(str)
+    return names, features, labels
 
 
 def _load_npz(file):
@@ -234,12 +243,13 @@ def main():
         if args['cm']:
             cm_path = abspath(args['cm'])
             makedirs(dirname(cm_path), exist_ok=True)
-            plot_confusion_matrix(
+            fig = plot_confusion_matrix(
                 cm,
                 classes=labels,
                 normalize=True,
-                title='UAR {:.1%}'.format(UAR),
-                save_path=cm_path)
+                title='UAR {:.1%}'.format(UAR))
+            save_fig(fig, cm_path)
+
         if args['pred']:
             prediction_path = abspath(args['pred'])
             makedirs(dirname(prediction_path), exist_ok=True)

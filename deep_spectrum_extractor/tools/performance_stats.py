@@ -7,9 +7,32 @@ from matplotlib import rcParams
 rcParams.update({'figure.autolayout': True})
 import matplotlib.pyplot as plt
 import numpy as np
+import tfplot
 from os.path import splitext, dirname, abspath
 from os import makedirs
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib import cm as colourmaps
+from sklearn.metrics import confusion_matrix
+
+
+def plot_confusion_matrix_from_pred(pred,
+                                    true,
+                                    classes,
+                                    normalize=True,
+                                    title='Confusion matrix',
+                                    cmap='summer_r',
+                                    save_path=None,
+                                    predicted_label='Predicted label',
+                                    true_label='True label'):
+    cm = confusion_matrix(true, pred, labels=classes)
+    return plot_confusion_matrix(
+        cm,
+        classes,
+        normalize=normalize,
+        title=title,
+        cmap=cmap,
+        predicted_label=predicted_label,
+        true_label=true_label)
 
 
 def plot_confusion_matrix(cm,
@@ -17,42 +40,49 @@ def plot_confusion_matrix(cm,
                           normalize=False,
                           title='Confusion matrix',
                           cmap='summer_r',
-                          save_path=None,
                           predicted_label='Predicted label',
                           true_label='True label'):
     """
     This function prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
     """
-    plt.figure()
+    fig = matplotlib.figure.Figure(dpi=200)
     original_cm = cm
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-
-    plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    plt.title(title)
-    plt.colorbar()
+    ax = fig.add_subplot(1,1,1)
+    im = ax.imshow(cm, vmin=0, vmax=1, cmap=cmap)
+    fig.colorbar(im)
+    ax.set_title(title)
     tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes, rotation=45)
-    plt.yticks(tick_marks, classes)
+    ax.set_xlabel(predicted_label)
+    ax.set_xticks(tick_marks)
+    ax.set_xticklabels(classes, rotation=45)
+    ax.set_ylabel(true_label)
+    ax.set_yticks(tick_marks)
+    ax.set_yticklabels(classes)
 
     fmt = 'd'
     thresh = cm.max() / 2.
     for i, j in itertools.product(
             range(original_cm.shape[0]), range(original_cm.shape[1])):
-        plt.text(
+        ax.text(
             j,
             i,
             format(original_cm[i, j], fmt),
             horizontalalignment="center",
             color="white" if cm[i, j] > thresh else "black")
+    fig.set_tight_layout(True)
+    return fig
 
-    plt.tight_layout()
-    plt.ylabel(true_label)
-    plt.xlabel(predicted_label)
-    if save_path:
-        plt.savefig(save_path, format=splitext(save_path)[1][1:])
-    plt.close('all')
+
+def save_fig(fig, save_path):
+    canvas = FigureCanvasAgg(fig)
+    fig.savefig(save_path, format=splitext(save_path)[1][1:])
+
+def fig_to_tf_summary(fig, tensor_name):
+    summary = tfplot.figure.to_summary(fig, tag=tensor_name)
+    return summary
 
 
 def isqrt(n):
@@ -62,6 +92,7 @@ def isqrt(n):
         x = y
         y = (x + n // x) // 2
     return x
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -106,15 +137,16 @@ def main():
             ), 'Invalid combination of confusion matrix and class labels!'
     save_path = abspath(args.o)
     makedirs(dirname(save_path), exist_ok=True)
-    plot_confusion_matrix(
+    fig = plot_confusion_matrix(
         cm,
         classes=args.classes,
         normalize=True,
         title=args.title,
         cmap=args.colour,
-        save_path=args.o,
         predicted_label=args.pl,
         true_label=args.tl)
+    save_fig(fig, args.o)
+
 
 if __name__ == '__main__':
     main()
