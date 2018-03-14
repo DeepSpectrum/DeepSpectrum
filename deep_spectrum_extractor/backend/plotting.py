@@ -189,7 +189,7 @@ class PlotGenerator():
             plot_file, input_path=input_path, output_spectrograms=output_spectrograms, output_wavs=output_wavs,
             **kwargs)
 
-        self.pool =  Pool(processes=self.number_of_processes)
+        self.pool = Pool(processes=self.number_of_processes)
         self.plots = self.pool.imap(plotting_func, self.files)
 
     def __len__(self):
@@ -203,6 +203,7 @@ class PlotGenerator():
             return next(self.plots)
         except StopIteration:
             self.pool.close()
+            self.pool.join()
             raise StopIteration
 
     @staticmethod
