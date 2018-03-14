@@ -1,29 +1,10 @@
 import os
 import argparse
 import tensorflow as tf
-
+from .data_loader import DataLoader
+from .dnn import DNNClassifier
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 tf.logging.set_verbosity(tf.logging.INFO)
-
-# class EvalCheckpointSaverListener(tf.train.CheckpointSaverListener):
-#     def __init__(self, estimator, input_fn):
-#         self.estimator = estimator
-#         self.input_fn = input_fn
-
-#     def after_save(self, session, global_step):
-#         metrics = self.estimator.evaluate(self.input_fn)
-#         print('Step {}: Accuracy: {} UAR: {}'.format(
-#             metrics['global_step'], metrics['accuracy'], metrics['uar']))
-
-
-def uar(labels, predictions, num_classes=6):
-    return {
-        'uar':
-        tf.metrics.mean_per_class_accuracy(
-            labels,
-            tf.reshape(predictions['class_ids'], [-1]),
-            num_classes=num_classes)
-    }
 
 
 def input_fn(filenames, shuffle=True, num_epochs=None, batch_size=32):
@@ -57,28 +38,23 @@ def input_fn(filenames, shuffle=True, num_epochs=None, batch_size=32):
     return features, labels
 
 
+
+
+
 def main(sysargs):
     parser = argparse.ArgumentParser(
         description=
-        'Train a mlp classifier on Deep Spectrum features in tfrecord format.')
+        'Train a mlp classifier on Deep Spectrum features in arff or csv format.')
     parser.add_argument(
         '-train',
         required=True,
         default=None,
-        nargs='+',
-        help='tfrecord files used for training the classifier.')
+        help='file used for training the classifier.')
     parser.add_argument(
         '-eval',
         required=True,
         default=None,
-        nargs='+',
-        help='tfrecord files used for classifier validation during training.')
-    parser.add_argument(
-        '-classes',
-        required=True,
-        type=int,
-        default=None,
-        help='Number of classes for the classification problem.')
+        help='file used for classifier validation during training.')
     parser.add_argument(
         '--batch_size', default=32, type=int, help='Batchsize for training.')
     parser.add_argument(
@@ -93,12 +69,7 @@ def main(sysargs):
         'Directory for saving and restoring model checkpoints, summaries and exports.'
     )
     parser.add_argument(
-        '--layers', default=2, type=int, help='Number of hidden layers.')
-    parser.add_argument(
-        '--num_features',
-        default=4096,
-        type=int,
-        help='Number of numerical input features in tfrecords files.')
+        '--layers', default=[500, 100], nargs='+', type=int, help='Shapes of hidden layers.')
     parser.add_argument(
         '--eval_period',
         default=10,
@@ -109,7 +80,12 @@ def main(sysargs):
         default=20,
         type=int,
         help='How many checkpoints to keep stored on disk.')
+    parser.add_argument('--lr', default=0.1, type=float, help='Learning rate.')
+    parser.add_argument('--dropout', default=0.2, type=float, help='Dropout')
     args = parser.parse_args()
+    train_data = DataLoader(args.train, sequences=True, batch_size=args.batch_size, shuffle=True, num_epochs=1, num_threads=1, queue_capacity=10000)
+    eval_data = DataLoader(args.eval, sequences=True, batch_size=args.batch_size, shuffle=False, num_epochs=1, num_threads=1)
+
     gpu_options = tf.GPUOptions(allow_growth=True)
     session_config = tf.ConfigProto(gpu_options=gpu_options)
     config = tf.estimator.RunConfig(
@@ -117,26 +93,20 @@ def main(sysargs):
         keep_checkpoint_max=args.keep_checkpoints,
         session_config=session_config,
         save_checkpoints_secs=args.eval_period)
-    feature_columns = [
-        tf.feature_column.numeric_column("x", shape=[args.num_features])
-    ]
-    classifier = tf.estimator.DNNClassifier(
-        feature_columns=feature_columns,
-        hidden_units=[2**(7 + i) for i in range(args.layers)][::-1],
-        n_classes=args.classes,
+    optimizer = tf.train.AdagradOptimizer(learning_rate=args.lr)
+    classifier = DNNClassifier(
+        feature_columns=train_data.feature_columns,
+        hidden_units=args.layers,
+        n_classes=len(train_data.label_dict),
         model_dir=args.model_dir,
-        dropout=0.2,
-        config=config)
-
-    classifier = tf.contrib.estimator.add_metrics(
-        classifier,
-        lambda labels, predictions: uar(labels, predictions, num_classes=args.classes))
+        dropout=args.dropout,
+        config=config, optimizer=optimizer, label_vocabulary=sorted(train_data.label_dict.keys()), weight_column=train_data.weight_column)
     eval_spec = tf.estimator.EvalSpec(
-        input_fn=lambda: input_fn(args.eval, shuffle=False, num_epochs=1),
+        input_fn=eval_data.input_fn,
         start_delay_secs=args.eval_period,
         throttle_secs=args.eval_period)
     train_spec = tf.estimator.TrainSpec(
-        input_fn=lambda: input_fn(args.train, shuffle=True),
+        input_fn=train_data.input_fn,
         max_steps=args.max_steps)
 
     tf.estimator.train_and_evaluate(classifier, train_spec, eval_spec)
