@@ -295,7 +295,8 @@ class RNNClassifier(tf.estimator.Estimator):
             head = head_lib._binary_logistic_head_with_sigmoid_cross_entropy_loss(  # pylint: disable=protected-access
                 weight_column=weight_column,
                 label_vocabulary=label_vocabulary,
-                loss_reduction=loss_reduction)
+                loss_reduction=loss_reduction,
+                model_dir=model_dir)
         else:
             head = head_lib._multi_class_head_with_softmax_cross_entropy_loss(  # pylint: disable=protected-access
                 n_classes,
@@ -349,13 +350,13 @@ def main(sysargs):
         help='Number of epochs to train the model.')
     parser.add_argument(
         '--model_dir',
-        default=None,
+        default='model',
         help=
         'Directory for saving and restoring model checkpoints, summaries and exports.'
     )
     parser.add_argument(
         '--layers',
-        default=[500, 100],
+        default=[100],
         nargs='+',
         type=int,
         help='Shapes of hidden layers.')
@@ -395,8 +396,6 @@ def main(sysargs):
         num_epochs=1,
         num_threads=1,
         sequence_classification=True)
-    print(eval_data.steps_per_epoch)
-
     gpu_options = tf.GPUOptions(allow_growth=True)
     session_config = tf.ConfigProto(gpu_options=gpu_options)
     config = tf.estimator.RunConfig(
@@ -408,7 +407,7 @@ def main(sysargs):
         feature_columns=train_data.feature_columns,
         hidden_units=args.layers,
         n_classes=len(train_data.label_dict),
-        model_dir=args.model_dir,
+        model_dir=config.model_dir,
         dropout=args.dropout,
         config=config,
         optimizer=optimizer,
@@ -425,5 +424,4 @@ def main(sysargs):
 
 
 if __name__ == '__main__':
-    np.set_printoptions(precision=2,suppress=True)
     tf.app.run()

@@ -45,12 +45,18 @@ from tensorflow.python.ops import weights_broadcast_ops
 from tensorflow.python.ops.losses import losses
 from tensorflow.python.saved_model import signature_constants
 from tensorflow.python.summary import summary
+from tensorflow.python.training import session_run_hook
+from tensorflow.python.training import training_util
+from tensorflow.python.training.session_run_hook import SessionRunArgs
+from tensorflow.python.training.summary_io import SummaryWriterCache
+from tensorflow.core.util.event_pb2 import SessionLog
 
 import tensorflow as tf
 
 _TF_PLOT = True
 try:
     import tfplot
+    tf.logging.info('Found tfplot package. Saving confusion matrix plots to tensorboard for all classifiers.')
 except ImportError:
     _TF_PLOT = False
 _DEFAULT_SERVING_KEY = signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
@@ -568,6 +574,23 @@ def _confusion_matrix(labels, predictions, num_classes, name=None):
         return con_matrix_tensor, update_op
 
 
+def _confusion_matrix_hook(predictions, labels, vocabulary, model_dir, num_classes):
+    if _TF_PLOT:
+        con_matrix_tensor = _confusion_matrix(
+            labels=labels, predictions=predictions, num_classes=num_classes)[1]
+        plot_summary = tfplot.summary.plot(
+            'images/cm_plot',
+            plot_confusion_matrix, [con_matrix_tensor],
+            normalize=True,
+            classes=vocabulary)
+        eval_summary_hook = EvalSummarySaverHook(
+            output_dir=os.path.join(model_dir, 'eval'),
+            summary_op=plot_summary)
+        return eval_summary_hook
+    else:
+        return None
+
+
 def _precision_at_threshold(labels, predictions, weights, threshold,
                             name=None):
     with ops.name_scope(name, 'precision_at_%s' % threshold,
@@ -878,20 +901,10 @@ class _MultiClassHeadWithSoftmaxCrossEntropyLoss(_Head):
                 regularized_training_loss = training_loss
             # Eval.
             if mode == model_fn.ModeKeys.EVAL:
-                if _TF_PLOT:
-                    con_matrix_tensor = _confusion_matrix(
-                        labels=label_ids,
-                        predictions=class_ids,
-                        num_classes=self._n_classes)[1]
-                    tfplot.summary.plot(
-                        'images/cm_plot',
-                        plot_confusion_matrix, [con_matrix_tensor],
-                        normalize=True,
-                        classes=self._label_vocabulary)
-                    eval_summary_hook = tf.train.SummarySaverHook(
-                        save_steps=1,
-                        output_dir=os.path.join(self._model_dir, 'eval'),
-                        summary_op=tf.summary.merge_all())
+                cm_plot_hook = _confusion_matrix_hook(
+                    class_ids, label_ids, self._label_vocabulary,
+                    self._model_dir, num_classes=self._n_classes)
+                evaluation_hooks = [cm_plot_hook] if cm_plot_hook is not None else None
                 return model_fn.EstimatorSpec(
                     mode=model_fn.ModeKeys.EVAL,
                     predictions=predictions,
@@ -902,7 +915,7 @@ class _MultiClassHeadWithSoftmaxCrossEntropyLoss(_Head):
                         weights=weights,
                         unreduced_loss=unreduced_loss,
                         regularization_loss=regularization_loss),
-                    evaluation_hooks=[eval_summary_hook])
+                    evaluation_hooks=evaluation_hooks)
 
             # Train.
             if train_op_fn is None:
@@ -1094,7 +1107,7 @@ class _BinaryLogisticHeadWithSigmoidCrossEntropyLoss(_Head):
                 metrics_lib.mean_per_class_accuracy(
                     labels=labels,
                     predictions=class_ids,
-                    num_classes=self._n_classes,
+                    num_classes=2,
                     name=keys.UAR),
                 _summary_key(self._name, keys.CONFUSION):
                 _confusion_matrix(
@@ -1260,20 +1273,10 @@ class _BinaryLogisticHeadWithSigmoidCrossEntropyLoss(_Head):
 
             # Eval.
             if mode == model_fn.ModeKeys.EVAL:
-                if _TF_PLOT:
-                    con_matrix_tensor = _confusion_matrix(
-                        labels=processed_labels,
-                        predictions=class_ids,
-                        num_classes=self._n_classes)[1]
-                    tfplot.summary.plot(
-                        'images/cm_plot',
-                        plot_confusion_matrix, [con_matrix_tensor],
-                        normalize=True,
-                        classes=self._label_vocabulary)
-                    eval_summary_hook = tf.train.SummarySaverHook(
-                        save_steps=1,
-                        output_dir=os.path.join(self._model_dir, 'eval'),
-                        summary_op=tf.summary.merge_all())
+                cm_plot_hook = _confusion_matrix_hook(
+                    class_ids, processed_labels, self._label_vocabulary,
+                    self._model_dir, num_classes=2)
+                evaluation_hooks = [cm_plot_hook] if cm_plot_hook is not None else None
                 return model_fn.EstimatorSpec(
                     mode=model_fn.ModeKeys.EVAL,
                     predictions=predictions,
@@ -1285,7 +1288,8 @@ class _BinaryLogisticHeadWithSigmoidCrossEntropyLoss(_Head):
                         class_ids=class_ids,
                         weights=weights,
                         unreduced_loss=unreduced_loss,
-                        regularization_loss=regularization_loss))
+                        regularization_loss=regularization_loss),
+                    evaluation_hooks=evaluation_hooks)
 
             # Train.
             if train_op_fn is None:
@@ -1581,21 +1585,95 @@ def _assert_range(labels, n_classes, message=None):
             return array_ops.identity(labels)
 
 
-# # TODO(b/69000400): Delete this method.
-# def _weights(features, weight_column):
-#   """Fetches weights from features."""
-#   with ops.name_scope(None, 'weights', values=features.values()):
-#     if weight_column is None:
-#       return 1.
-#     if isinstance(weight_column, six.string_types):
-#       weight_column = feature_column_lib.numeric_column(
-#           key=weight_column, shape=(1,))
-#     if not isinstance(weight_column, feature_column_lib._NumericColumn):  # pylint: disable=protected-access
-#       raise TypeError('Weight column must be either a string or _NumericColumn.'
-#                       ' Given type: {}.'.format(type(weight_column)))
-#     weights = weight_column._get_dense_tensor(  # pylint: disable=protected-access
-#         feature_column_lib._LazyBuilder(features))  # pylint: disable=protected-access
-#     if not (weights.dtype.is_floating or weights.dtype.is_integer):
-#       raise ValueError('Weight column should be castable to float. '
-#                        'Given dtype: {}'.format(weights.dtype))
-#     return math_ops.to_float(weights, name='weights')
+class EvalSummarySaverHook(session_run_hook.SessionRunHook):
+    """Saves summaries every N steps."""
+
+    def __init__(self,
+                 output_dir=None,
+                 summary_writer=None,
+                 scaffold=None,
+                 summary_op=None):
+        """Initializes a `EvalSummarySaverHook`.
+        Args:
+        output_dir: `string`, the directory to save the summaries to. Only used
+            if no `summary_writer` is supplied.
+        summary_writer: `SummaryWriter`. If `None` and an `output_dir` was passed,
+            one will be created accordingly.
+        scaffold: `Scaffold` to get summary_op if it's not provided.
+        summary_op: `Tensor` of type `string` containing the serialized `Summary`
+            protocol buffer or a list of `Tensor`. They are most likely an output
+            by TF summary methods like `tf.summary.scalar` or
+            `tf.summary.merge_all`. It can be passed in as one tensor; if more
+            than one, they must be passed in as a list.
+        Raises:
+        ValueError: Exactly one of scaffold or summary_op should be set.
+        """
+        if ((scaffold is None and summary_op is None)
+                or (scaffold is not None and summary_op is not None)):
+            raise ValueError(
+                "Exactly one of scaffold or summary_op must be provided.")
+        self._summary_op = summary_op
+        self._summary_writer = summary_writer
+        self._output_dir = output_dir
+        self._scaffold = scaffold
+        self._summary = None
+        # TODO(mdan): Throw an error if output_dir and summary_writer are None.
+
+    def begin(self):
+        if self._summary_writer is None and self._output_dir:
+            self._summary_writer = SummaryWriterCache.get(self._output_dir)
+        self._next_step = None
+        self._global_step_tensor = training_util._get_or_create_global_step_read(
+        )  # pylint: disable=protected-access
+        if self._global_step_tensor is None:
+            raise RuntimeError(
+                "Global step should be created to use SummarySaverHook.")
+
+    def before_run(self, run_context):  # pylint: disable=unused-argument
+        requests = {"global_step": self._global_step_tensor}
+        if self._get_summary_op() is not None:
+            requests["summary"] = self._get_summary_op()
+
+        return SessionRunArgs(requests)
+
+    def after_run(self, run_context, run_values):
+        _ = run_context
+        if not self._summary_writer:
+            return
+
+        global_step = run_values.results["global_step"]
+        if self._next_step is None:
+            global_step = run_context.session.run(self._global_step_tensor)
+
+        if self._next_step is None:
+            self._summary_writer.add_session_log(
+                SessionLog(status=SessionLog.START), global_step)
+
+        if "summary" in run_values.results:
+            self._summary = run_values.results["summary"]
+
+        self._next_step = global_step + 1
+
+    def end(self, session=None):
+        for summary in self._summary:
+            self._summary_writer.add_summary(summary, self._next_step - 1)
+        if self._summary_writer:
+            self._summary_writer.flush()
+
+    def _get_summary_op(self):
+        """Fetches the summary op either from self._summary_op or self._scaffold.
+        Returns:
+        Returns a list of summary `Tensor`.
+        """
+        summary_op = None
+        if self._summary_op is not None:
+            summary_op = self._summary_op
+        elif self._scaffold.summary_op is not None:
+            summary_op = self._scaffold.summary_op
+
+        if summary_op is None:
+            return None
+
+        if not isinstance(summary_op, list):
+            return [summary_op]
+        return summary_op
