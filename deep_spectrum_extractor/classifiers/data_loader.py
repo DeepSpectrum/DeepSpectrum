@@ -1,6 +1,7 @@
 import arff
 import numpy as np
 import tensorflow as tf
+import pandas as pd
 from functools import partial
 
 tf.logging.set_verbosity(tf.logging.INFO)
@@ -60,6 +61,10 @@ class DataLoader():
     def __load_arff(self, file_path):
         arff_data = arff.load(open(file_path))
         return np.array(arff_data['data'])
+
+    def __load_csv(self, file_path):
+        df = pd.read_csv(file_path, sep=';')
+        return df.values
 
     def __parse_data(self, file_path):
         if file_path.endswith('.arff') or file_path.endswith('.csv'):
