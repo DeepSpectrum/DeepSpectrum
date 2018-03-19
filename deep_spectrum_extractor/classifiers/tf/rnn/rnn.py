@@ -7,8 +7,8 @@ import argparse
 from tensorflow.python.estimator.canned import optimizers
 from tensorflow.python.ops import partitioned_variables
 from tensorflow.python.estimator import model_fn
-from .data_loader import DataLoader
-from . import head as head_lib
+from ..data_loader import DataLoader
+from .. import head as head_lib
 
 _LEARNING_RATE = 0.05
 
@@ -209,7 +209,8 @@ def _rnn_model_fn(features,
             activation_fn=activation_fn,
             dropout=dropout,
             input_layer_partitioner=input_layer_partitioner,
-            cell_type=cell_type)
+            cell_type=cell_type,
+            sequence_classification=sequence_classification)
         logits = logit_fn(features=features, mode=mode)
 
         def _train_op_fn(loss):
@@ -324,104 +325,3 @@ class RNNClassifier(tf.estimator.Estimator):
 
         super(RNNClassifier, self).__init__(
             model_fn=_model_fn, model_dir=model_dir, config=config)
-
-
-def main(sysargs):
-    parser = argparse.ArgumentParser(
-        description=
-        'Train a RNN classifier on Deep Spectrum features in arff or csv format.'
-    )
-    parser.add_argument(
-        '-train',
-        required=True,
-        default=None,
-        help='file used for training the classifier.')
-    parser.add_argument(
-        '-eval',
-        required=True,
-        default=None,
-        help='file used for classifier validation during training.')
-    parser.add_argument(
-        '--batch_size', default=32, type=int, help='Batchsize for training.')
-    parser.add_argument(
-        '--max_steps',
-        default=10000,
-        type=int,
-        help='Number of epochs to train the model.')
-    parser.add_argument(
-        '--model_dir',
-        default='model',
-        help=
-        'Directory for saving and restoring model checkpoints, summaries and exports.'
-    )
-    parser.add_argument(
-        '--layers',
-        default=[100],
-        nargs='+',
-        type=int,
-        help='Shapes of hidden layers.')
-    parser.add_argument(
-        '--eval_period',
-        default=10,
-        type=int,
-        help='Evaluation interval in seconds.')
-    parser.add_argument(
-        '--keep_checkpoints',
-        default=5,
-        type=int,
-        help='How many checkpoints to keep stored on disk.')
-    parser.add_argument(
-        '--lr', default=0.001, type=float, help='Learning rate.')
-    parser.add_argument('--dropout', default=0.2, type=float, help='Dropout')
-    parser.add_argument(
-        '--type',
-        default='lstm',
-        choices=['lstm', 'gru'],
-        help='Type of RNN cell to use in model.')
-    args = parser.parse_args()
-    train_data = DataLoader(
-        args.train,
-        sequences=True,
-        batch_size=args.batch_size,
-        shuffle=True,
-        num_epochs=None,
-        num_threads=1,
-        queue_capacity=10000,
-        sequence_classification=True)
-    eval_data = DataLoader(
-        args.eval,
-        sequences=True,
-        batch_size=args.batch_size,
-        shuffle=False,
-        num_epochs=1,
-        num_threads=1,
-        sequence_classification=True)
-    gpu_options = tf.GPUOptions(allow_growth=True)
-    session_config = tf.ConfigProto(gpu_options=gpu_options)
-    config = tf.estimator.RunConfig(
-        model_dir=args.model_dir,
-        keep_checkpoint_max=args.keep_checkpoints,
-        session_config=session_config)
-    optimizer = tf.train.RMSPropOptimizer(args.lr)
-    classifier = RNNClassifier(
-        feature_columns=train_data.feature_columns,
-        hidden_units=args.layers,
-        n_classes=len(train_data.label_dict),
-        model_dir=config.model_dir,
-        dropout=args.dropout,
-        config=config,
-        optimizer=optimizer,
-        label_vocabulary=sorted(train_data.label_dict.keys()),
-        weight_column=train_data.weight_column)
-    eval_spec = tf.estimator.EvalSpec(
-        input_fn=eval_data.input_fn,
-        start_delay_secs=args.eval_period,
-        throttle_secs=args.eval_period)
-    train_spec = tf.estimator.TrainSpec(
-        input_fn=train_data.input_fn, max_steps=args.max_steps)
-
-    tf.estimator.train_and_evaluate(classifier, train_spec, eval_spec)
-
-
-if __name__ == '__main__':
-    tf.app.run()

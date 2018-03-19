@@ -19,7 +19,7 @@ from __future__ import division
 from __future__ import print_function
 
 import six
-from . import head as head_lib
+from .. import head as head_lib
 from tensorflow.python.estimator import estimator
 from tensorflow.python.estimator import model_fn
 from tensorflow.python.estimator.canned import optimizers

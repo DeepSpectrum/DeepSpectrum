@@ -1,13 +1,12 @@
 import argparse
+import numpy as np
+import tfplot
 import itertools
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib import rcParams
-
 rcParams.update({'figure.autolayout': True})
 import matplotlib.pyplot as plt
-import numpy as np
-import tfplot
 from os.path import splitext, dirname, abspath
 from os import makedirs
 from matplotlib.backends.backend_agg import FigureCanvasAgg
@@ -49,8 +48,9 @@ def plot_confusion_matrix(cm,
     fig = matplotlib.figure.Figure(dpi=200)
     original_cm = cm
     if normalize:
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-    ax = fig.add_subplot(1,1,1)
+        with np.errstate(divide='ignore',invalid='ignore'):
+            cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    ax = fig.add_subplot(1, 1, 1)
     im = ax.imshow(cm, vmin=0, vmax=1, cmap=cmap)
     fig.colorbar(im)
     ax.set_title(title)
@@ -79,6 +79,7 @@ def plot_confusion_matrix(cm,
 def save_fig(fig, save_path):
     canvas = FigureCanvasAgg(fig)
     fig.savefig(save_path, format=splitext(save_path)[1][1:])
+
 
 def fig_to_tf_summary(fig, tensor_name):
     summary = tfplot.figure.to_summary(fig, tag=tensor_name)

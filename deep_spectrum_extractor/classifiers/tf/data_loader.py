@@ -6,6 +6,7 @@ from functools import partial
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
+_WEIGHT_COLUMN = 'weight'
 
 class DataLoader():
     def __init__(self,
@@ -21,7 +22,8 @@ class DataLoader():
                  shuffle=False,
                  num_epochs=1,
                  num_threads=1,
-                 queue_capacity=1000):
+                 queue_capacity=1000,
+                 class_weights=None):
         self.sequences = sequences
         self.regression = regression
         self.name_column = name_column
@@ -31,9 +33,6 @@ class DataLoader():
         self.num_features = None
         self.max_sequence_len = max_sequence_len
         self.sequence_classification = sequence_classification
-        assert not (
-            self.sequence_classification and self.regression
-        ), 'Cannot load data for both regression and sequence classification.'
 
         self.batch_size = batch_size
         self.shuffle = shuffle
@@ -44,9 +43,9 @@ class DataLoader():
 
         self.input_fn = None
         self.feature_columns = None
-        self.weight_column = 'weight'
+        self.weight_column = _WEIGHT_COLUMN
+        self.class_weights = class_weights
 
-        self.class_weights = None
         self.label_dict = dict()
         self.reverse_label_dict = dict()
         print('Loading data from {}...'.format(file_path))
@@ -138,7 +137,7 @@ class DataLoader():
                 'features', shape=features[0].shape)
         ]
         self.weight_column = 'weight'
-        self.steps_per_epoch = features.shape[0]// self.batch_size + (features.shape[0] % self.batch_size > 0)
+        self.steps_per_epoch = features.shape[0] / self.batch_size
         self.input_fn = tf.estimator.inputs.numpy_input_fn(
             x={'features': features,
                self.weight_column: weights},
@@ -164,6 +163,8 @@ class DataLoader():
                     sorted(self.label_dict.keys()))
             }
             unique, counts = np.unique(labels, return_counts=True)
-            self.class_weights = dict(
-                zip(unique, map(lambda x: min(counts) / x, counts)))
+
+            if self.class_weights is None:
+                self.class_weights = dict(
+                    zip(unique, map(lambda x: min(counts) / x, counts)))
             return np.array(labels, dtype=str)
