@@ -1506,7 +1506,7 @@ class _RegressionHeadWithMeanSquaredErrorLoss(_Head):
                 eval_metric_ops = {
                     _summary_key(self._name, keys.LOSS_MEAN):
                     metrics_lib.mean(values=unreduced_loss, weights=weights),
-                    _summary_key(self._name, keys.CCC):
+                    _summary_key(self._name, keys.PCC):
                     streaming_pearson_correlation(
                         predictions=predicted_value,
                         labels=labels,

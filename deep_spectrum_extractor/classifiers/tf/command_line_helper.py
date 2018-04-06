@@ -2,15 +2,14 @@ import argparse
 import tensorflow as tf
 import pickle
 import csv
-from .hooks import EvalConfusionMatrixHook
 from os.path import join, basename
 from os import makedirs
 
-__TF_PLOT = True
+__CM_PLOT = True
 try:
-    import tfplot
+    from .hooks import EvalConfusionMatrixHook
 except ImportError:
-    __TF_PLOT = False
+    __CM_PLOT = False
 
 # Modes (Classification and Regression)
 __CLASSIFICATION = 'classification'
@@ -172,13 +171,13 @@ def basic_train(model,
                 eval_period,
                 mode=__CLASSIFICATION):
     if mode == __CLASSIFICATION:
-        cm_hook = [
-            EvalConfusionMatrixHook(
-                join(model_dir, 'eval'),
-                vocabulary=sorted(loader_train.class_weights.keys()))
-        ] if __TF_PLOT else None
-    else:
-        cm_hook = None
+        if __CM_PLOT:
+            cm_hook = [
+                EvalConfusionMatrixHook(
+                    join(model_dir, 'eval'),
+                    vocabulary=sorted(loader_train.class_weights.keys()))]
+        else:
+            cm_hook = None
     steps = int(loader_train.steps_per_epoch * number_of_epochs)
     eval_spec = tf.estimator.EvalSpec(
         input_fn=loader_eval.input_fn,
@@ -198,13 +197,13 @@ def basic_eval(model,
                evaluation_key='manual',
                mode=__CLASSIFICATION):
     if mode == __CLASSIFICATION:
-        cm_hook = [
-            EvalConfusionMatrixHook(
-                vocabulary=sorted(loader_eval.class_weights.keys()),
-                output_dir=join(model_dir, 'eval_{}'.format(evaluation_key)))
-        ] if __TF_PLOT else None
-    else:
-        cm_hook = None
+        if __CM_PLOT:
+            cm_hook = [
+                EvalConfusionMatrixHook(
+                    join(model_dir, 'eval'),
+                    vocabulary=sorted(loader_eval.class_weights.keys()))]
+        else:
+            cm_hook = None
     model.evaluate(
         loader_eval.input_fn,
         checkpoint_path=checkpoint_path,

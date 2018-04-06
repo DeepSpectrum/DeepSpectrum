@@ -38,7 +38,7 @@ class MetricKeys(object):
   PREDICTION_MEAN = 'prediction/mean'
   UAR = 'unweighted_average_recall'
   CONFUSION = 'confusion_matrix'
-  CCC = 'concordance correlation coefficient'
+  PCC = 'pearson\'s correlation coefficient'
 
   # The following require a threshold applied, should be float in range (0, 1).
   ACCURACY_AT_THRESHOLD = 'accuracy/positive_threshold_%g'
