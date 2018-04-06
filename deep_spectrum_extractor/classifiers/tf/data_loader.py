@@ -8,6 +8,7 @@ tf.logging.set_verbosity(tf.logging.INFO)
 
 _WEIGHT_COLUMN = 'weight'
 
+
 class DataLoader():
     def __init__(self,
                  file_path,
@@ -45,6 +46,10 @@ class DataLoader():
         self.feature_columns = None
         self.weight_column = _WEIGHT_COLUMN
         self.class_weights = class_weights
+        if self.class_weights is not None:
+            self.__infer_weights = False
+        else:
+            self.__infer_weights = True
 
         self.label_dict = dict()
         self.reverse_label_dict = dict()
@@ -87,8 +92,35 @@ class DataLoader():
                 weights = np.array(
                     list(map(lambda x: self.class_weights[x], labels)),
                     dtype=np.float32)
+            else:
+                weights = np.ones(labels.shape, dtype=np.float32)
 
         features = data[:, feature_indices].astype(np.float32)
+
+        features, labels, weights = self.__pack_numpy_data(
+            features, labels, weights)
+
+        if not self.regression:
+            print('Using the following class weights:')
+            for label in self.class_weights:
+                print('{}: {:.2f}'.format(label, self.class_weights[label]))
+        self.feature_columns = [
+            tf.feature_column.numeric_column(
+                'features', shape=features[0].shape)
+        ]
+        self.weight_column = 'weight'
+        self.steps_per_epoch = features.shape[0] / self.batch_size
+        self.input_fn = tf.estimator.inputs.numpy_input_fn(
+            x={'features': features,
+               self.weight_column: weights},
+            y=labels,
+            batch_size=self.batch_size,
+            num_epochs=self.num_epochs,
+            shuffle=self.shuffle,
+            num_threads=self.num_threads,
+            queue_capacity=self.queue_capacity)
+
+    def __pack_numpy_data(self, features, labels, weights):
         if self.sequences:
             print('Packing sequences...')
             assert self.names is not None
@@ -113,40 +145,47 @@ class DataLoader():
                 dtype=np.float32)
             if labels is not None:
                 labels = np.split(labels, sorted_indices[1:])
-                labels = np.array(
-                    [
-                        np.pad(
-                            labels, (0, self.max_sequence_len - len(labels)),
-                            mode='edge') for labels in labels
-                    ],
-                    dtype=str)
-                if self.class_weights is not None:
-                    weights = np.split(weights, sorted_indices[1:])
-                    weights = np.array(
-                        tf.keras.preprocessing.sequence.pad_sequences(
-                            weights,
-                            maxlen=self.max_sequence_len,
-                            dtype='float32',
-                            padding='post',
-                            truncating='post'))
+                labels = self.__pad_labels(labels)
+                weights = np.split(weights, sorted_indices[1:])
+                weights = np.array(
+                    tf.keras.preprocessing.sequence.pad_sequences(
+                        weights,
+                        maxlen=self.max_sequence_len,
+                        dtype='float32',
+                        padding='post',
+                        truncating='post'))
                 if self.sequence_classification:
                     labels = np.array([labels[0] for labels in labels])
-                    weights = np.array([weights[0] for weights in weights])
-        self.feature_columns = [
-            tf.feature_column.numeric_column(
-                'features', shape=features[0].shape)
-        ]
-        self.weight_column = 'weight'
-        self.steps_per_epoch = features.shape[0] / self.batch_size
-        self.input_fn = tf.estimator.inputs.numpy_input_fn(
-            x={'features': features,
-               self.weight_column: weights},
-            y=labels,
-            batch_size=self.batch_size,
-            num_epochs=self.num_epochs,
-            shuffle=self.shuffle,
-            num_threads=self.num_threads,
-            queue_capacity=self.queue_capacity)
+                    if self.__infer_weights:
+                        unique, counts = np.unique(labels, return_counts=True)
+                        self.class_weights = dict(
+                            zip(unique, map(lambda x: max(counts)/x, counts)))
+                        weights = np.array(
+                            list(map(lambda x: self.class_weights[x], labels)),
+                            dtype=np.float32)
+                    else:
+                        weights = np.array([weights[0] for weights in weights])
+        return features, labels, weights
+
+    def __pad_labels(self, labels):
+        if self.regression:
+            labels = np.array(
+                tf.keras.preprocessing.sequence.pad_sequences(
+                    labels,
+                    maxlen=self.max_sequence_len,
+                    dtype='float32',
+                    padding='post',
+                    truncating='post'),
+                dtype=np.float32)
+        else:
+            labels = np.array(
+                [
+                    np.pad(
+                        labels, (0, self.max_sequence_len - len(labels)),
+                        mode='edge') for labels in labels
+                ],
+                dtype=str)
+        return labels
 
     def __convert_labels(self, labels):
         if self.regression:
@@ -164,7 +203,7 @@ class DataLoader():
             }
             unique, counts = np.unique(labels, return_counts=True)
 
-            if self.class_weights is None:
+            if self.__infer_weights:
                 self.class_weights = dict(
-                    zip(unique, map(lambda x: min(counts) / x, counts)))
+                    zip(unique, map(lambda x: max(counts)/x, counts)))
             return np.array(labels, dtype=str)

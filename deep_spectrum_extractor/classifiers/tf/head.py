@@ -49,6 +49,7 @@ from tensorflow.python.training import training_util
 from tensorflow.python.training.session_run_hook import SessionRunArgs
 from tensorflow.python.training.summary_io import SummaryWriterCache
 from tensorflow.core.util.event_pb2 import SessionLog
+from tensorflow.contrib.metrics import streaming_pearson_correlation
 
 import tensorflow as tf
 
@@ -1504,7 +1505,12 @@ class _RegressionHeadWithMeanSquaredErrorLoss(_Head):
                 # Estimator already adds a metric for loss.
                 eval_metric_ops = {
                     _summary_key(self._name, keys.LOSS_MEAN):
-                    metrics_lib.mean(values=unreduced_loss, weights=weights)
+                    metrics_lib.mean(values=unreduced_loss, weights=weights),
+                    _summary_key(self._name, keys.CCC):
+                    streaming_pearson_correlation(
+                        predictions=predicted_value,
+                        labels=labels,
+                        weights=weights)
                 }
                 if regularization_loss is not None:
                     regularization_loss_key = _summary_key(
@@ -1558,6 +1564,3 @@ def _assert_range(labels, n_classes, message=None):
             labels, message=message or 'Label IDs must >= 0')
         with ops.control_dependencies((assert_less, assert_greater)):
             return array_ops.identity(labels)
-
-
-
