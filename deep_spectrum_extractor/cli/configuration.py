@@ -390,18 +390,19 @@ class Configuration:
         if self.writer:
             self.writer_args['output'] = abspath(args['o'])
             makedirs(dirname(self.writer_args['output']), exist_ok=True)
-            if self.plotting:
-                self.writer_args['window'] = args['t'][0]
-                self.writer_args['hop'] = args['t'][1]
-                self.writer_args['start'] = args['start']
-            else:
-                self.writer_args['window'] = None
-                self.writer_args['hop'] = None
-                self.writer_args['start'] = 0
+            # if self.plotting:
+            #     self.writer_args['window'] = args['t'][0]
+            #     self.writer_args['hop'] = args['t'][1]
+            #     self.writer_args['start'] = args['start']
+            # else:
+            #     self.writer_args['window'] = None
+            #     self.writer_args['hop'] = None
+            #     self.writer_args['start'] = 0
             self.writer_args['continuous_labels'] = (
                 'window' in self.plotting_args) and args['tc'] and self.label_file
             self.writer_args['labels'] = args['el']
-            self.writer_args['no_timestamps'] = args['no_timestamps']
+            # self.writer_args['no_timestamps'] = args['no_timestamps']
+            self.writer_args['write_timestamps'] = (args['t'][0] or args['t'][1]) and not args['no_timestamps']
             self.writer_args['no_labels'] = args['no_labels']
 
         # list all .wavs for the extraction found in the given folders
