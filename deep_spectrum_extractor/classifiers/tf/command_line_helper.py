@@ -28,7 +28,8 @@ __PHASE_KEYS = [__TRAIN, __EVAL, __PREDICT]
 
 
 def basic_parser(net_name='classifier'):
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     subparsers = parser.add_subparsers(
         help='Either train or evaluate a {} or make predictions.'.format(
             net_name))
@@ -41,7 +42,8 @@ def basic_parser(net_name='classifier'):
 def __basic_train_subparser(subparsers, net_name='classifier'):
     train_parser = subparsers.add_parser(
         __TRAIN,
-        help='Train and evaluate a {} on given data.'.format(net_name))
+        help='Train and evaluate a {} on given data.'.format(net_name),
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     train_parser.add_argument(
         'training_data',
         default=None,
@@ -98,7 +100,8 @@ def __basic_eval_subparser(subparsers, net_name='classifier'):
     eval_parser = subparsers.add_parser(
         __EVAL,
         help='Evaluate a {} on numerical features in arff or csv format.'.
-        format(net_name))
+        format(net_name),
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     eval_parser.add_argument(
         'evaluation_data', help='Features to evaluate model on.')
     eval_parser.add_argument(
@@ -123,7 +126,8 @@ def __basic_predict_subparser(subparsers, net_name='classifier'):
         __PREDICT,
         help=
         'Make predictions with a {} on numerical features in arff or csv format.'.
-        format(net_name))
+        format(net_name),
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     predict_parser.add_argument(
         'prediction_data', help='Features to make predictions for.')
     predict_parser.add_argument(
@@ -143,7 +147,7 @@ def __basic_predict_subparser(subparsers, net_name='classifier'):
         '--model_dir',
         required=True,
         help=
-        'Directory for saving and restoring model checkpoints, summaries and exports.'
+        'Directory for saving and restoring model checkpoints, summaries and exports. If possible, continues training from checkpoint in this directory.'
     )
     return predict_parser
 
@@ -161,7 +165,6 @@ def load_params(model_dir):
     return params['loader'], params['model'], params['mode']
 
 
-
 def basic_train(model,
                 loader_train,
                 loader_eval,
@@ -170,14 +173,14 @@ def basic_train(model,
                 keep_checkpoints,
                 eval_period,
                 mode=__CLASSIFICATION):
+    cm_hook = None
     if mode == __CLASSIFICATION:
         if __CM_PLOT:
             cm_hook = [
                 EvalConfusionMatrixHook(
                     join(model_dir, 'eval'),
-                    vocabulary=sorted(loader_train.class_weights.keys()))]
-        else:
-            cm_hook = None
+                    vocabulary=sorted(loader_train.class_weights.keys()))
+            ]
     steps = int(loader_train.steps_per_epoch * number_of_epochs)
     eval_spec = tf.estimator.EvalSpec(
         input_fn=loader_eval.input_fn,
@@ -196,14 +199,14 @@ def basic_eval(model,
                checkpoint_path=None,
                evaluation_key='manual',
                mode=__CLASSIFICATION):
+    cm_hook = None
     if mode == __CLASSIFICATION:
         if __CM_PLOT:
             cm_hook = [
                 EvalConfusionMatrixHook(
                     join(model_dir, 'eval'),
-                    vocabulary=sorted(loader_eval.class_weights.keys()))]
-        else:
-            cm_hook = None
+                    vocabulary=sorted(loader_eval.class_weights.keys()))
+            ]
     model.evaluate(
         loader_eval.input_fn,
         checkpoint_path=checkpoint_path,
