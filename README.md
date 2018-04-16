@@ -155,3 +155,36 @@ tool's arguments - except for those specific to creating audio plots:
 | -np | Specify the number of processes used for the extraction. Defaults to the number of available CPU cores | None |
 | -config | The path to the configuration file used by the program can be given here. If the file does not exist yet, it is created and filled with standard settings. | deep.conf |
 | -h | Show help. | None |
+
+### Classifiers
+
+The tool also includes classifiers to be used with the extracted features (csv or arff).
+
+#### Linear SVM
+
+If the package is installed, a linear SVM classifier can be called with: 
+
+```linear_svm train.arff devel.arff test.arff```
+
+per default, this evaluates SVM complexities on a logarithmic scale between 1 
+and 10^-9 by training the classifier on the first feature file and evaluating it 
+on the second one. Another evaluation is done by combining the first to partitions
+and evaluating on the last. If only two partitions are given, the first evaluation 
+is performed by 10-fold CV. Additional arguments (e.g. for writing the results, 
+specifying the complexities by hand or plotting a confusion matrix) are described 
+by calling `-h`.
+
+#### Neural Networks
+
+Two types of neural network models are available: A regular feed-forward network 
+and a recurrent neural network usable with either gru or lstm cells. The 
+networks can be run with `dnn` and `rnn` and support three operating modes: 
+`train`, `eval` and `predict`. All commands have the following common structure: 
+
+```dnn|rnn train|eval|predict [feature_files]```
+
+`train` takes two feature files as input: training data and evaluation 
+data, whereas `eval` and `predict` use a single input file. All cli interface share
+the `--model_dir` argument which specifies where checkpoints should be written
+during trainig and from where a trained model should be loaded for evaluation/prediction.
+All additional parameters for each network and operating mode are accessible via `-h`.
