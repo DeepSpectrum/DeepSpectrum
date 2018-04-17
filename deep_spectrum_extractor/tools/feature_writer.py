@@ -1,6 +1,7 @@
 import csv
 
 import numpy as np
+import gc
 from os.path import basename
 from tqdm import tqdm
 
@@ -118,6 +119,7 @@ class ArffFeatureWriter(FeatureWriter):
                     if name != old_name:
                         pbar.update()
                         old_name = name
+                    del feature_vector
             pbar.update()
 
 

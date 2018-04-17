@@ -1,5 +1,6 @@
 import numpy as np
 import re
+import gc
 
 class Extractor():
     def __init__(self, images, batch_size):
@@ -237,17 +238,21 @@ def _new_batch_images(images, batch_size=256):
             current_name_batch.append(name)
             current_ts_batch.append(ts)
             current_image_batch.append(image)
+            del image
             if (index + 1) % batch_size == 0:
                 name_batch, ts_batch, image_batch = current_name_batch, current_ts_batch, np.array(current_image_batch, dtype=np.float32)
                 current_name_batch = []
                 current_ts_batch = []
                 current_image_batch = []
+                gc.collect()
                 yield (name_batch, ts_batch, image_batch)
             index += 1
         except StopIteration:
             if current_name_batch:
                 name_batch, ts_batch, image_batch = current_name_batch, current_ts_batch, np.array(current_image_batch, dtype=np.float32)
                 current_name_batch = []
+                gc.collect()
                 yield (name_batch, ts_batch, image_batch)
             else:
+                gc.collect()
                 raise StopIteration

@@ -6,6 +6,7 @@ import matplotlib
 # force matplotlib to not use X-Windows backend. Needed for running the tool through an ssh connection.
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import gc
 import librosa.display
 import numpy as np
 import soundfile as sf
@@ -17,6 +18,7 @@ from os import environ, makedirs, walk
 from os.path import basename, join, dirname
 from multiprocessing import cpu_count, Pool
 from functools import partial
+from itertools import islice, chain
 
 environ['GLOG_minloglevel'] = '2'
 
@@ -66,7 +68,7 @@ def plot_chunk(chunk, window, hop, start, end, mode='spectrogram', output_folder
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
         spectrogram_axes = PLOTTING_FUNCTIONS[mode](audio, sr, nfft, **kwargs)
-
+        del audio
     fig.add_axes(spectrogram_axes, id='spectrogram')
 
     if output_folder:
@@ -78,8 +80,10 @@ def plot_chunk(chunk, window, hop, start, end, mode='spectrogram', output_folder
     buf = io.BytesIO()
     fig.savefig(buf, format='png', dpi=size)
     buf.seek(0)
-    plt.close('all')
+    fig.clf()
+    plt.close(fig)
     img_blob = buf.read()
+    buf.close()
     try:
         img = imread_from_blob(img_blob, 'png')
         img = img[:, :, :-1]
@@ -88,15 +92,36 @@ def plot_chunk(chunk, window, hop, start, end, mode='spectrogram', output_folder
         return None
     return (filename, ts, img)
 
-def _generate_chunks_filename_timestamp_wrapper(filepath, window, hop, start=0, end=None, wav_out=None):
+def _generate_chunks_filename_timestamp_wrapper(filepath, window, hop, start=0, end=None, nfft=256, wav_out=None):
     sound_info, sr = _read_wav_data(filepath, start=start, end=end)
+    if not nfft:
+        nfft = _next_power_of_two(int(sr * 0.025))
     for idx, audio in enumerate(_generate_chunks(sound_info, sr, window, hop, start, wav_out)):
         if window or hop:
             ts = start + idx*hop
         else:
             ts = None
-        yield (basename(filepath), sr, ts, audio)
+        if len(audio) >= nfft:
+            yield (basename(filepath), sr, ts, audio)
 
+
+# def _generate_chunks_filename_timestamp_wrapper(filepath, window, hop, start=0, end=None, wav_out=None):
+#     with sf.SoundFile(filepath) as soundfile:
+#         sr = soundfile.samplerate
+#         channels = soundfile.channels
+#         start = int(start*sr)
+#         soundfile.seek(start)
+#         end = int(sr*end) - start if end is not None else -1
+#         for idx, audio in enumerate(soundfile.blocks(blocksize=int(sr*window), overlap=int(sr*(window-hop)), frames=end, fill_value=0)):
+#             if window or hop:
+#                 ts = start + idx*hop
+#             else:
+#                 ts = None
+#             if channels == 2:
+#                 audio = audio.astype(float)
+#                 audio = audio.sum(axis=1) / 2
+#                 audio = np.array(audio)
+#             yield (basename(filepath), sr, ts, audio)
 
 def plot(wav_file, window, hop, mode='spectrogram', size=227, output_folder=None, wav_folder=None, start=0, end=None,
          nfft=None, **kwargs):
@@ -283,12 +308,14 @@ class PlotGenerator():
             makedirs(output_wavs, exist_ok=True)
         if not self.number_of_processes:
             self.number_of_processes = cpu_count()
-        self.chunks = (chunk for filename in self.files for chunk in _generate_chunks_filename_timestamp_wrapper(filename, wav_out=output_wavs, window=kwargs['window'], hop=kwargs['hop'], start=kwargs['start'], end=kwargs['end']))
+        self.chunks = (chunk for filename in self.files for chunk in _generate_chunks_filename_timestamp_wrapper(filename, wav_out=output_wavs, window=kwargs['window'], hop=kwargs['hop'], start=kwargs['start'], end=kwargs['end'], nfft=kwargs['nfft']))
+        # self.batches = batches(self.chunks)
         plotting_func = partial(
             plot_chunk, output_folder=output_spectrograms,
             **kwargs)
 
         self.pool = Pool(processes=self.number_of_processes)
+        # self.plots = (plot for batch in self.batches for plot in self.pool.imap(plotting_func, batch))
         self.plots = self.pool.imap(plotting_func, self.chunks)
 
     def __len__(self):
@@ -313,3 +340,9 @@ class PlotGenerator():
         for root, dirs, files in walk(folder, topdown=True):
             wavs += [join(root, j) for j in files if re.match(reg_expr, j)]
         return wavs
+
+
+# def batches(iterable, size=256):
+#     iterator = iter(iterable)
+#     for first in iterator:
+#         yield chain([first], islice(iterator, size - 1))
