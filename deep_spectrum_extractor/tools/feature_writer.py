@@ -92,9 +92,9 @@ class ArffFeatureWriter(FeatureWriter):
             writer = None
             first = True
             for batch in features:
-                for name, timestamp, feature_vector in batch:
+                for feature_tuple in batch:
                     if first:
-                        old_name = name
+                        old_name = feature_tuple.name
                         first = False
                     if self.no_labels:
                         classes = None
@@ -104,22 +104,22 @@ class ArffFeatureWriter(FeatureWriter):
                                 for class_name, class_type in self.labels]
                     if not writer:
                         attributes = _determine_attributes(
-                            self.write_timestamps, feature_vector, classes)
+                            self.write_timestamps, feature_tuple.features, classes)
                         writer = ArffWriter(
                             output_file, 'Deep Spectrum Features', attributes)
                     time_stamp, label = self.timestamp_and_label(
-                        name, timestamp)
-                    row = [name]
+                        feature_tuple.name, feature_tuple.timestamp)
+                    row = [feature_tuple.name]
                     if time_stamp is not None:
                         row.append(str(time_stamp))
-                    row += (list(map(str, feature_vector)))
+                    row += (list(map(str, feature_tuple.features)))
                     if not self.no_labels:
                         row += label
                     writer.writerow(row)
-                    if name != old_name:
+                    if feature_tuple.name != old_name:
                         pbar.update()
-                        old_name = name
-                    del feature_vector
+                        old_name = feature_tuple.name
+                    del feature_tuple
             pbar.update()
 
 
@@ -129,9 +129,9 @@ class CsvFeatureWriter(FeatureWriter):
             writer = None
             first = True
             for batch in features:
-                for name, timestamp, feature_vector in batch:
+                for feature_tuple in batch:
                     if first:
-                        old_name = name
+                        old_name = feature_tuple.name
                         first = False
                     if self.no_labels:
                         classes = None
@@ -142,91 +142,91 @@ class CsvFeatureWriter(FeatureWriter):
 
                     if not writer:
                         attributes = _determine_attributes(
-                            self.write_timestamps, feature_vector, classes)
+                            self.write_timestamps, feature_tuple.features, classes)
                         writer = csv.writer(output_file, delimiter=',')
                         writer.writerow(
                             [attribute[0] for attribute in attributes])
                     time_stamp, label = self.timestamp_and_label(
-                        name, timestamp)
-                    row = [name]
+                        feature_tuple.name, feature_tuple.timestamp)
+                    row = [feature_tuple.name]
                     if time_stamp is not None:
                         row.append(time_stamp)
-                    row += (list(map(str, feature_vector)))
+                    row += (list(map(str, feature_tuple.feature_vector)))
                     if not self.no_labels:
                         row += label
                     writer.writerow(row)
-                    if name != old_name:
+                    if feature_tuple.name != old_name:
                         pbar.update()
-                        old_name = name
+                        old_name = feature_tuple.name
             pbar.update()
 
-class NumpyFeatureWriter(FeatureWriter):
-    def write_features(self, names, features, hide_progress=False):
-        file_names, timestamps, data, labels = ([], [], [], [])
-        for file_name, features in tqdm(
-                zip(names, features), total=len(names),
-                disable=hide_progress):
+# class NumpyFeatureWriter(FeatureWriter):
+#     def write_features(self, names, features, hide_progress=False):
+#         file_names, timestamps, data, labels = ([], [], [], [])
+#         for file_name, features in tqdm(
+#                 zip(names, features), total=len(names),
+#                 disable=hide_progress):
 
-            file_name = basename(file_name)
+#             file_name = basename(file_name)
 
-            for idx, feature_vector in enumerate(features):
-                timestamp, label = self.timestamp_and_label(file_name, idx)
-                if len(label) == 1:
-                    label = label[0]
-                data.append(feature_vector)
-                labels.append(label)
-                file_names.append(file_name)
-                timestamps.append(timestamp)
-        print('Writing output...')
-        np.savez(
-            self.output,
-            names=file_names,
-            features=data,
-            labels=labels,
-            timestamps=timestamps)
+#             for idx, feature_vector in enumerate(features):
+#                 timestamp, label = self.timestamp_and_label(file_name, idx)
+#                 if len(label) == 1:
+#                     label = label[0]
+#                 data.append(feature_vector)
+#                 labels.append(label)
+#                 file_names.append(file_name)
+#                 timestamps.append(timestamp)
+#         print('Writing output...')
+#         np.savez(
+#             self.output,
+#             names=file_names,
+#             features=data,
+#             labels=labels,
+#             timestamps=timestamps)
 
 
-class TfFeatureWriter(FeatureWriter):
-    try:
-        import tensorflow as tf
-    except:
-        pass
+# class TfFeatureWriter(FeatureWriter):
+#     try:
+#         import tensorflow as tf
+#     except:
+#         pass
 
-    def write_features(self, names, features, hide_progress=False):
-        label_map = [{
-            label: index
-            for index, label in enumerate(sorted(class_name[1]))
-        } for class_name in self.labels]
-        with self.tf.python_io.TFRecordWriter(self.output) as writer:
-            for file_name, features in tqdm(
-                    zip(names, features),
-                    total=len(names),
-                    disable=hide_progress):
-                file_name = basename(file_name)
-                for idx, feature_vector in enumerate(features):
-                    time_stamp, label = self.timestamp_and_label(
-                        file_name, idx)
-                    label = [label_map[i][l] for i, l in enumerate(label)]
-                    feature = {
-                        'label': self._int64_feature(label),
-                        'features': self._bytes_feature(
-                            feature_vector.tostring())
-                    }
-                    example = self.tf.train.Example(
-                        features=self.tf.train.Features(feature=feature))
-                    writer.write(example.SerializeToString())
+#     def write_features(self, names, features, hide_progress=False):
+#         label_map = [{
+#             label: index
+#             for index, label in enumerate(sorted(class_name[1]))
+#         } for class_name in self.labels]
+#         with self.tf.python_io.TFRecordWriter(self.output) as writer:
+#             for file_name, features in tqdm(
+#                     zip(names, features),
+#                     total=len(names),
+#                     disable=hide_progress):
+#                 file_name = basename(file_name)
+#                 for idx, feature_vector in enumerate(features):
+#                     time_stamp, label = self.timestamp_and_label(
+#                         file_name, idx)
+#                     label = [label_map[i][l] for i, l in enumerate(label)]
+#                     feature = {
+#                         'label': self._int64_feature(label),
+#                         'features': self._bytes_feature(
+#                             feature_vector.tostring())
+#                     }
+#                     example = self.tf.train.Example(
+#                         features=self.tf.train.Features(feature=feature))
+#                     writer.write(example.SerializeToString())
 
-    def _int64_feature(self, value):
-        return self.tf.train.Feature(
-            int64_list=self.tf.train.Int64List(value=value))
+#     def _int64_feature(self, value):
+#         return self.tf.train.Feature(
+#             int64_list=self.tf.train.Int64List(value=value))
 
-    def _bytes_feature(self, value):
-        return self.tf.train.Feature(
-            bytes_list=self.tf.train.BytesList(value=[value]))
+#     def _bytes_feature(self, value):
+#         return self.tf.train.Feature(
+#             bytes_list=self.tf.train.BytesList(value=[value]))
 
-    def _floats_feature(self, value):
-        return self.tf.train.Feature(
-            float_list=self.tf.train.FloatList(value=value))
+#     def _floats_feature(self, value):
+#         return self.tf.train.Feature(
+#             float_list=self.tf.train.FloatList(value=value))
 
 
 def _determine_attributes(timestamp, feature_vector, classes):
@@ -248,7 +248,7 @@ def get_writer(**kwargs):
         return ArffFeatureWriter(**kwargs)
     elif kwargs['output'].endswith('.csv'):
         return CsvFeatureWriter(**kwargs)
-    elif kwargs['output'].endswith('.npz'):
-        return NumpyFeatureWriter(**kwargs)
-    elif kwargs['output'].endswith('.tfrecord'):
-        return TfFeatureWriter(**kwargs)
+    # elif kwargs['output'].endswith('.npz'):
+    #     return NumpyFeatureWriter(**kwargs)
+    # elif kwargs['output'].endswith('.tfrecord'):
+    #     return TfFeatureWriter(**kwargs)

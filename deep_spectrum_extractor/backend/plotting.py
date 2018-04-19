@@ -19,6 +19,10 @@ from os.path import basename, join, dirname
 from multiprocessing import cpu_count, Pool
 from functools import partial
 from itertools import islice, chain
+from collections import namedtuple
+
+PlotTuple = namedtuple('PlotTuple', ['name', 'timestamp', 'plot'])
+AudioChunk = namedtuple('AudioChunk', ['name', 'samplerate', 'timestamp', 'audio'])
 
 environ['GLOG_minloglevel'] = '2'
 
@@ -90,7 +94,7 @@ def plot_chunk(chunk, window, hop, start, end, mode='spectrogram', output_folder
     except IOError:
         print('Error while reading the spectrogram blob.')
         return None
-    return (filename, ts, img)
+    return PlotTuple(name=filename, timestamp=ts, plot=img)
 
 def _generate_chunks_filename_timestamp_wrapper(filepath, window, hop, start=0, end=None, nfft=256, wav_out=None):
     sound_info, sr = _read_wav_data(filepath, start=start, end=end)
@@ -101,8 +105,8 @@ def _generate_chunks_filename_timestamp_wrapper(filepath, window, hop, start=0, 
             ts = start + idx*hop
         else:
             ts = None
-        if len(audio) >= nfft:
-            yield (basename(filepath), sr, ts, audio)
+        if len(audio) >= nfft: # cannot plot chunks that are too short
+            yield AudioChunk(basename(filepath), sr, ts, audio)
 
 
 # def _generate_chunks_filename_timestamp_wrapper(filepath, window, hop, start=0, end=None, wav_out=None):
@@ -256,46 +260,46 @@ def get_relative_path(file, prefix):
 
 
 
-class OldPlotGenerator():
-    def __init__(self, input_path, output_spectrograms=None, output_wavs=None, number_of_processes=None,
-                 **kwargs):
-        self.files = sorted(self._find_wav_files(input_path))
-        self.number_of_processes = number_of_processes
-        if output_spectrograms:
-            makedirs(output_spectrograms, exist_ok=True)
-        if output_wavs:
-            makedirs(output_wavs, exist_ok=True)
-        if not self.number_of_processes:
-            self.number_of_processes = cpu_count()
-        plotting_func = partial(
-            plot_file, input_path=input_path, output_spectrograms=output_spectrograms, output_wavs=output_wavs,
-            **kwargs)
+# class OldPlotGenerator():
+#     def __init__(self, input_path, output_spectrograms=None, output_wavs=None, number_of_processes=None,
+#                  **kwargs):
+#         self.files = sorted(self._find_wav_files(input_path))
+#         self.number_of_processes = number_of_processes
+#         if output_spectrograms:
+#             makedirs(output_spectrograms, exist_ok=True)
+#         if output_wavs:
+#             makedirs(output_wavs, exist_ok=True)
+#         if not self.number_of_processes:
+#             self.number_of_processes = cpu_count()
+#         plotting_func = partial(
+#             plot_file, input_path=input_path, output_spectrograms=output_spectrograms, output_wavs=output_wavs,
+#             **kwargs)
 
-        self.pool = Pool(processes=self.number_of_processes)
-        self.plots = self.pool.imap(plotting_func, self.files)
+#         self.pool = Pool(processes=self.number_of_processes)
+#         self.plots = self.pool.imap(plotting_func, self.files)
 
-    def __len__(self):
-        return len(self.files)
+#     def __len__(self):
+#         return len(self.files)
 
-    def __iter__(self):
-        return self
+#     def __iter__(self):
+#         return self
 
-    def __next__(self):
-        try:
-            return next(self.plots)
-        except StopIteration:
-            self.pool.close()
-            self.pool.join()
-            raise StopIteration
+#     def __next__(self):
+#         try:
+#             return next(self.plots)
+#         except StopIteration:
+#             self.pool.close()
+#             self.pool.join()
+#             raise StopIteration
 
-    @staticmethod
-    def _find_wav_files(folder):
-        globexpression = '*.wav'
-        reg_expr = re.compile(fnmatch.translate(globexpression), re.IGNORECASE)
-        wavs = []
-        for root, dirs, files in walk(folder, topdown=True):
-            wavs += [join(root, j) for j in files if re.match(reg_expr, j)]
-        return wavs
+#     @staticmethod
+#     def _find_wav_files(folder):
+#         globexpression = '*.wav'
+#         reg_expr = re.compile(fnmatch.translate(globexpression), re.IGNORECASE)
+#         wavs = []
+#         for root, dirs, files in walk(folder, topdown=True):
+#             wavs += [join(root, j) for j in files if re.match(reg_expr, j)]
+#         return wavs
 
 class PlotGenerator():
     def __init__(self, input_path, output_spectrograms=None, output_wavs=None, number_of_processes=None,
