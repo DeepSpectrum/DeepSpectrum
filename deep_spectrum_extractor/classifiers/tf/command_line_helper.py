@@ -38,7 +38,6 @@ def basic_parser(net_name='classifier'):
     predict_subparser = __basic_predict_subparser(subparsers, net_name)
     return parser, train_subparser, eval_subparser, predict_subparser
 
-
 def __basic_train_subparser(subparsers, net_name='classifier'):
     train_parser = subparsers.add_parser(
         __TRAIN,
@@ -207,6 +206,14 @@ def basic_train(model,
 
     return model.evaluate(loader_eval.input_fn, hooks=cm_hook)
 
+def write_results(metrics, output_path):
+    with open(output_path, 'w', newline='') as csvfile:
+        fieldnames = sorted(metrics.keys())
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerow(metrics)
+
+
 def basic_eval(model,
                loader_eval,
                model_dir,
@@ -267,12 +274,12 @@ def basic_predict(model,
                         ] + [probability for probability in probabilities])
 
 
-def config(args, steps_per_epoch):
+def config(model_dir, keep_checkpoints, steps_per_epoch):
     gpu_options = tf.GPUOptions(allow_growth=True)
     session_config = tf.ConfigProto(gpu_options=gpu_options)
     config = tf.estimator.RunConfig(
-        model_dir=args.model_dir,
-        keep_checkpoint_max=args.keep_checkpoints,
+        model_dir=model_dir,
+        keep_checkpoint_max=keep_checkpoints,
         session_config=session_config,
         save_checkpoints_steps=steps_per_epoch,
         tf_random_seed=42)

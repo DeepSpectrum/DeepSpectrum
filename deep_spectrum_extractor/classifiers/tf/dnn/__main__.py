@@ -1,8 +1,9 @@
 import tensorflow as tf
-from ..command_line_helper import basic_parser, __REGRESSION, __CLASSIFICATION, config, basic_train, basic_eval, basic_predict, save_params, load_params
+from ..command_line_helper import basic_parser, __REGRESSION, __CLASSIFICATION, config, basic_train, basic_eval, basic_predict, save_params, load_params, write_results
 from ..data_loader import DataLoader
 from .dnn import DNNClassifier, DNNRegressor
 from ..custom_metrics import ccc_loss, uar, confusion_matrix, streaming_concordance_correlation_coefficient, pearson_r
+from os.path import join
 
 
 def main():
@@ -28,6 +29,7 @@ def __add_train_args(train_parser):
         '--sequences',
         action='store_true',
         help='Whether the input data contains sequences which should be considered in whole.')
+    train_parser.add_argument('-o', '--output', default=None, help='Where to store the final evaluation results.')
     train_parser.set_defaults(action=__train)
 
 
@@ -36,6 +38,7 @@ def __add_predict_args(predict_parser):
 
 
 def __add_eval_args(eval_parser):
+    eval_parser.add_argument('-o', '--output', default=None, help='Where to store the evaluation results.')
     eval_parser.set_defaults(action=__eval)
 
 
@@ -56,7 +59,7 @@ def __train(args):
     eval_data_loader = DataLoader(
         args.evaluation_data, batch_size=args.batch_size, **loader_params)
     optimizer = tf.train.AdadeltaOptimizer(args.learning_rate, rho=args.decay_rate)
-    configuration = config(args, steps_per_epoch=train_data_loader.steps_per_epoch)
+    configuration = config(model_dir=args.model_dir, keep_checkpoints=args.keep_checkpoints, steps_per_epoch=train_data_loader.steps_per_epoch)
     model_params = {
         'hidden_units': args.layers,
         'feature_columns': train_data_loader.feature_columns,
@@ -77,18 +80,20 @@ def __train(args):
         model = tf.contrib.estimator.add_metrics(model, lambda labels, predictions: streaming_concordance_correlation_coefficient(predictions=predictions['predictions'], labels=labels))
         model = tf.contrib.estimator.add_metrics(model, lambda labels, predictions: pearson_r(predictions=predictions['predictions'], labels=labels))
     save_params(loader_params=loader_params, model_params=model_params, model_dir=args.model_dir, mode=args.mode)
-    basic_train(model, train_data_loader, eval_data_loader, args.model_dir,
+    metrics = basic_train(model, train_data_loader, eval_data_loader, args.model_dir,
                 args.number_of_epochs, args.keep_checkpoints, args.eval_period,
                 args.mode)
-
-
+    if args.output:
+        write_results(metrics, args.output)
 
 def __eval(args):
     loader_params, model_params, mode = load_params(args.model_dir)
     eval_data_loader = DataLoader(args.evaluation_data, batch_size=args.batch_size, **loader_params)
     if mode == __CLASSIFICATION:
         model = tf.estimator.DNNClassifier(**model_params)
-    basic_eval(model, eval_data_loader, args.model_dir, args.checkpoint, evaluation_key='on {}'.format(args.evaluation_data), mode=mode)
+    metrics = basic_eval(model, eval_data_loader, args.model_dir, args.checkpoint, evaluation_key='on {}'.format(args.evaluation_data), mode=mode)
+    if args.output:
+        write_results(metrics, args.output)
 
 def __predict(args):
     loader_params, model_params, mode = load_params(args.model_dir)

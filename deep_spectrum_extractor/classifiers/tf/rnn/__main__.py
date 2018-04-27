@@ -33,14 +33,15 @@ def __add_train_args(train_parser):
         '--sequenced_labels',
         action='store_true',
         help='Whether each element of a sequence has its own label.')
+    train_parser.add_argument('-o', '--output', default=None, help='Where to store the final evaluation results.')
     train_parser.set_defaults(action=__train)
-
 
 def __add_predict_args(predict_parser):
     predict_parser.set_defaults(action=__predict)
 
 
 def __add_eval_args(eval_parser):
+    eval_parser.add_argument('-o', '--output', default=None, help='Where to store the final evaluation results.')
     eval_parser.set_defaults(action=__eval)
 
 
@@ -61,7 +62,7 @@ def __train(args):
     eval_data_loader = DataLoader(
         args.evaluation_data, batch_size=args.batch_size, **loader_params)
     optimizer = tf.train.AdamOptimizer(args.learning_rate, args.decay_rate)
-    configuration = config(args, train_data_loader.steps_per_epoch)
+    configuration = config(args.model_dir, args.keep_checkpoints, train_data_loader.steps_per_epoch)
     model_params = {
         'hidden_units': args.layers,
         'feature_columns': train_data_loader.feature_columns,
@@ -80,7 +81,7 @@ def __train(args):
     elif args.mode == __REGRESSION:
         model = RNNRegressor(**model_params)
     save_params(loader_params=loader_params, model_params=model_params, model_dir=args.model_dir, mode=args.mode)
-    basic_train(model, train_data_loader, eval_data_loader, args.model_dir,
+    metrics = basic_train(model, train_data_loader, eval_data_loader, args.model_dir,
                 args.number_of_epochs, args.keep_checkpoints, args.eval_period,
                 args.mode)
 
