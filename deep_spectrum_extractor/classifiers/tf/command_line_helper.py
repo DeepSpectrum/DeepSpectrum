@@ -4,9 +4,6 @@ import pickle
 import csv
 from os.path import join, basename
 from os import makedirs
-from skopt import gp_minimize
-from skopt.space import Real, Categorical, Integer
-from skopt.utils import use_named_args
 
 __CM_PLOT = True
 try:
