@@ -4,8 +4,6 @@ import tensorflow as tf
 import pandas as pd
 from functools import partial
 
-tf.logging.set_verbosity(tf.logging.INFO)
-
 _WEIGHT_COLUMN = 'weight'
 
 

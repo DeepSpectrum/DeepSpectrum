@@ -4,6 +4,9 @@ import pickle
 import csv
 from os.path import join, basename
 from os import makedirs
+from skopt import gp_minimize
+from skopt.space import Real, Categorical, Integer
+from skopt.utils import use_named_args
 
 __CM_PLOT = True
 try:
@@ -76,6 +79,12 @@ def __basic_train_subparser(subparsers, net_name='classifier'):
         default=0.001,
         type=float,
         help='Learning rate.')
+    train_parser.add_argument(
+        '-dr',
+        '--decay_rate',
+        type=float,
+        default=0.95,
+        help='Learning rate decay.')
     train_parser.add_argument(
         '-d', '--dropout', default=0.2, type=float, help='Dropout')
     train_parser.add_argument(
@@ -172,7 +181,8 @@ def basic_train(model,
                 number_of_epochs,
                 keep_checkpoints,
                 eval_period,
-                mode=__CLASSIFICATION):
+                mode=__CLASSIFICATION,
+                distributed=False):
     cm_hook = None
     if mode == __CLASSIFICATION:
         if __CM_PLOT:
@@ -181,17 +191,24 @@ def basic_train(model,
                     join(model_dir, 'eval'),
                     vocabulary=sorted(loader_train.class_weights.keys()))
             ]
-    steps = int(loader_train.steps_per_epoch * number_of_epochs)
-    eval_spec = tf.estimator.EvalSpec(
-        input_fn=loader_eval.input_fn,
-        start_delay_secs=eval_period,
-        throttle_secs=eval_period,
-        hooks=cm_hook)
-    train_spec = tf.estimator.TrainSpec(
-        input_fn=loader_train.input_fn, max_steps=steps)
+    if distributed:
+        steps = int(loader_train.steps_per_epoch * number_of_epochs)
+        eval_spec = tf.estimator.EvalSpec(
+            input_fn=loader_eval.input_fn,
+            start_delay_secs=eval_period,
+            throttle_secs=eval_period,
+            hooks=cm_hook)
+        train_spec = tf.estimator.TrainSpec(
+            input_fn=loader_train.input_fn, max_steps=steps)
+        tf.estimator.train_and_evaluate(model, train_spec, eval_spec)
+    else:
+        for epoch in range(number_of_epochs):
+            model.train(loader_train.input_fn, steps=loader_train.steps_per_epoch)
+            metrics = model.evaluate(loader_eval.input_fn, hooks=cm_hook)
+            metrics_string = ', '.join((': '.join((key, str(value))) for key, value in metrics.items()))
+            print('Evaluation results for epoch {}: '.format(str(epoch+1)) + metrics_string)
 
-    tf.estimator.train_and_evaluate(model, train_spec, eval_spec)
-
+    return model.evaluate(loader_eval.input_fn, hooks=cm_hook)
 
 def basic_eval(model,
                loader_eval,
@@ -207,7 +224,7 @@ def basic_eval(model,
                     join(model_dir, 'eval'),
                     vocabulary=sorted(loader_eval.class_weights.keys()))
             ]
-    model.evaluate(
+    return model.evaluate(
         loader_eval.input_fn,
         checkpoint_path=checkpoint_path,
         name='{}'.format(evaluation_key),
@@ -263,3 +280,5 @@ def config(args, steps_per_epoch):
         save_checkpoints_steps=steps_per_epoch,
         tf_random_seed=42)
     return config
+
+

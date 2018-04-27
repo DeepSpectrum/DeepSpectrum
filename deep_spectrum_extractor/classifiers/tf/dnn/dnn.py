@@ -352,9 +352,7 @@ class DNNClassifier(estimator.Estimator):
                 config=config)
 
         super(DNNClassifier, self).__init__(
-            model_fn=_model_fn,
-            model_dir=model_dir,
-            config=config)
+            model_fn=_model_fn, model_dir=model_dir, config=config)
 
 
 @tf_export('estimator.DNNRegressor')
@@ -426,20 +424,19 @@ class DNNRegressor(estimator.Estimator):
   @end_compatibility
   """
 
-    def __init__(
-            self,
-            hidden_units,
-            feature_columns,
-            model_dir=None,
-            label_dimension=1,
-            weight_column=None,
-            optimizer='Adagrad',
-            activation_fn=nn.relu,
-            dropout=None,
-            input_layer_partitioner=None,
-            config=None,
-            loss_reduction=losses.Reduction.SUM,
-    ):
+    def __init__(self,
+                 hidden_units,
+                 feature_columns,
+                 model_dir=None,
+                 label_dimension=1,
+                 weight_column=None,
+                 optimizer='Adagrad',
+                 activation_fn=nn.relu,
+                 dropout=None,
+                 input_layer_partitioner=None,
+                 config=None,
+                 loss_reduction=losses.Reduction.SUM,
+                 loss_fn=None):
         """Initializes a `DNNRegressor` instance.
 
     Args:
@@ -490,7 +487,8 @@ class DNNRegressor(estimator.Estimator):
                 _regression_head_with_mean_squared_error_loss(
                     label_dimension=label_dimension,
                     weight_column=weight_column,
-                    loss_reduction=loss_reduction),
+                    loss_reduction=loss_reduction,
+                    loss_fn=loss_fn),
                 hidden_units=hidden_units,
                 feature_columns=tuple(feature_columns or []),
                 optimizer=optimizer,
@@ -500,6 +498,4 @@ class DNNRegressor(estimator.Estimator):
                 config=config)
 
         super(DNNRegressor, self).__init__(
-            model_fn=_model_fn,
-            model_dir=model_dir,
-            config=config)
+            model_fn=_model_fn, model_dir=model_dir, config=config)
