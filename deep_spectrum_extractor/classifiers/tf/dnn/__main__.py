@@ -63,7 +63,7 @@ def __train(args):
         'weight_column': train_data_loader.weight_column,
         'dropout': args.dropout,
         'config': configuration,
-        'loss_reduction': tf.losses.Reduction.SUM_OVER_BATCH_SIZE
+        'loss_reduction': tf.losses.Reduction.MEAN
     }
     if args.mode == __CLASSIFICATION:
         model_params['n_classes'] = len(train_data_loader.label_dict.keys())
@@ -86,14 +86,14 @@ def __eval(args):
     loader_params, model_params, mode = load_params(args.model_dir)
     eval_data_loader = DataLoader(args.evaluation_data, batch_size=args.batch_size, **loader_params)
     if mode == __CLASSIFICATION:
-        model = DNNClassifier(**model_params)
+        model = tf.estimator.DNNClassifier(**model_params)
     basic_eval(model, eval_data_loader, args.model_dir, args.checkpoint, evaluation_key='on {}'.format(args.evaluation_data), mode=mode)
 
 def __predict(args):
     loader_params, model_params, mode = load_params(args.model_dir)
     predict_data_loader = DataLoader(args.prediction_data, batch_size=args.batch_size, **loader_params)
     if mode == __CLASSIFICATION:
-        model = DNNClassifier(**model_params)
+        model = tf.estimator.DNNClassifier(**model_params)
     basic_predict(model, predict_data_loader, args.model_dir, args.output, args.checkpoint, mode=mode)
 
 if __name__ == '__main__':

@@ -108,25 +108,6 @@ def _generate_chunks_filename_timestamp_wrapper(filepath, window, hop, start=0, 
         if len(audio) >= nfft: # cannot plot chunks that are too short
             yield AudioChunk(basename(filepath), sr, ts, audio)
 
-
-# def _generate_chunks_filename_timestamp_wrapper(filepath, window, hop, start=0, end=None, wav_out=None):
-#     with sf.SoundFile(filepath) as soundfile:
-#         sr = soundfile.samplerate
-#         channels = soundfile.channels
-#         start = int(start*sr)
-#         soundfile.seek(start)
-#         end = int(sr*end) - start if end is not None else -1
-#         for idx, audio in enumerate(soundfile.blocks(blocksize=int(sr*window), overlap=int(sr*(window-hop)), frames=end, fill_value=0)):
-#             if window or hop:
-#                 ts = start + idx*hop
-#             else:
-#                 ts = None
-#             if channels == 2:
-#                 audio = audio.astype(float)
-#                 audio = audio.sum(axis=1) / 2
-#                 audio = np.array(audio)
-#             yield (basename(filepath), sr, ts, audio)
-
 def plot(wav_file, window, hop, mode='spectrogram', size=227, output_folder=None, wav_folder=None, start=0, end=None,
          nfft=None, **kwargs):
     """
