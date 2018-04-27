@@ -51,7 +51,7 @@ def __train(args):
         shuffle=True,
         num_epochs=None,
         **loader_params)
-    loader_params['class_weights'] = train_data_loader.class_weights
+    loader_params['class_weights'] = {class_key: 1.0 for class_key in train_data_loader.class_weights}
     loader_params['max_sequence_len'] = train_data_loader.max_sequence_len
     eval_data_loader = DataLoader(
         args.evaluation_data, batch_size=args.batch_size, **loader_params)
@@ -80,6 +80,7 @@ def __train(args):
     basic_train(model, train_data_loader, eval_data_loader, args.model_dir,
                 args.number_of_epochs, args.keep_checkpoints, args.eval_period,
                 args.mode)
+
 
 
 def __eval(args):
