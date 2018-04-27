@@ -179,9 +179,8 @@ class DataLoader():
             labels = np.array(
                 [
                     np.pad(
-                        labels, (0, self.max_sequence_len - len(labels)),
-                        mode='edge') for labels in labels
-                ],
+                        labels, (0, max(self.max_sequence_len - len(labels),0)),
+                        mode='edge') if len(labels) < self.max_sequence_len else labels[:self.max_sequence_len] for labels in labels                 ],
                 dtype=str)
         return labels
 
