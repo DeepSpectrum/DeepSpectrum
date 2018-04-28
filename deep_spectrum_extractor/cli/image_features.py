@@ -4,7 +4,8 @@ import numpy as np
 from .configuration import Configuration
 from ..tools.feature_writer import get_writer
 from os import environ
-
+from os.path import basename
+from ..backend.plotting import PlotTuple
 environ['GLOG_minloglevel'] = '2'
 environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -13,7 +14,7 @@ def image_reader(files):
     for image in files:
         img = cv2.imread(image, cv2.IMREAD_COLOR)
         img = img[:,:,::-1]
-        yield np.array([img])
+        yield PlotTuple(name=basename(image), timestamp=None, plot=np.array([img]))
 
 def main():
     configuration = Configuration(plotting=False, file_type='png')

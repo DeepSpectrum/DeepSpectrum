@@ -60,7 +60,7 @@ def __train(args):
     loader_params['max_sequence_len'] = train_data_loader.max_sequence_len
     eval_data_loader = DataLoader(
         args.evaluation_data, batch_size=args.batch_size, **loader_params)
-    optimizer = tf.train.AdamOptimizer(args.learning_rate, args.decay_rate)
+    optimizer = tf.train.AdamOptimizer(args.learning_rate)
     configuration = config(args, train_data_loader.steps_per_epoch)
     model_params = {
         'hidden_units': args.layers,

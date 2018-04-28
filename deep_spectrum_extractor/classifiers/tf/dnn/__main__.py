@@ -2,7 +2,6 @@ import tensorflow as tf
 from ..command_line_helper import basic_parser, __REGRESSION, __CLASSIFICATION, config, basic_train, basic_eval, basic_predict, save_params, load_params
 from ..data_loader import DataLoader
 from .dnn import DNNClassifier, DNNRegressor
-from ..custom_metrics import ccc_loss, uar, confusion_matrix, streaming_concordance_correlation_coefficient, pearson_r
 
 
 def main():
@@ -55,7 +54,7 @@ def __train(args):
     loader_params['max_sequence_len'] = train_data_loader.max_sequence_len
     eval_data_loader = DataLoader(
         args.evaluation_data, batch_size=args.batch_size, **loader_params)
-    optimizer = tf.train.AdadeltaOptimizer(args.learning_rate, rho=args.decay_rate)
+    optimizer = tf.train.AdamOptimizer(args.learning_rate)
     configuration = config(args, steps_per_epoch=train_data_loader.steps_per_epoch)
     model_params = {
         'hidden_units': args.layers,
@@ -63,19 +62,15 @@ def __train(args):
         'weight_column': train_data_loader.weight_column,
         'dropout': args.dropout,
         'config': configuration,
-        'loss_reduction': tf.losses.Reduction.SUM_OVER_BATCH_SIZE
+        'loss_reduction': tf.losses.Reduction.MEAN
     }
     if args.mode == __CLASSIFICATION:
         model_params['n_classes'] = len(train_data_loader.label_dict.keys())
         model_params['label_vocabulary'] = sorted(train_data_loader.label_dict.keys())
-        model = tf.estimator.DNNClassifier(**model_params,
+        model = DNNClassifier(**model_params,
             optimizer=optimizer)
-        model = tf.contrib.estimator.add_metrics(model, lambda labels, predictions: uar(labels, predictions['class_ids'], model_params['n_classes'], model_params['label_vocabulary']))
-        model = tf.contrib.estimator.add_metrics(model, lambda labels, predictions: confusion_matrix(labels, predictions['class_ids'], model_params['n_classes'], model_params['label_vocabulary']))
     elif args.mode == __REGRESSION:
-        model = tf.estimator.DNNRegressor(**model_params)
-        model = tf.contrib.estimator.add_metrics(model, lambda labels, predictions: streaming_concordance_correlation_coefficient(predictions=predictions['predictions'], labels=labels))
-        model = tf.contrib.estimator.add_metrics(model, lambda labels, predictions: pearson_r(predictions=predictions['predictions'], labels=labels))
+        model = DNNRegressor(**model_params)
     save_params(loader_params=loader_params, model_params=model_params, model_dir=args.model_dir, mode=args.mode)
     basic_train(model, train_data_loader, eval_data_loader, args.model_dir,
                 args.number_of_epochs, args.keep_checkpoints, args.eval_period,
@@ -95,6 +90,7 @@ def __predict(args):
     if mode == __CLASSIFICATION:
         model = DNNClassifier(**model_params)
     basic_predict(model, predict_data_loader, args.model_dir, args.output, args.checkpoint, mode=mode)
+
 
 if __name__ == '__main__':
     main()
