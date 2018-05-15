@@ -14,7 +14,7 @@ setup(name='deep_spectrum_extractor',
               'image_cnn_features = deep_spectrum_extractor.cli.image_features:main'
           ]
       },
-      install_requires=['numpy', 'scipy', 'imread', 'pysoundfile', 'tqdm', 'matplotlib', 'opencv-python', 'librosa', 'sklearn', 'liac-arff'],
+      install_requires=['numpy', 'scipy', 'pandas', 'imread', 'pysoundfile', 'tqdm', 'matplotlib', 'opencv-python', 'librosa', 'sklearn', 'liac-arff'],
       extras_require={'tensorflow-gpu': ['tensorflow-gpu'], 'tensorflow': ['tensorflow']},
       zip_safe=False
       )
