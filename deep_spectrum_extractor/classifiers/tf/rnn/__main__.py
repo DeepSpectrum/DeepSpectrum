@@ -2,6 +2,7 @@ import tensorflow as tf
 from ..command_line_helper import basic_parser, __REGRESSION, __CLASSIFICATION, config, basic_train, basic_eval, basic_predict, save_params, load_params
 from ..data_loader import DataLoader
 from .rnn import RNNClassifier, RNNRegressor
+from os.path import basename
 
 
 def main():
@@ -91,7 +92,7 @@ def __eval(args):
     eval_data_loader = DataLoader(args.evaluation_data, batch_size=args.batch_size, **loader_params)
     if mode == __CLASSIFICATION:
         model = RNNClassifier(**model_params)
-    basic_eval(model, eval_data_loader, args.model_dir, args.checkpoint, evaluation_key='on {}'.format(args.evaluation_data), mode=mode)
+    basic_eval(model, eval_data_loader, args.model_dir, args.checkpoint, evaluation_key='on {}'.format(basename(args.evaluation_data)), mode=mode)
 
 def __predict(args):
     loader_params, model_params, mode = load_params(args.model_dir)
