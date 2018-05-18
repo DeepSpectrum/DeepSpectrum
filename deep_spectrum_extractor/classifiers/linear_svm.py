@@ -139,7 +139,7 @@ def parameter_search_cross_validation(folds_X: list, folds_y: list, Cs=np.logspa
             makedirs(dir, exist_ok=True)
             csv_file = open(output, 'w', newline='')
             csv_writer = csv.writer(csv_file)
-            csv_writer.writerow(['Complexity'] + [f'UAR fold {idx}' for idx in range(len(folds_y))])
+            csv_writer.writerow(['Complexity'] + [f'UAR fold {idx}' for idx in range(len(folds_y))] + ['UAR combined'])
         for C in Cs:
             scores = []
             predictions = None
@@ -166,16 +166,16 @@ def parameter_search_cross_validation(folds_X: list, folds_y: list, Cs=np.logspa
                 else:
                     predictions = np.append(predictions, predicted_eval)
 
-            UAR = np.mean(scores)
+            UAR = recall_score(np.concatenate(folds_y), predictions, average='macro')
 
             print(
                 'C: {:.1E} UAR (CV): {:.2%} (+/- {:.2%})'.
                     format(C, UAR,
                            np.std(scores, ddof=1) * 2))
             if csv_writer:
-                print(C, scores)
                 csv_writer.writerow([
-                                        '{:.1E}'.format(Decimal(C))] + ['{:.2%}'.format(UAR) for UAR in scores])
+                                        '{:.1E}'.format(Decimal(C))] + ['{:.2%}'.format(UAR) for UAR in scores] + [
+                                        '{:.2%}'.format(UAR)])
             if UAR > best_uar:
                 best_uar = UAR
                 best_prediction = predictions
@@ -276,7 +276,8 @@ def main():
         folds_names, folds_X, folds_y = zip(*(_load(file) for file in args['i']))
         labels = sorted(set((label for fold in folds_y for label in fold)))
         print('Starting training...')
-        UAR, best_prediction = parameter_search_cross_validation(list(folds_X), list(folds_y), args['C'], output=args['o'],
+        UAR, best_prediction = parameter_search_cross_validation(list(folds_X), list(folds_y), args['C'],
+                                                                 output=args['o'],
                                                                  standardize=args['standardize'])
         true_labels = np.concatenate(list(folds_y))
         cm = confusion_matrix(true_labels, best_prediction, labels=labels)
@@ -329,7 +330,6 @@ def main():
         prediction_path = abspath(args['pred'])
         makedirs(dirname(prediction_path), exist_ok=True)
         write_predictions(prediction_path, best_prediction, names=names, true_labels=true_labels)
-
 
 
 if __name__ == '__main__':
