@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 "e1839a8" = {path = ".", editable = true}
 pandas = "*"
+tfplot = {git = "https://github.com/wookayin/tensorflow-plot.git"}
 
 [dev-packages]
 
