@@ -24,6 +24,7 @@ def _load(file):
     elif file.endswith('.csv'):
         return _load_csv(file)
 
+
 def _load_csv(file):
     df = pd.read_csv(file, sep=';', header=None)
     names = df.iloc[:, 0].astype(str)
@@ -35,7 +36,7 @@ def _load_csv(file):
 def _load_npz(file):
     with np.load(file) as data:
         return data['features'], np.reshape(data['labels'],
-                                            (data['labels'].shape[0], ))
+                                            (data['labels'].shape[0],))
 
 
 def _load_arff(file):
@@ -46,6 +47,7 @@ def _load_arff(file):
     features = data[:, 1:-1].astype(float)
     labels = data[:, -1]
     return names, features, labels
+
 
 def write_predictions(filepath, predictions, names=None, true_labels=None):
     columns = []
@@ -123,6 +125,66 @@ def parameter_search_train_devel_test(train_X,
             csv_file.close()
 
 
+def parameter_search_cross_validation(folds_X: list, folds_y: list, Cs=np.logspace(0, -9, num=10), output=None,
+                                      standardize=False):
+    csv_writer = None
+    csv_file = None
+    best_uar = 0
+
+    try:
+
+        if output:
+            output = abspath(output)
+            dir = dirname(output)
+            makedirs(dir, exist_ok=True)
+            csv_file = open(output, 'w', newline='')
+            csv_writer = csv.writer(csv_file)
+            csv_writer.writerow(['Complexity'] + [f'UAR fold {idx}' for idx in range(len(folds_y))])
+        for C in Cs:
+            scores = []
+            predictions = None
+            for eval_index in range(len(folds_X)):
+                print(f'Processing fold {eval_index}...')
+                eval_X, eval_y = folds_X[eval_index], folds_y[eval_index]
+                train_X, train_y = np.concatenate(
+                    [X for index, X in enumerate(folds_X) if index is not eval_index]), np.concatenate(
+                    [y for index, y in enumerate(folds_y) if index is not eval_index])
+                clf = LinearSVC(
+                    C=C,
+                    class_weight='balanced',
+                    random_state=RANDOM_SEED)
+                if standardize:
+                    print('Standardizing input...')
+                    scaler = StandardScaler().fit(train_X)
+                    train_X = scaler.transform(train_X)
+                    eval_X = scaler.transform(eval_X)
+                clf.fit(train_X, train_y)
+                predicted_eval = clf.predict(eval_X)
+                scores.append(recall_score(eval_y, predicted_eval, average='macro'))
+                if predictions is None:
+                    predictions = predicted_eval
+                else:
+                    predictions = np.append(predictions, predicted_eval)
+
+            UAR = np.mean(scores)
+
+            print(
+                'C: {:.1E} UAR (CV): {:.2%} (+/- {:.2%})'.
+                    format(C, UAR,
+                           np.std(scores, ddof=1) * 2))
+            if csv_writer:
+                print(C, scores)
+                csv_writer.writerow([
+                                        '{:.1E}'.format(Decimal(C))] + ['{:.2%}'.format(UAR) for UAR in scores])
+            if UAR > best_uar:
+                best_uar = UAR
+                best_prediction = predictions
+        return best_uar, best_prediction
+    finally:
+        if csv_file:
+            csv_file.close()
+
+
 def parameter_search_train_devel(train_X,
                                  train_y,
                                  devel_X,
@@ -161,8 +223,8 @@ def parameter_search_train_devel(train_X,
 
             print(
                 'C: {:.1E} UAR train (CV): {:.2%} (+/- {:.2%}) UAR development: {:.2%}'.
-                format(C, UAR_train,
-                       scores.std() * 2, UAR_devel))
+                    format(C, UAR_train,
+                           scores.std() * 2, UAR_devel))
             if csv_writer:
                 csv_writer.writerow([
                     '{:.1E}'.format(Decimal(C)), '{:.2%}'.format(UAR_train),
@@ -180,13 +242,13 @@ def parameter_search_train_devel(train_X,
 def main():
     parser = argparse.ArgumentParser(
         description=
-        'Evaluate linear SVM for given Cs on a train, devel, test split of data in arff format',
+        'Evaluate linear SVM for given Cs on data in arff format',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     required_named = parser.add_argument_group('Required named arguments')
     required_named.add_argument(
         'i',
         nargs='+',
-        help='arff files of training, development and test sets')
+        help='arff files')
     parser.add_argument(
         '-C',
         nargs='+',
@@ -206,8 +268,21 @@ def main():
     parser.add_argument(
         '-pred', help='Filepath for prediction output in csv format.', required=False, default=None)
     args = vars(parser.parse_args())
-    if len(args['i']) > 1:
-        print('Loading input...')
+    print('Loading input...')
+    if len(args['i']) < 2:
+        parser.error('Unsupported number of partitions.')
+        return
+    elif len(args['i']) > 3:
+        folds_names, folds_X, folds_y = zip(*(_load(file) for file in args['i']))
+        labels = sorted(set((label for fold in folds_y for label in fold)))
+        print('Starting training...')
+        UAR, best_prediction = parameter_search_cross_validation(list(folds_X), list(folds_y), args['C'], output=args['o'],
+                                                                 standardize=args['standardize'])
+        true_labels = np.concatenate(list(folds_y))
+        cm = confusion_matrix(true_labels, best_prediction, labels=labels)
+        names = np.concatenate(list(folds_names))
+    elif len(args['i']) > 1:
+
         train_names, train_X, train_y = _load(args['i'][0])
         devel_names, devel_X, devel_y = _load(args['i'][1])
         labels = sorted(set(train_y))
@@ -240,22 +315,21 @@ def main():
             cm = confusion_matrix(devel_y, best_prediction, labels=labels)
             true_labels = devel_y
             names = devel_names
-        if args['cm']:
-            cm_path = abspath(args['cm'])
-            makedirs(dirname(cm_path), exist_ok=True)
-            fig = plot_confusion_matrix(
-                cm,
-                classes=labels,
-                normalize=True,
-                title='UAR {:.1%}'.format(UAR))
-            save_fig(fig, cm_path)
+    if args['cm']:
+        cm_path = abspath(args['cm'])
+        makedirs(dirname(cm_path), exist_ok=True)
+        fig = plot_confusion_matrix(
+            cm,
+            classes=labels,
+            normalize=True,
+            title='UAR {:.1%}'.format(UAR))
+        save_fig(fig, cm_path)
 
-        if args['pred']:
-            prediction_path = abspath(args['pred'])
-            makedirs(dirname(prediction_path), exist_ok=True)
-            write_predictions(prediction_path, best_prediction, names=names, true_labels=true_labels)
-    else:
-        parser.error('Unsupported number of partitions.')
+    if args['pred']:
+        prediction_path = abspath(args['pred'])
+        makedirs(dirname(prediction_path), exist_ok=True)
+        write_predictions(prediction_path, best_prediction, names=names, true_labels=true_labels)
+
 
 
 if __name__ == '__main__':
