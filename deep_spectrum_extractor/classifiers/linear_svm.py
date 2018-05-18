@@ -139,12 +139,12 @@ def parameter_search_cross_validation(folds_X: list, folds_y: list, Cs=np.logspa
             makedirs(dir, exist_ok=True)
             csv_file = open(output, 'w', newline='')
             csv_writer = csv.writer(csv_file)
-            csv_writer.writerow(['Complexity'] + [f'UAR fold {idx}' for idx in range(len(folds_y))] + ['UAR combined'])
+            csv_writer.writerow(['Complexity'] + ['UAR fold {}'.format(idx) for idx in range(len(folds_y))] + ['UAR combined'])
         for C in Cs:
             scores = []
             predictions = None
             for eval_index in range(len(folds_X)):
-                print(f'Processing fold {eval_index}...')
+                print('Processing fold {}...'.format(eval_index))
                 eval_X, eval_y = folds_X[eval_index], folds_y[eval_index]
                 train_X, train_y = np.concatenate(
                     [X for index, X in enumerate(folds_X) if index is not eval_index]), np.concatenate(
