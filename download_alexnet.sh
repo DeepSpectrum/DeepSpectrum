@@ -20,4 +20,3 @@ pipenv run python convert_to_pb.py
 mv bvlc_alexnet.pb ../deep-spectrum/AlexNet.pb
 rm bvlc_alexnet.*
 rm deploy.prototxt
-rm -R caffe-tensorflow
