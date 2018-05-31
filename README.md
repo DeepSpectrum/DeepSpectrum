@@ -68,7 +68,7 @@ extract_ds_features -h
 from the same place. This will start a new shell for you in which the virtualenv is activated. For the following examples, we assume you used the second method.
 
 ## Features for AVEC2018 CES
-The command below extracts features from overlapping 1 second windows spaced with a hop size of 0.1 seconds (`-t 1 0.1`) of the the file `Train_DE_01.wav`. It plots mel spectrograms (`-mode mel`) and feeds them to a pre-trained AlexNet model (`-net alexnet`). The activations on the fc7 layer (`-layer fc7`) are finally written to `Train_DE_01.arff` as feature vectors in arff format.
+The command below extracts features from overlapping 1 second windows spaced with a hop size of 0.1 seconds (`-t 1 0.1`) of the the file `Train_DE_01.wav`. It plots mel spectrograms (`-mode mel`) and feeds them to a pre-trained AlexNet model (`-net alexnet`). The activations on the fc7 layer (`-layer fc7`) are finally written to `Train_DE_01.arff` as feature vectors in arff format. `--no_labels` suppresses writing any labels to the output file.
 ```bash
 extract_ds_features -i Train_DE_01.wav -t 1 0.1 --no_labels -net alexnet -layer fc7 -mode mel -o Train_DE_01.arff
 ```
