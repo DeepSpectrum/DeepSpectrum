@@ -67,42 +67,46 @@ extract_ds_features -h
 ```
 from the same place. This will start a new shell for you in which the virtualenv is activated. For the following examples, we assume you used the second method.
 
+## Features for AVEC2018 CES
+The command below extracts features from overlapping 1 second windows spaced with a hop size of 0.1 seconds (`-t 1 0.1`) of the the file `Train_DE_01.wav`. It plots mel spectrograms (`-mode mel`) and feeds them to a pre-trained AlexNet model (`-net alexnet`). The activations on the fc7 layer (`-layer fc7`) are finally written to `Train_DE_01.arff` as feature vectors in arff format.
+```bash
+extract_ds_features -i Train_DE_01.wav -t 1 0.1 --no_labels -net alexnet -layer fc7 -mode mel -o Train_DE_01.arff
+```
 
-Available command line options (also shown with `extract_ds_features -h`):
-
-
-## Required options
+## Commandline Options
+All options can also be displayed using `extract_ds_features -h`.
+### Required options
 | Option   | Description | Default |
 |----------|-------------|---------|
-| **-f**   | Specify the directory containing your *.wav* files here | None |
+| **-i**   | Specify the directory containing your *.wav* files or the path to a single *.wav* file. | None |
 | **-o** | The location of the output feature file. Supported output formats are: Comma separated value files and arff files. If the specified output file's extension is *.arff*, arff is chosen as format, otherwise the output will be in comma separated value format. | None |
 
 
-## Extracting features from audio chunks
+### Extracting features from audio chunks
 | Option   | Description | Default |
 |----------|-------------|---------|
 | -t | Define window and hopsize for feature extraction. E.g `-t 1 0.5` extracts features from 1 second chunks every 0.5 seconds. | Extract from the whole audio file. |
 | -start | Set a start time (in seconds) from which features should be extracted from the audio files. | 0 |
 | -end | Set an end time until which features should be extracted from the audio files. | None |
 
-## Setting parameters for the audio plots
+### Setting parameters for the audio plots
 | Option   | Description | Default |
 |----------|-------------|---------|
 | -mode | Type of plot to use in the system (Choose from: 'spectrogram', 'mel', 'chroma'). | spectrogram |
-| -scale | Scale for the y-axis of the plots used by the system (Choose from: 'linear', 'log' and 'mel'). This is ignored if mode=chroma. (default: linear)
+| -scale | Scale for the y-axis of the plots used by the system (Choose from: 'linear', 'log' and 'mel'). This is ignored if mode=chroma or mode=mel. (default: linear)
 | -ylim | Specify a limit for the y-axis in the spectrogram plot in frequency. | None |
 | -delta | If specified, derivatives of the given order of the selected features are displayed in the plots used by the system. | None |
 | -nmel | Number of melbands used for computing the melspectrogram. Only takes effect with mode=mel. | 128 |
 | -nfft | The length of the FFT window used for creating the spectrograms in number of samples. Consider choosing smaller values when extracting from small segments. | The next power of two from 0.025 x sampling_rate_of_wav |
 | -cmap | Choose a matplotlib colourmap for creating the spectrogram plots. | viridis |
 
-## Parameters for the feature extractor CNN
+### Parameters for the feature extractor CNN
 | Option   | Description | Default |
 |----------|-------------|---------|
 | -net | Choose the net for feature extraction as specified in the config file | alexnet |
 | -layer | Name of the layer from which features should be extracted as specified in your caffe .prototxt file. | fc7 |
 
-## Defining label information
+### Defining label information
 | Option   | Description | Default |
 |----------|-------------|---------|
 | -l | Specify a comma separated values file containing labels for each *.wav* file. It has to include a header and the first column must specify the name of the audio file (with extension!) | None |
@@ -111,13 +115,13 @@ Available command line options (also shown with `extract_ds_features -h`):
 | --no_timestamps | Remove timestamps from the output. | Write timestamps in feature file. |
 | --no_labels | Remove labels from the output. | Write labels in feature file. |
 
-## Additional output 
+### Additional output 
 | Option   | Description | Default |
 |----------|-------------|---------|
 | -specout | Specify a folder to save the plots used during extraction as .pngs | None |
 | -wavout | Convenience function to write the chunks of audio data used in the extraction to the specified folder. | None |
 
-## Configuration and Help
+### Configuration and Help
 | Option   | Description | Default |
 |----------|-------------|---------|
 | -np | Specify the number of processes used for the extraction. Defaults to the number of available CPU cores | None |
