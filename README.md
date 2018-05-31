@@ -107,6 +107,18 @@ All options can also be displayed using `extract_ds_features -h`.
 | -layer | Name of the layer from which features should be extracted as specified in your caffe .prototxt file. | fc7 |
 
 ### Defining label information
+You can use csv files for label information or explicitly set a fixed label for all input files. If you use csv files, numerical features are supported (e.g. for regression). If you do neither of those, each file is assigned the name of its parent directory as label. This can be useful if your folder structure already represents the class labels, e.g.
+```
+data                          Base Directory of your data
+  ├─── class0                 Directory containing members of 'class0'
+  |    └─── instance0.wav     Directory containing members of 'class1'
+  ├─── class1                      
+  |    └─── instance4.wav     
+  |    └─── ...
+  └─── class2.py              Directory containing members of 'class2'
+       └─── instance20.wav  
+```
+
 | Option   | Description | Default |
 |----------|-------------|---------|
 | -l | Specify a comma separated values file containing labels for each *.wav* file. It has to include a header and the first column must specify the name of the audio file (with extension!) | None |
