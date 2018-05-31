@@ -33,7 +33,7 @@ Install the Deep Spectrum tool from the `deep-spectrum/` directory with pipenv (
 cd deep-spectrum
 pipenv --site-packages install
 ```
-If you already have installed a recent version (> 1.5) of tensorflow on your system, continue with the [configuration](##configuration). Otherwise, install tensorflow (version 1.8.0 is tested): 
+If you already have installed a recent version (> 1.5) of tensorflow on your system, continue with the [configuration](#configuration). Otherwise, install tensorflow (version 1.8.0 is tested): 
 ```bash
 pipenv install tensorflow==1.8.0
 ```
