@@ -119,5 +119,5 @@ def _determine_attributes(timestamp, feature_vector, classes):
 def get_writer(**kwargs):
     if kwargs['output'].endswith('.arff'):
         return ArffFeatureWriter(**kwargs)
-    elif kwargs['output'].endswith('.csv'):
+    else:
         return CsvFeatureWriter(**kwargs)
