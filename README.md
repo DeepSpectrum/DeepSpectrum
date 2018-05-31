@@ -1,13 +1,21 @@
-# DeepSpectrum
+**DeepSpectrum** is a Python toolkit for feature extraction from audio data with pre-trained Image Convolutional Neural Networks (CNNs). It features an extraction pipeline which first creates visual representations for audio data - plots of spectrograms or chromagrams - and then feeds them to a pre-trained Image CNN. Activations of a specific layer then form the final feature vectors.
 
+**(c) 2017-2018 Shahin Amiriparian, Maurice Gercuk, Sandra Ottl, Björn Schuller: Universität Augsburg**
+Published under GPLv3, see the LICENSE.md file for details.
 
-## Dependencies
+Please direct any questions or requests to Shahin Amiriparian (shahin.amiriparian at tum.de) or Maurice Gercuk (gerczuk at fim.uni-passau.de).
+
+# Citing
+If you use DeepSpectrum or any code from DeepSpectrum in your research work, you are kindly asked to acknowledge the use of DeepSpectrum in your publications.
+> S. Amiriparian, M. Gerczuk, S. Ottl, N. Cummins, M. Freitag, S. Pugachevskiy, A. Baird and B. Schuller. Snore Sound Classification using Image-Based Deep Spectrum Features. In Proceedings of INTERSPEECH (Vol. 17, pp. 2017-434)
+
+# Dependencies
 * Python 3.6 with pipenv for the Deep Spectrum tool (`pip install pipenv`)
 * Python 2.7 to download and convert the AlexNet model
 
-## Installation
+# Installation
 
-### Download and convert AlexNet model
+## Download and convert AlexNet model
 The Deep Spectrum tool uses the ImageNet pretrained AlexNet model to extract features. To download and convert it to a tensorflow compatible format, a script `download_alexnet.sh` is included. The script performs these general steps:
 1. Create a python2 virtual environment with tensorflow in `convert-models/`
 2. Clone the caffe-tensorflow repository (https://github.com/ethereon/caffe-tensorflow) that is later used to convert the model
@@ -17,7 +25,7 @@ The Deep Spectrum tool uses the ImageNet pretrained AlexNet model to extract fea
 6. Load the model into a tensorflow graph and save it to `.pb` format (`convert_to_pb.py`)
 7. Move the file to `deep-spectrum/AlexNet.pb`
 
-### Deep Spectrum tool
+## Deep Spectrum tool
 Install the Deep Spectrum tool from the `deep-spectrum/` directory with pipenv (which also handles the creation of a virtualenv for you):
 ```bash
 cd deep-spectrum
