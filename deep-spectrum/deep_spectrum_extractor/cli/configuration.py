@@ -54,7 +54,7 @@ class Configuration:
     def general_parser(self):
         parser = argparse.ArgumentParser(add_help=False)
         parser.add_argument(
-            '-f', help='folder where your files reside', required=True)
+            '-i', help='folder where your wav files reside. Alternatively, path to a single .wav file.', required=True)
         parser.add_argument(
             '-config',
             help=
@@ -207,7 +207,7 @@ class Configuration:
             parents=self.parsers)
 
         args = vars(self.parser.parse_args())
-        self.input = args['f']
+        self.input = args['i']
         self.config = args['config']
         self.label_file = args['l']
         self.number_of_processes = args['np']
@@ -266,11 +266,13 @@ class Configuration:
 
         self._load_config()
 
-    def _find_files(self, folder):
+    def _find_files(self, path):
+        if isfile(path):
+            return [path]
         globexpression = '*.' + self.file_type
         reg_expr = re.compile(fnmatch.translate(globexpression), re.IGNORECASE)
         wavs = []
-        for root, dirs, files in walk(folder, topdown=True):
+        for root, dirs, files in walk(path, topdown=True):
             wavs += [join(root, j) for j in files if re.match(reg_expr, j)]
         return wavs
 
