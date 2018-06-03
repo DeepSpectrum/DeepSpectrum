@@ -1,6 +1,6 @@
 from os import environ
 
-from deep_spectrum_extractor.cli.configuration import Configuration
+from ..cli.configuration import Configuration
 from ..backend.plotting import PlotGenerator
 from ..tools.feature_writer import get_writer
 
@@ -13,7 +13,7 @@ def main(args=None):
     configuration = Configuration()
     configuration.parse_arguments()
     plots = PlotGenerator(
-        input_path=configuration.input,
+        files=configuration.files,
         number_of_processes=configuration.number_of_processes,
         **configuration.plotting_args)
 

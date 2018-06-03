@@ -1,2 +1,8 @@
 *.egg-info/
+.idea/
+*caffe-tensorflow/
+bvlc*
 *.pb
+*.npy
+*.caffemodel
+*.prototxt

@@ -253,7 +253,7 @@ class Configuration:
             self.writer_args['no_labels'] = args['no_labels']
 
         # list all .wavs for the extraction found in the given folder
-        self.files = self._find_files(self.input)
+        self.files = sorted(self._find_files(self.input))
         if not self.files:
             self.parser.error(
                 'No files were found. Check the specified input path.')
