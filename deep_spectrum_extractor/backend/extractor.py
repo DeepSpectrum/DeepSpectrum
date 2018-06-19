@@ -113,7 +113,7 @@ class TensorflowHubExtractor(Extractor):
             self.input = self.tf.placeholder(
                 self.tf.float32, shape=(None, None, None, 3))
             processed_features = self.__process_images(self.input)
-            self.__layers = module(processed_features, as_dict=True)
+            self.__layers = module(dict(images=processed_features), signature='image_feature_vector', as_dict=True)
             self.layers = self.__layers.keys()
             if self.layer in self.__layers:
                 self.features = self.__layers[layer]

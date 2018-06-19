@@ -394,23 +394,15 @@ class Configuration:
                     except ImportError:
                         self.parser.error('No tensorflow installation found!')
                     net_conf = conf_parser['tensorflow-nets']
-                    if self.net in [
-                            model.__name__ for model in tf_models.get_models()
-                    ]:
-                        if self.net in net_conf:
-                            self.extraction_args['model_path'] = net_conf[
-                                self.net]
-                        else:
-                            self.parser.error(
-                                'No model weights defined for {} in {}'.format(
-                                    self.net, self.config))
+
+                    if self.net in net_conf:
+                        self.extraction_args['model_path'] = net_conf[
+                            self.net]
                     else:
                         self.parser.error(
-                            'No model definition exists for {}. Available tf_models: {}'.
-                            format(self.net, [
-                                model.__name__
-                                for model in tf_models.get_models()
-                            ]))
+                            'No model weights defined for {} in {}'.format(
+                                self.net, self.config))
+
 
                 elif self.backend == 'tensorflow-hub':
                     print('Using tensorflow-hub backend as specified in {}'.
