@@ -26,7 +26,7 @@ def _load(file):
 
 
 def _load_csv(file):
-    df = pd.read_csv(file, sep=';', header=None)
+    df = pd.read_csv(file, sep=',')
     names = df.iloc[:, 0].astype(str)
     features = df.iloc[:, 1:-1].astype(float)
     labels = df.iloc[:, -1].astype(str)
