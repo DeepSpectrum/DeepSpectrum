@@ -27,13 +27,14 @@ class Configuration:
                  extraction=True,
                  plotting=True,
                  writer=True,
-                 file_type='wav'):
+                 file_type='wav',
+                 parser_description='Extract deep spectrum features from wav files'):
         # set default values
         self.model_weights = join(
             expanduser('~'), 'tf_models/bvlc_alexnet.npy')
         self.number_of_processes = None
         self.label_file = None
-        self.reduced = None
+        self.reduced = False
         self.files = []
         self.input = []
         self.file_type = file_type
@@ -48,13 +49,15 @@ class Configuration:
         self.writer = writer
         self.writer_args = {}
         self.backend = 'caffe'
-        self.parsers = [self.general_parser(), self.label_parser()]
+        self.parser_description = parser_description
+        self.parsers = [self.general_parser()]
         if self.plotting:
             self.parsers.append(self.plotting_parser())
         if self.extraction:
             self.parsers.append(self.extraction_parser())
         if self.writer:
             self.parsers.append(self.writer_parser())
+            self.parsers.append(self.label_parser())
 
     def general_parser(self):
         parser = argparse.ArgumentParser(add_help=False)
@@ -147,6 +150,7 @@ class Configuration:
             help=
             'If given, derivatives of the given order of the selected features are displayed in the plots used by the system.',
             default=None)
+        parser.add_argument('--pretty_pdfs', nargs='?', const=True, default=False, help='Add if you want to create nice pdf plots of the spectrograms the system uses. For figures in your papers ^.^')
         return parser
 
     def extraction_parser(self):
@@ -214,15 +218,13 @@ class Configuration:
         :return: Nothing
         """
         self.parser = argparse.ArgumentParser(
-            description='Extract deep spectrum features from wav files',
+            description=self.parser_description,
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
             parents=self.parsers)
 
         args = vars(self.parser.parse_args())
         self.input = args['f']
         self.config = args['config']
-        self.reduced = args['reduced']
-        self.label_file = args['l']
         self.number_of_processes = args['np']
 
         # arguments for the plotting functions
@@ -246,12 +248,20 @@ class Configuration:
                 args['specout']) if args['specout'] else None
             self.plotting_args['output_wavs'] = abspath(
                 args['wavout']) if args['wavout'] else None
+            if args['pretty_pdfs']:
+                self.plotting_args['file_type'] = 'pdf'
+                self.plotting_args['labelling'] = True
 
         # arguments for extraction functions
         if self.extraction:
             self.net = args['net']
             self.extraction_args['layer'] = args['layer']
             self.extraction_args['batch_size'] = args['batch_size']
+
+        self.files = self._find_files(self.input)
+        if not self.files:
+            self.parser.error(
+                'No files were found. Check the specified input path.')
 
         # arguments for writer
         if self.writer:
@@ -265,20 +275,21 @@ class Configuration:
             self.writer_args['write_timestamps'] = (
                 args['t'][0] or args['t'][1]) and not args['no_timestamps']
             self.writer_args['no_labels'] = args['no_labels']
+            self.label_file = args['l']
+            self.reduced = args['reduced']
+            # list all .wavs for the extraction found in the given folders
 
-        # list all .wavs for the extraction found in the given folders
-        self.files = self._find_files(self.input)
-        if not self.files:
-            self.parser.error(
-                'No files were found. Check the specified input path.')
+            print('Parsing labels...')
+            if self.label_file is None:
+                self._create_labels_from_folder_structure()
+            else:
+                self._read_label_file()
 
-        print('Parsing labels...')
-        if self.label_file is None:
-            self._create_labels_from_folder_structure()
-        else:
-            self._read_label_file()
+            self._load_config()
 
-        self._load_config()
+
+
+
 
     def _find_files(self, folder):
         globexpression = '*.' + self.file_type

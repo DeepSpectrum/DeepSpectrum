@@ -40,13 +40,15 @@ def plot_confusion_matrix(cm,
                           title='Confusion matrix',
                           cmap='summer_r',
                           predicted_label='Predicted label',
-                          true_label='True label'):
+                          true_label='True label',
+                          percentages=True):
     """
     This function prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
     """
     fig = matplotlib.figure.Figure(dpi=200)
     original_cm = cm
+    total_samples = np.sum(original_cm)
     if normalize:
         with np.errstate(divide='ignore',invalid='ignore'):
             cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
@@ -66,11 +68,15 @@ def plot_confusion_matrix(cm,
     thresh = cm.max() / 2.
     for i, j in itertools.product(
             range(original_cm.shape[0]), range(original_cm.shape[1])):
+        text = format(original_cm[i, j], fmt)
+        if percentages:
+            text += '\n{0:.1%}'.format(original_cm[i,j]/total_samples)
         ax.text(
             j,
             i,
-            format(original_cm[i, j], fmt),
+            text,
             horizontalalignment="center",
+            verticalalignment="center",
             color="white" if cm[i, j] > thresh else "black")
     fig.set_tight_layout(True)
     return fig

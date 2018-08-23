@@ -11,7 +11,8 @@ setup(name='deep_spectrum_extractor',
               'dnn = deep_spectrum_extractor.classifiers.tf.dnn.__main__:main',
               'rnn = deep_spectrum_extractor.classifiers.tf.rnn.__main__:main',
               'plot_cm = deep_spectrum_extractor.tools.performance_stats:main',
-              'image_cnn_features = deep_spectrum_extractor.cli.image_features:main'
+              'image_cnn_features = deep_spectrum_extractor.cli.image_features:main',
+              'plot_wavs = deep_spectrum_extractor.cli.create_plots:main'
           ]
       },
       install_requires=['numpy', 'scipy', 'pandas', 'imread', 'pysoundfile', 'tqdm', 'matplotlib', 'opencv-python', 'librosa', 'sklearn', 'liac-arff'],

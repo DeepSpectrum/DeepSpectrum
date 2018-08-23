@@ -22,7 +22,7 @@ def main(args=None):
     configuration = Configuration()
     configuration.parse_arguments()
     plots = PlotGenerator(
-        input_path=configuration.input,
+        files=configuration.files,
         number_of_processes=configuration.number_of_processes,
         **configuration.plotting_args)
 
@@ -36,7 +36,7 @@ def main(args=None):
                    extractor.layers))
 
     writer = get_writer(**configuration.writer_args)
-    writer.write_features(plots.files, extractor, hide_progress=False)
+    writer.write_features(configuration.files, extractor, hide_progress=False)
 
     if configuration.reduced:
         print('Performing feature reduction...')
