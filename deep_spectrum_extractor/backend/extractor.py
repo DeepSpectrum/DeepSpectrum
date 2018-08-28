@@ -60,20 +60,30 @@ class TensorFlowExtractor(Extractor):
         return graph
 
     def __input_and_layers(self):
-        tensor_names = [op.name + ':0' for op in self.graph.get_operations()]
+        tensor_names = [op.name + ':0' for op in self.graph.get_operations() if not self.__ignore_tensor(op.name)]
+        #print(tensor_names)
+        #tensor_endings = set([tensor.split('/')[-1] for tensor in tensor_names])
+        #print(tensor_endings)
         prefix_re = r'^(\w+)/*'
         prefix = re.match(prefix_re, tensor_names[0]).group(1)
-        layer_re = r'\b(\w+)/\1\b'
-        layer_names = set(
-            re.search(layer_re, tensor).group(1) for tensor in tensor_names
-            if re.search(layer_re, tensor))
-        layer_dict = {
-            layer: self.graph.get_tensor_by_name(
-                '/'.join([prefix] + [layer] * 2) + ':0')
-            for layer in layer_names
-        }
+        #print(prefix)
+        #layer_re = r'\b(\w+)/\1\b'
+        # layer_names = set(
+        #     re.search(layer_re, tensor).group(1) for tensor in tensor_names
+        #     if re.search(layer_re, tensor))
+
+        layer_dict = {tensor_name.split('/')[-1][:-2]: self.graph.get_tensor_by_name(tensor_name) for tensor_name in tensor_names}
+        # layer_dict = {
+        #     layer: self.graph.get_tensor_by_name(
+        #         '/'.join([prefix] + [layer] * 2) + ':0')
+        #     for layer in layer_names
+        # }
         input = self.graph.get_tensor_by_name(prefix + '/input:0')
         return input, layer_dict
+
+    def __ignore_tensor(self, tensor_name):
+        ignored_tensor_endings = ['weights', 'bias', 'MatMul', 'BiasAdd', 'read', 'size', 'prob', 'stack', 'strided_slice', 'shape', 'axis', 'input', 'concat', 'Conv2D', 'split', 'norm']
+        return any(ending in tensor_name for ending in ignored_tensor_endings)
 
     def __process_images(self, images, data_spec):
 
