@@ -2,7 +2,6 @@ import tensorflow as tf
 from ..command_line_helper import basic_parser, __REGRESSION, __CLASSIFICATION, config, basic_train, basic_eval, basic_predict, save_params, load_params, write_results
 from ..data_loader import DataLoader
 from .dnn import DNNClassifier, DNNRegressor
-from ..custom_metrics import ccc_loss, uar, confusion_matrix, streaming_concordance_correlation_coefficient, pearson_r
 from os.path import join
 
 

@@ -5,15 +5,99 @@ import numpy as np
 import pandas as pd
 
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import recall_score, confusion_matrix
+from sklearn.metrics import recall_score, confusion_matrix, make_scorer, f1_score, accuracy_score
 from sklearn.model_selection import cross_val_score
 from sklearn.svm import LinearSVC
 from decimal import Decimal
 from os.path import abspath, dirname
 from os import makedirs
 from ..tools.performance_stats import plot_confusion_matrix, save_fig
+from deep_spectrum_extractor.learn.results import ClassificationResult, ClassificationMetrics
+from dataclasses import asdict
+from .experiment import Experiment, DevelExperiment, DataTuple, Metrics
+from .results import DevelTestResultSet
+from pprint import pprint
+from sklearn.base import BaseEstimator, clone
+from sklearn.pipeline import Pipeline
+from typing import List, Dict
+from sklearn.model_selection import PredefinedSplit, GridSearchCV
+
+CLASSIFICATION_SCORERS = {Metrics.UAR: make_scorer(recall_score, average='macro'),
+                          Metrics.F1: make_scorer(f1_score, average='macro'),
+                          Metrics.ACCURACY: accuracy_score}
 
 RANDOM_SEED = 42
+
+
+def load(file):
+    if file.endswith('.arff'):
+        return __load_arff(file)
+    elif file.endswith('.csv'):
+        return __load_csv(file)
+
+
+def __load_csv(file):
+    df = pd.read_csv(file, sep=',')
+    names = df.iloc[:, 0].astype(str).values
+    features = df.iloc[:, 1:-1].astype(float).values
+    labels = df.iloc[:, -1].astype(str).values
+    return DataTuple(names=names, timestamps=None, features=features, labels=labels)
+
+
+def __load_arff(file):
+    with open(file) as input:
+        dataset = arff.load(input)
+    data = np.array(dataset['data'])
+    names = data[:, 0]
+    features = data[:, 1:-1].astype(float)
+    labels = data[:, -1]
+    return DataTuple(names=names, timestamps=None, features=features, labels=labels)
+
+
+class ScikitExperiment(Experiment):
+
+    def __init__(self, estimator: BaseEstimator, parameter_grid: List[Dict], standardize=False, **kwargs):
+        super().__init__(**kwargs)
+        self.estimator = estimator
+        self.parameter_grid = parameter_grid
+        self.standardize = standardize
+        if self.standardize:
+            self.pipeline = Pipeline([('standard-scaler', StandardScaler), (estimator.__class__.__name__, estimator)])
+        else:
+            self.pipeline = Pipeline([(estimator.__class__.__name__, estimator)])
+
+    @classmethod
+    def load_file(cls, path: str) -> DataTuple:
+        return load(path)
+
+
+class ScikitDevelExperiment(ScikitExperiment, DevelExperiment):
+
+    def __init__(self, train_file: str, devel_file: str, **kwargs):
+        super().__init__(train_file=train_file, devel_file=devel_file, **kwargs)
+        num_train = self.train.names.shape
+        num_devel = self.devel.names.shape
+        self._all_features = np.append(self.train.features, self.devel.features, axis=0)
+        self._all_labels = np.append(self.train.labels, self.devel.labels)
+        split_indices = np.repeat([-1, 0], [num_train, num_devel])
+        self._split = PredefinedSplit(split_indices)
+
+    def optimize(self, metric: Metrics):
+        scorer = CLASSIFICATION_SCORERS[metric]
+        self._grid_search = GridSearchCV(estimator=self.pipeline, param_grid=self.parameter_grid,
+                                         scoring=CLASSIFICATION_SCORERS,
+                                         n_jobs=-1, cv=self._split, refit=scorer)
+        self._grid_search.fit(self._all_features, self._all_labels)
+        estimator = clone(self._grid_search.estimator).set_params(
+            **self._grid_search.best_params_)
+        estimator.fit(X=self.train.features, y=self.train.labels)
+        predictions = estimator.predict(self.devel.features)
+        devel_results = ClassificationResult(predictions=predictions, true=self.devel.labels, labels=set(self.devel.labels), _comparison_metric=metric)
+        self.results = DevelTestResultSet(devel=devel_results, test=None)
+
+
+    def evaluate(self, eval_file: str, metric: Metrics):
+        pass
 
 
 def _load(file):
@@ -108,6 +192,11 @@ def parameter_search_train_devel_test(train_X,
             clf.fit(traindevel_X, traindevel_y)
             predicted_test = clf.predict(test_X)
             UAR_test = recall_score(test_y, predicted_test, average='macro')
+            result = ClassificationResult(names=None, predictions=list(predicted_test), true=list(test_y),
+                                          labels=set(test_y),
+                                          meta={'C': f'{C:.1E}'}, comparison_metric=ClassificationMetrics.UAR)
+            pprint(result)
+            result.save('test.json')
             print('C: {:.1E} UAR development: {:.2%} UAR test: {:.2%}'.format(
                 Decimal(C), UAR_devel, UAR_test))
             if csv_writer:
@@ -139,7 +228,8 @@ def parameter_search_cross_validation(folds_X: list, folds_y: list, Cs=np.logspa
             makedirs(dir, exist_ok=True)
             csv_file = open(output, 'w', newline='')
             csv_writer = csv.writer(csv_file)
-            csv_writer.writerow(['Complexity'] + ['UAR fold {}'.format(idx) for idx in range(len(folds_y))] + ['UAR combined'])
+            csv_writer.writerow(
+                ['Complexity'] + ['UAR fold {}'.format(idx) for idx in range(len(folds_y))] + ['UAR combined'])
         for C in Cs:
             scores = []
             predictions = None
@@ -283,7 +373,10 @@ def main():
         cm = confusion_matrix(true_labels, best_prediction, labels=labels)
         names = np.concatenate(list(folds_names))
     elif len(args['i']) > 1:
-
+        clf = LinearSVC()
+        experiment = ScikitDevelExperiment(train_file=args['i'][0], devel_file=args['i'][1], estimator=clf,
+                                           parameter_grid=[{'C': [0, 1]}])
+        print(experiment.train, experiment.estimator, experiment.pipeline)
         train_names, train_X, train_y = _load(args['i'][0])
         devel_names, devel_X, devel_y = _load(args['i'][1])
         labels = sorted(set(train_y))
