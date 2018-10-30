@@ -1516,7 +1516,12 @@ class _RegressionHeadWithMeanSquaredErrorLoss(_Head):
                     streaming_concordance_correlation_coefficient(
                         predictions=predicted_value,
                         labels=labels,
-                        weights=weights)
+                        weights=weights),
+                    _summary_key(self._name, keys.MSE):
+                    tf.metrics.mean_squared_error(predictions=predicted_value, labels=labels, weights=weights),
+                    _summary_key(self._name, keys.RMSE):
+                    tf.metrics.root_mean_squared_error(predictions=predicted_value, labels=labels, weights=weights)
+
                 }
                 if regularization_loss is not None:
                     regularization_loss_key = _summary_key(

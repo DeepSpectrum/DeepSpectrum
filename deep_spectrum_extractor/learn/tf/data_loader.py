@@ -4,7 +4,9 @@ import tensorflow as tf
 import pandas as pd
 from functools import partial
 
-tf.logging.set_verbosity(tf.logging.INFO)
+# tf.logging.set_verbosity(tf.logging.DEBUG) #EC
+tf.logging.set_verbosity(tf.logging.ERROR) #EC
+
 
 _WEIGHT_COLUMN = 'weight'
 
@@ -31,6 +33,7 @@ class DataLoader():
         self.timestamp_column = timestamp_column
         self.label_column = label_column
         self.names = None
+        self.data_labels = None
         self.num_features = None
         self.max_sequence_len = max_sequence_len
         self.sequence_classification = sequence_classification
@@ -64,18 +67,20 @@ class DataLoader():
 
     def __load_arff(self, file_path):
         arff_data = arff.load(open(file_path))
-        return np.array(arff_data['data'])
+
+        return np.array(arff_data['data']),arff_data['attributes']
 
     def __load_csv(self, file_path):
-        df = pd.read_csv(file_path, sep=';')
-        return df.values
+        df = pd.read_csv(file_path, sep=',')
+        return df.values,df.dtypes.index
 
     def __parse_data(self, file_path):
         if file_path.endswith('.arff') or file_path.endswith('.csv'):
             self.__parse_numpy_data(file_path)
 
     def __parse_numpy_data(self, file_path):
-        data = self.__load_file(file_path)
+        data, data_names = self.__load_file(file_path)
+        self.data_labels = data_names
         num_columns = len(data[0])
         feature_indices = list(range(num_columns))
         labels = None
@@ -83,11 +88,24 @@ class DataLoader():
             feature_indices.remove(self.name_column)
             self.names = np.array(data[:, self.name_column], dtype=str)
         if self.timestamp_column is not None:
-            feature_indices.remove(self.timestamp_column)
+            if self.timestamp_column >= 0:
+                feature_indices.remove(self.timestamp_column)
+            else:
+                feature_indices.remove(num_columns+self.timestamp_column)
         if self.label_column is not None:
-            self.label_column = num_columns + self.label_column if self.label_column < 0 else self.label_column
-            feature_indices.remove(self.label_column)
-            labels = self.__convert_labels(data[:, self.label_column])
+            # Only worked with 1 label
+            if not self.regression:
+                assert len(self.label_column) == 1, 'Multiple target columns not supported for classification.'
+
+                self.label_column = num_columns + self.label_column[0] if self.label_column[0] < 0 else self.label_column[0] #EC
+                feature_indices.remove(self.label_column) #EC
+
+            else:
+                # Code to use any number of labels
+                for lc_i,lc in enumerate(self.label_column):
+                    self.label_column[lc_i] = num_columns + lc if lc < 0 else lc #EC
+                    feature_indices.remove(self.label_column[lc_i]) #EC
+            labels = self.__convert_labels(data[:, self.label_column]) #EC
             if not self.regression:
                 weights = np.array(
                     list(map(lambda x: self.class_weights[x], labels)),
@@ -156,13 +174,13 @@ class DataLoader():
                         truncating='post'))
                 if self.sequence_classification:
                     labels = np.array([labels[0] for labels in labels])
-                    if self.__infer_weights:
+                    if self.__infer_weights and not self.regression: # MG this was the bug
                         unique, counts = np.unique(labels, return_counts=True)
                         self.class_weights = dict(
                             zip(unique, map(lambda x: max(counts)/x, counts)))
                         weights = np.array(
-                            list(map(lambda x: self.class_weights[x], labels)),
-                            dtype=np.float32)
+                                list(map(lambda x: self.class_weights[x], labels)),
+                                dtype=np.float32)
                     else:
                         weights = np.array([weights[0] for weights in weights])
         return features, labels, weights
@@ -182,7 +200,7 @@ class DataLoader():
                 [
                     np.pad(
                         labels, (0, max(self.max_sequence_len - len(labels),0)),
-                        mode='edge') if len(labels) < self.max_sequence_len else labels[:self.max_sequence_len] for labels in labels                 ],
+                        mode='edge') if len(labels) < self.max_sequence_len else labels[:self.max_sequence_len] for labels in labels],
                 dtype=str)
         return labels
 

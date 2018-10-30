@@ -126,6 +126,15 @@ def _rnn_logit_fn_builder(units,
                 elif cell_type == 'gru':
                     hidden_states = states
                 net = tf.concat(hidden_states, name='final_h_states', axis=-1)
+
+            net = tf.layers.batch_normalization(
+                net,
+                # The default momentum 0.99 actually crashes on certain
+                # problem, so here we use 0.999, which is the default of
+                # tf.contrib.layers.batch_norm.
+                momentum=0.999,
+                training=(mode == model_fn.ModeKeys.TRAIN),
+                name='batchnorm')
         with tf.variable_scope('logits', values=(net, )) as logits_scope:
             logits = tf.layers.dense(
                 net,

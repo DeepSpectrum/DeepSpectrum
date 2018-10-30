@@ -2,8 +2,10 @@ import argparse
 import tensorflow as tf
 import pickle
 import csv
-from os.path import join, basename
-from os import makedirs
+from os.path import join, basename, dirname
+from os import makedirs,path,listdir,getcwd
+from decimal import Decimal
+import shutil
 
 __CM_PLOT = True
 try:
@@ -11,6 +13,8 @@ try:
 except ImportError:
     __CM_PLOT = False
 
+#from .hooks import EarlyStopping
+from .exporters import BestCheckpointExporter
 # Modes (Classification and Regression)
 __CLASSIFICATION = 'classification'
 __REGRESSION = 'regression'
@@ -26,12 +30,14 @@ __EVAL = 'eval'
 __PREDICT = 'predict'
 __PHASE_KEYS = [__TRAIN, __EVAL, __PREDICT]
 
+DESCRIPTION='Interface for training and evaluating a {}.'
+
 
 def basic_parser(net_name='classifier'):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     subparsers = parser.add_subparsers(
-        help='Either train or evaluate a {} or make predictions.'.format(
+        help=DESCRIPTION.format(
             net_name))
     train_subparser = __basic_train_subparser(subparsers, net_name)
     eval_subparser = __basic_eval_subparser(subparsers, net_name)
@@ -92,6 +98,21 @@ def __basic_train_subparser(subparsers, net_name='classifier'):
         help=
         'Directory for saving and restoring model checkpoints, summaries and exports.'
     )
+    train_parser.add_argument(  # EC
+        '-lc',
+        '--labelcolumns',
+        default=[-1],  # [-2, -1],
+        nargs='+',
+        type=int,
+        required=False,
+        help='Index of labels collumns in data files.')
+    train_parser.add_argument(  # EC
+        '-tsc',
+        '--timestampcolumn',
+        default=None,  # [-2, -1],
+        type=int,
+        required=False,
+        help='Index of timestamp collumn in data files (if it exists).')
     return train_parser
 
 
@@ -117,6 +138,21 @@ def __basic_eval_subparser(subparsers, net_name='classifier'):
         help=
         'Directory for saving and restoring model checkpoints, summaries and exports.'
     )
+    eval_parser.add_argument(  # EC
+        '-lc',
+        '--labelcolumns',
+        default=[-1],  # [-2, -1],
+        nargs='+',
+        type=int,
+        required=False,
+        help='Index of labels collumns in data files.')
+    eval_parser.add_argument(  # EC
+        '-tsc',
+        '--timestampcolumn',
+        default=None,
+        type=int,
+        required=False,
+        help='Index of timestamp collumn in data files (if it exists).')
     return eval_parser
 
 
@@ -153,7 +189,9 @@ def __basic_predict_subparser(subparsers, net_name='classifier'):
 
 def save_params(loader_params, model_params, model_dir, mode=__CLASSIFICATION):
     params = {'mode': mode, 'model': model_params, 'loader': loader_params}
-    makedirs(model_dir, exist_ok=True)
+    if path.exists(model_dir): #EC
+        shutil.rmtree(model_dir)  #EC
+    makedirs(model_dir) #, exist_ok=True) #EC
     with open(join(model_dir, 'params.pickle'), 'wb') as handle:
         pickle.dump(params, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -173,6 +211,10 @@ def basic_train(model,
                 eval_period,
                 mode=__CLASSIFICATION):
     cm_hook = None
+    if mode == __REGRESSION:
+        #cm_hook = [EarlyStopping(int(loader_train.steps_per_epoch * 5))]
+        cm_exporter = BestCheckpointExporter(name='BestCheckpoint',minimize=True)
+
     if mode == __CLASSIFICATION:
         if __CM_PLOT:
             cm_hook = [
@@ -185,7 +227,8 @@ def basic_train(model,
         input_fn=loader_eval.input_fn,
         start_delay_secs=eval_period,
         throttle_secs=eval_period,
-        hooks=cm_hook)
+        exporters=[cm_exporter])
+        #steps = 1, hooks=cm_hook)
     train_spec = tf.estimator.TrainSpec(
         input_fn=loader_train.input_fn, max_steps=steps)
 
@@ -214,6 +257,8 @@ def basic_eval(model,
                     join(model_dir, 'eval'),
                     vocabulary=sorted(loader_eval.class_weights.keys()))
             ]
+    # if mode == __REGRESSION:
+    #     cm_hook = [ExportPredictions("predictions.csv")]
     model.evaluate(
         loader_eval.input_fn,
         checkpoint_path=checkpoint_path,
@@ -228,7 +273,6 @@ def basic_predict(model,
                   checkpoint=None,
                   mode=__CLASSIFICATION):
     predictions = model.predict(loader_predict.input_fn)
-
     with open(output, 'w') as of:
         writer = csv.writer(of, delimiter=',')
         if mode == __CLASSIFICATION:
@@ -236,6 +280,16 @@ def basic_predict(model,
                 class_name + ' probability'
                 for class_name in sorted(loader_predict.class_weights.keys())
             ])
+        if mode == __REGRESSION: #EC
+            writer.writerow(['name'] + [str(loader_predict.data_labels[label_column])  # MG
+                                        for label_column in loader_predict.label_column  # MG
+                                        ])  # MG
+        #     writer.writerow(['name'] + [ str(out_num) #EC
+        #         for out_num in loader_predict.data_labels[loader_predict.label_column] #EC
+        #     ]) #EC
+
+
+
 
         for name, prediction in zip(loader_predict.names, predictions):
             if mode == __CLASSIFICATION:
@@ -258,6 +312,17 @@ def basic_predict(model,
                             list(map(lambda x: x.decode('utf-8'), class_name))
                             [0]
                         ] + [probability for probability in probabilities])
+            if mode == __REGRESSION: #EC
+
+                #for line in prediction['predictions']: #EC
+
+                writer.writerow([
+                     name] + [single_prediction for single_prediction in prediction]) # MG
+                    # text_out=[name]
+                    # for col in line:
+                    #     text_out.append(col)
+                    # writer.writerow(text_out)
+
 
 
 def config(model_dir, keep_checkpoints, steps_per_epoch):
@@ -268,5 +333,6 @@ def config(model_dir, keep_checkpoints, steps_per_epoch):
         keep_checkpoint_max=keep_checkpoints,
         session_config=session_config,
         save_checkpoints_steps=steps_per_epoch,
+        log_step_count_steps=5,
         tf_random_seed=42)
     return config
