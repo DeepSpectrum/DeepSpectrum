@@ -13,6 +13,8 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib import cm as colourmaps
 from sklearn.metrics import confusion_matrix
 
+DESCRIPTION='Create a pdf plot from the textual representation of a confusion matrix.'
+
 
 def plot_confusion_matrix_from_pred(pred,
                                     true,

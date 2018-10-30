@@ -16,10 +16,11 @@ from ..tools.feature_writer import get_writer
 environ['GLOG_minloglevel'] = '2'
 environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+DESCRIPTION='Extract deep spectrum features from wav files.'
 
 def main(args=None):
     # set up the configuration object and parse commandline arguments
-    configuration = Configuration()
+    configuration = Configuration(parser_description='Extract deep spectrum features from wav files.')
     configuration.parse_arguments()
     plots = PlotGenerator(
         files=configuration.files,

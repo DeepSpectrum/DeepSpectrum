@@ -1,8 +1,11 @@
 import tensorflow as tf
-from ..command_line_helper import basic_parser, __REGRESSION, __CLASSIFICATION, config, basic_train, basic_eval, basic_predict, save_params, load_params, write_results
+from ..command_line_helper import basic_parser, __REGRESSION, __CLASSIFICATION, config, basic_train, basic_eval, basic_predict, save_params, load_params, write_results, DESCRIPTION
 from ..data_loader import DataLoader
 from .dnn import DNNClassifier, DNNRegressor
 from os.path import join
+
+DESCRIPTION=DESCRIPTION.format('Deep Neural Network')
+
 
 
 def main():

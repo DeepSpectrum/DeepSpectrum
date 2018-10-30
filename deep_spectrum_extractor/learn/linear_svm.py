@@ -28,6 +28,8 @@ CLASSIFICATION_SCORERS = {Metrics.UAR: make_scorer(recall_score, average='macro'
 
 RANDOM_SEED = 42
 
+DESCRIPTION='Train and evaluate a linear Support Vector Machine.'
+
 
 def load(file):
     if file.endswith('.arff'):
@@ -331,8 +333,7 @@ def parameter_search_train_devel(train_X,
 
 def main():
     parser = argparse.ArgumentParser(
-        description=
-        'Evaluate linear SVM for given Cs on data in arff format',
+        description=DESCRIPTION,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     required_named = parser.add_argument_group('Required named arguments')
     required_named.add_argument(

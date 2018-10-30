@@ -5,14 +5,15 @@ setup(name='deep_spectrum_extractor',
       packages=find_packages(),
       entry_points={
           'console_scripts': [
-              'extract_ds_features = deep_spectrum_extractor.cli.__main__:main',
-              'reduce_ds_features = deep_spectrum_extractor.tools.feature_reduction:main',
-              'linear_svm = deep_spectrum_extractor.learn.linear_svm:main',
-              'dnn = deep_spectrum_extractor.learn.tf.dnn.__main__:main',
-              'rnn = deep_spectrum_extractor.learn.tf.rnn.__main__:main',
-              'plot_cm = deep_spectrum_extractor.tools.performance_stats:main',
-              'image_cnn_features = deep_spectrum_extractor.cli.image_features:main',
-              'plot_wavs = deep_spectrum_extractor.cli.create_plots:main'
+              'ds-features = deep_spectrum_extractor.cli.ds_extract:main',
+              'ds-reduce = deep_spectrum_extractor.tools.feature_reduction:main',
+              'ds-svm = deep_spectrum_extractor.learn.linear_svm:main',
+              'ds-dnn = deep_spectrum_extractor.learn.tf.dnn.__main__:main',
+              'ds-rnn = deep_spectrum_extractor.learn.tf.rnn.__main__:main',
+              'ds-cm = deep_spectrum_extractor.tools.performance_stats:main',
+              'ds-image-features = deep_spectrum_extractor.cli.image_features:main',
+              'ds-plot = deep_spectrum_extractor.cli.create_plots:main',
+              'ds-help = deep_spectrum_extractor.cli.ds_help:main'
           ]
       },
       install_requires=['numpy', 'scipy', 'pandas', 'imread', 'pysoundfile', 'tqdm', 'matplotlib', 'opencv-python', 'librosa', 'sklearn', 'liac-arff'],

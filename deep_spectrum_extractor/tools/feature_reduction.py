@@ -7,6 +7,8 @@ import numpy as np
 
 import deep_spectrum_extractor.tools.custom_arff as arff
 
+DESCRIPTION='Reduce a list of feature files by removing features zero features.'
+
 
 def _reduce(file_name):
     with open(file_name, newline='') as file:
@@ -65,7 +67,7 @@ def reduce_file(input, output):
 
 def main(args=None):
     parser = argparse.ArgumentParser(
-        description='Reduce a list of feature files by removing features that are always zero in the first given file.',
+        description=DESCRIPTION,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('input', nargs='+', help='The feature files to reduce.')
     args = vars(parser.parse_args())

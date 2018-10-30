@@ -12,10 +12,12 @@ from ..backend.plotting import PlotGenerator
 environ['GLOG_minloglevel'] = '2'
 environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+DESCRIPTION='Create plots from wav files.'
+
 
 def main(args=None):
     # set up the configuration object and parse commandline arguments
-    configuration = Configuration(extraction=False, writer=False, parser_description='Create plots from wav files.')
+    configuration = Configuration(extraction=False, writer=False, parser_description=DESCRIPTION)
     configuration.parse_arguments()
     plots = PlotGenerator(
         files=configuration.files,

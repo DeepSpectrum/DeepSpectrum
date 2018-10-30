@@ -1,9 +1,11 @@
 import tensorflow as tf
-from ..command_line_helper import basic_parser, __REGRESSION, __CLASSIFICATION, config, basic_train, basic_eval, basic_predict, save_params, load_params
+from ..command_line_helper import basic_parser, __REGRESSION, __CLASSIFICATION, config, basic_train, basic_eval, \
+    basic_predict, save_params, load_params, DESCRIPTION
 from ..data_loader import DataLoader
 from .rnn import RNNClassifier, RNNRegressor
 from os.path import basename
 
+DESCRIPTION=DESCRIPTION.format('Recurrent Neural Network')
 
 def main():
     parser, train_parser, eval_parser, predict_parser = basic_parser(
@@ -37,6 +39,7 @@ def __add_train_args(train_parser):
     train_parser.add_argument('-o', '--output', default=None, help='Where to store the final evaluation results.')
     train_parser.set_defaults(action=__train)
 
+
 def __add_predict_args(predict_parser):
     predict_parser.set_defaults(action=__predict)
 
@@ -50,7 +53,9 @@ def __train(args):
     loader_params = {
         'sequences': True,
         'regression': args.mode == __REGRESSION,
-        'sequence_classification': not args.sequenced_labels
+        'sequence_classification': not args.sequenced_labels,
+        'label_column': args.labelcolumns,  # EC
+        'timestamp_column': args.timestampcolumn  # EC
     }
     train_data_loader = DataLoader(
         args.training_data,
@@ -58,11 +63,14 @@ def __train(args):
         shuffle=True,
         num_epochs=None,
         **loader_params)
-    loader_params['class_weights'] = {class_key: 1.0 for class_key in train_data_loader.class_weights}
+
+    loader_params['class_weights'] = {class_key: 1.0 for class_key in
+                                      train_data_loader.class_weights} if args.mode == __CLASSIFICATION else None
     loader_params['max_sequence_len'] = train_data_loader.max_sequence_len
     eval_data_loader = DataLoader(
         args.evaluation_data, batch_size=args.batch_size, **loader_params)
-    optimizer = tf.train.AdaDelta(args.learning_rate, args.decay_rate)
+    optimizer = tf.train.AdamOptimizer(args.learning_rate)
+
     configuration = config(args.model_dir, args.keep_checkpoints, train_data_loader.steps_per_epoch)
     model_params = {
         'hidden_units': args.layers,
@@ -78,13 +86,14 @@ def __train(args):
         model_params['n_classes'] = len(train_data_loader.label_dict.keys())
         model_params['label_vocabulary'] = sorted(train_data_loader.label_dict.keys())
         model = RNNClassifier(**model_params,
-            optimizer=optimizer)
+                              optimizer=optimizer)
     elif args.mode == __REGRESSION:
-        model = RNNRegressor(**model_params)
+        model_params['label_dimension'] = len(args.labelcolumns)
+        model = RNNRegressor(**model_params, optimizer=optimizer)
     save_params(loader_params=loader_params, model_params=model_params, model_dir=args.model_dir, mode=args.mode)
     metrics = basic_train(model, train_data_loader, eval_data_loader, args.model_dir,
-                args.number_of_epochs, args.keep_checkpoints, args.eval_period,
-                args.mode)
+                          args.number_of_epochs, args.keep_checkpoints, args.eval_period,
+                          args.mode)
 
 
 def __eval(args):
@@ -92,7 +101,11 @@ def __eval(args):
     eval_data_loader = DataLoader(args.evaluation_data, batch_size=args.batch_size, **loader_params)
     if mode == __CLASSIFICATION:
         model = RNNClassifier(**model_params)
-    basic_eval(model, eval_data_loader, args.model_dir, args.checkpoint, evaluation_key='on {}'.format(basename(args.evaluation_data)), mode=mode)
+    elif mode == __REGRESSION:
+        model = RNNRegressor(**model_params)
+    basic_eval(model, eval_data_loader, args.model_dir, args.checkpoint,
+               evaluation_key='on {}'.format(basename(args.evaluation_data)), mode=mode)
+
 
 def __predict(args):
     loader_params, model_params, mode = load_params(args.model_dir)

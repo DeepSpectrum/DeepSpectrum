@@ -9,6 +9,7 @@ from ..backend.plotting import PlotTuple
 environ['GLOG_minloglevel'] = '2'
 environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+DESCRIPTION='Extract CNN-descriptors from images.'
 
 def image_reader(files):
     for image in files:
@@ -17,7 +18,7 @@ def image_reader(files):
         yield PlotTuple(name=basename(image), timestamp=None, plot=np.array([img]))
 
 def main():
-    configuration = Configuration(plotting=False, file_type='png')
+    configuration = Configuration(plotting=False, file_type='png', parser_description=DESCRIPTION)
     configuration.parse_arguments()
     plots = image_reader(configuration.files)
     print('Loading model and weights...')
