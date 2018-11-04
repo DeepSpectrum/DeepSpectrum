@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from itertools import chain
 from json import dump
 from statistics import pstdev, mean
+from decimal import Decimal
 from scipy.stats import shapiro
 import pickle
 
@@ -46,8 +47,8 @@ class Result(ABC):
     predictions: List
     true: List
     metrics: Dict[Metrics, float] = field(init=False)
-    meta: Dict[str, str]
     _comparison_metric: Metrics
+    timestamps: List[Decimal]
 
     @property
     def comparison_metric(self) -> Metrics:
@@ -75,6 +76,8 @@ class Result(ABC):
 @dataclass(order=True)
 class ClassificationResult(Result):
     predictions: List[str]
+    decision_func: List[List[float]]
+    probabilities: List[List[float]]
     true: List[str]
     labels: Set[str]
 
@@ -83,6 +86,7 @@ class ClassificationResult(Result):
     def __post_init__(self):
         self.metrics = {metric_name: metric(self) for metric_name, metric in METRICS_MAPPING.items()}
         self.sort_index = self.metrics[self._comparison_metric]
+        self.labels = sorted(self.labels)
 
 
 @dataclass(order=True)
@@ -90,6 +94,7 @@ class ResultSet(ABC):
     sort_index: float = field(init=False, repr=False)
     _comparison_metric: Metrics
     meta: Dict
+    description: str
 
     def save(self, path):
         with open(path, 'wb') as fp:
@@ -100,19 +105,14 @@ class ResultSet(ABC):
         with open(path, 'rb') as fp:
             result_set = pickle.load(fp)
             assert isinstance(result_set, cls), f'{path} is not a {cls.__name__} object!'
-            return
+            return result_set
 
 @dataclass(order=True)
-class DevelTestResultSet(ResultSet):
-    devel: Result
-    test: Result
+class EvalPartitionResultSet(ResultSet):
+    eval: Result
 
     def __post_init__(self):
-        # Compare Resultsets from their test results if available
-        if self.test is not None:
-            self.sort_index = self.test.metrics[self._comparison_metric]
-        else:
-            self.sort_index = self.devel.metrics[self._comparison_metric]
+        self.sort_index = self.eval.metrics[self._comparison_metric]
 
     @property
     def comparison_metric(self) -> Metrics:
@@ -121,12 +121,7 @@ class DevelTestResultSet(ResultSet):
     @comparison_metric.setter
     def comparison_metric(self, value: Metrics):
         self._comparison_metric = value
-
-        # Compare Resultsets from their test results if available
-        if self.test is not None:
-            self.sort_index = self.test.metrics[self._comparison_metric]
-        else:
-            self.sort_index = self.devel.metrics[self._comparison_metric]
+        self.sort_index = self.eval.metrics[self._comparison_metric]
 
 
 @dataclass

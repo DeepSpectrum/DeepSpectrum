@@ -4,31 +4,47 @@ import arff
 import numpy as np
 import pandas as pd
 
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.metrics import recall_score, confusion_matrix, make_scorer, f1_score, accuracy_score
 from sklearn.model_selection import cross_val_score
-from sklearn.svm import LinearSVC
+from sklearn.svm import LinearSVC, LinearSVR, SVC, SVR, NuSVC, NuSVR
+from sklearn.linear_model import SGDClassifier, SGDRegressor
 from decimal import Decimal
 from os.path import abspath, dirname
 from os import makedirs
 from ..tools.performance_stats import plot_confusion_matrix, save_fig
 from deep_spectrum_extractor.learn.results import ClassificationResult, ClassificationMetrics
 from dataclasses import asdict
-from .experiment import Experiment, DevelExperiment, DataTuple, Metrics
-from .results import DevelTestResultSet
+from .experiment import Experiment, DevelExperiment, DataTuple
+from .results import EvalPartitionResultSet, Metrics
 from pprint import pprint
 from sklearn.base import BaseEstimator, clone
 from sklearn.pipeline import Pipeline
 from typing import List, Dict
 from sklearn.model_selection import PredefinedSplit, GridSearchCV
+from sklearn.externals import joblib
 
-CLASSIFICATION_SCORERS = {Metrics.UAR: make_scorer(recall_score, average='macro'),
-                          Metrics.F1: make_scorer(f1_score, average='macro'),
-                          Metrics.ACCURACY: accuracy_score}
+__MODEL_EXT = 'joblib'
+
+CLASSIFICATION_SCORERS = {Metrics.UAR.value: make_scorer(recall_score, average='macro'),
+                          Metrics.F1.value: make_scorer(f1_score, average='macro'),
+                          Metrics.ACCURACY.value: make_scorer(accuracy_score)}
 
 RANDOM_SEED = 42
 
-DESCRIPTION='Train and evaluate a linear Support Vector Machine.'
+DESCRIPTION = 'Train and evaluate a linear Support Vector Machine.'
+
+CLASSIFIER_GRID = [
+    {'scaler': [StandardScaler(), MinMaxScaler(), None], 'estimator': [LinearSVC(random_state=RANDOM_SEED)],
+     'estimator__loss': ['hinge', 'squared_hinge'],
+     'estimator__C': np.logspace(0, -9, num=10), 'estimator__class_weight': ['balanced'],
+     'estimator__max_iter': [10000]},
+    {'scaler': [StandardScaler(), MinMaxScaler(), None], 'estimator': [SGDClassifier(random_state=RANDOM_SEED)],
+     'estimator__loss': ['hinge', 'log', 'modified_huber', 'squared_hinge', 'perceptron'],
+     'estimator__class_weight': ['balanced'], 'estimator__early_stopping': [True],
+     'estimator__n_iter_no_change': [5],
+     'estimator__max_iter': [10000]}
+]
 
 
 def load(file):
@@ -58,48 +74,86 @@ def __load_arff(file):
 
 class ScikitExperiment(Experiment):
 
-    def __init__(self, estimator: BaseEstimator, parameter_grid: List[Dict], standardize=False, **kwargs):
+    def __init__(self, parameter_grid: List[Dict], **kwargs):
         super().__init__(**kwargs)
-        self.estimator = estimator
         self.parameter_grid = parameter_grid
-        self.standardize = standardize
-        if self.standardize:
-            self.pipeline = Pipeline([('standard-scaler', StandardScaler), (estimator.__class__.__name__, estimator)])
-        else:
-            self.pipeline = Pipeline([(estimator.__class__.__name__, estimator)])
+        self.pipeline = Pipeline([('scaler', None), ('estimator', LinearSVC())])
+        self.best_estimator = None
 
     @classmethod
-    def load_file(cls, path: str) -> DataTuple:
+    def load_feature_file(cls, path: str) -> DataTuple:
         return load(path)
+
+    def save(self, path: str):
+        super().save(path)
+        joblib.dump(self.best_estimator, 'model.joblib')
 
 
 class ScikitDevelExperiment(ScikitExperiment, DevelExperiment):
 
     def __init__(self, train_file: str, devel_file: str, **kwargs):
         super().__init__(train_file=train_file, devel_file=devel_file, **kwargs)
-        num_train = self.train.names.shape
-        num_devel = self.devel.names.shape
+        num_train = self.train.names.shape[0]
+        num_devel = self.devel.names.shape[0]
         self._all_features = np.append(self.train.features, self.devel.features, axis=0)
         self._all_labels = np.append(self.train.labels, self.devel.labels)
+        self._labels = set(self._all_labels)
         split_indices = np.repeat([-1, 0], [num_train, num_devel])
         self._split = PredefinedSplit(split_indices)
+        self._description = f'Scikit-learn models trained on {train_file} and optimized on {devel_file}.'
 
     def optimize(self, metric: Metrics):
-        scorer = CLASSIFICATION_SCORERS[metric]
         self._grid_search = GridSearchCV(estimator=self.pipeline, param_grid=self.parameter_grid,
                                          scoring=CLASSIFICATION_SCORERS,
-                                         n_jobs=-1, cv=self._split, refit=scorer)
+                                         n_jobs=-1, cv=self._split, refit=metric.value, verbose=2)
         self._grid_search.fit(self._all_features, self._all_labels)
+        self.best_estimator = self._grid_search.best_estimator_
         estimator = clone(self._grid_search.estimator).set_params(
             **self._grid_search.best_params_)
         estimator.fit(X=self.train.features, y=self.train.labels)
         predictions = estimator.predict(self.devel.features)
-        devel_results = ClassificationResult(predictions=predictions, true=self.devel.labels, labels=set(self.devel.labels), _comparison_metric=metric)
-        self.results = DevelTestResultSet(devel=devel_results, test=None)
-
+        decision_function = None
+        probabilities = None
+        if hasattr(self.best_estimator, 'decision_function'):
+            decision_function = self.best_estimator.decision_function(self.devel.features)
+        if hasattr(self.best_estimator, 'predict_proba'):
+            probabilities = self.best_estimator.predict_proba(self.devel.features)
+        devel_results = ClassificationResult(predictions=predictions, true=self.devel.labels,
+                                             labels=self._labels, _comparison_metric=metric,
+                                             names=self.devel.names, timestamps=self.devel.timestamps,
+                                             decision_func=decision_function, probabilities=probabilities)
+        self.results['validation'] = EvalPartitionResultSet(eval=devel_results, description=self._description,
+                                                            _comparison_metric=metric,
+                                                            meta={'model-parameters': self._grid_search.best_params_})
+        print(
+            f'Optimization finished. Best score: \n\n {self._grid_search.best_score_}\n\nFor parameters: \n\n {self._grid_search.best_params_}\n')
 
     def evaluate(self, eval_file: str, metric: Metrics):
-        pass
+        assert self.best_estimator is not None, 'Call "optimize" first!'
+        self.results['evaluation'] = evaluate(estimator=self.best_estimator, eval_file=eval_file, metric=metric,
+                                              labels=self._labels)
+
+
+def evaluate(estimator: BaseEstimator, eval_file: str, metric: Metrics, labels=None) -> EvalPartitionResultSet:
+    eval_data = ScikitExperiment.load_feature_file(eval_file)
+    if labels is None:
+        labels = sorted(set(eval_data.labels))
+
+    predictions = estimator.predict(eval_data.features)
+    decision_function = None
+    probabilities = None
+    if hasattr(estimator, 'decision_function'):
+        decision_function = estimator.decision_function(eval_data.features)
+    if hasattr(estimator, 'predict_proba'):
+        probabilities = estimator.predict_proba(eval_data.features)
+    evaluation_results = ClassificationResult(predictions=predictions, true=eval_data.labels, labels=labels,
+                                              _comparison_metric=metric, decision_func=decision_function,
+                                              probabilities=probabilities, names=eval_data.names,
+                                              timestamps=eval_data.timestamps)
+    description = f'Evaluation results for {eval_file}.'
+    return EvalPartitionResultSet(eval=evaluation_results, description=description,
+                                  _comparison_metric=metric,
+                                  meta={'model-parameters': estimator.get_params()})
 
 
 def _load(file):
@@ -329,6 +383,7 @@ def parameter_search_train_devel(train_X,
     finally:
         if csv_file:
             csv_file.close()
+
 
 
 def main():

@@ -1,7 +1,7 @@
 from .ds_extract import DESCRIPTION as ds_extract
 from .image_features import DESCRIPTION as ds_image_features
 from .ds_plot import DESCRIPTION as ds_plot
-from ..learn.linear_svm import DESCRIPTION as ds_svm
+from ..learn.scikit_models import DESCRIPTION as ds_svm
 from ..tools.feature_reduction import DESCRIPTION as ds_reduce
 from ..learn.tf.dnn.__main__ import DESCRIPTION as ds_dnn
 from ..learn.tf.rnn.__main__ import DESCRIPTION as ds_rnn
