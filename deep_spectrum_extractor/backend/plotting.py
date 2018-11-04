@@ -23,6 +23,14 @@ AudioChunk = namedtuple('AudioChunk', ['name', 'samplerate', 'timestamp', 'audio
 
 environ['GLOG_minloglevel'] = '2'
 
+label_font = {'family' : 'normal',
+        'size'   : 14}
+
+font = {'family' : 'normal',
+        'size'   : 12}
+
+matplotlib.rc('font', **font)
+
 
 def _read_wav_data(wav_file, start=0, end=None):
     """
@@ -61,7 +69,8 @@ def plot_chunk(chunk, mode='spectrogram', output_folder=None, size=227, nfft=Non
     if not nfft:
         nfft = _next_power_of_two(int(sr * 0.025))
     fig = plt.figure(frameon=False)
-    plt.tight_layout()
+    if not labelling:
+        plt.tight_layout()
 
     if labelling:
         pass
@@ -74,10 +83,23 @@ def plot_chunk(chunk, mode='spectrogram', output_folder=None, size=227, nfft=Non
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
         spectrogram_axes = PLOTTING_FUNCTIONS[mode](audio, sr, nfft, **kwargs)
+        if mode != 'chroma':
+            kHz_ticks = np.apply_along_axis(lambda x: x/1000, 0, spectrogram_axes.get_yticks())
+            spectrogram_axes.set_yticklabels(kHz_ticks)
+            spectrogram_axes.set_ylabel('Frequency [kHz]', fontdict=label_font)
+        else:
+            spectrogram_axes.set_ylabel('Pitch Classes', fontdict=label_font)
+        spectrogram_axes.set_xticks(spectrogram_axes.get_xticks()[::2])
+
+        spectrogram_axes.set_xlabel('Time [s]', fontdict=label_font)
+
         del audio
     fig.add_axes(spectrogram_axes, id='spectrogram')
+
     if labelling:
-        plt.colorbar(format='%+2.0f dB')
+        plt.colorbar(format='%+2.1f dB')
+        plt.tight_layout()
+
 
     if output_folder:
         file_name = basename(filename)[:-4]
@@ -135,9 +157,10 @@ def plot_mel_spectrogram(audio_data, sr, nfft=None, melbands=64, delta=None, **k
 def plot_chroma(audio_data, sr, nfft=None, delta=None, **kwargs):
     spectrogram = y_limited_spectrogram(audio_data, sr, nfft, ylim=kwargs['ylim'])
     spectrogram = librosa.feature.chroma_stft(S=np.abs(spectrogram) ** 2, sr=sr)
+    kwargs['scale'] = 'chroma'
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
-    return _create_plot(spectrogram, sr, nfft, **kwargs)
+    return _create_plot(spectrogram, sr, nfft,  **kwargs)
 
 
 def y_limited_spectrogram(audio_data, sr, nfft=None, ylim=None):
