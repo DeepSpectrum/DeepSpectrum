@@ -62,7 +62,7 @@ class Configuration:
     def general_parser(self):
         parser = argparse.ArgumentParser(add_help=False)
         parser.add_argument(
-            '-f', help='folder where your files reside', required=True)
+            '-i', help='input folder where your files reside', required=True)
         parser.add_argument(
             '-config',
             help=
@@ -110,8 +110,8 @@ class Configuration:
         parser.add_argument(
             '-cmap',
             default='viridis',
-            help='define the matplotlib colour map to use for the spectrograms',
-            choices=sorted([m for m in cm.cmap_d]))
+            help='define the matplotlib colour map to use for the spectrograms')#,
+            #choices=sorted([m for m in cm.cmap_d]))
         parser.add_argument(
             '-ylim',
             type=int,
@@ -223,7 +223,7 @@ class Configuration:
             parents=self.parsers)
 
         args = vars(self.parser.parse_args())
-        self.input = args['f']
+        self.input = args['i']
         self.config = args['config']
         self.number_of_processes = args['np']
 
