@@ -7,7 +7,7 @@ import numpy as np
 
 import deep_spectrum_extractor.tools.custom_arff as arff
 
-DESCRIPTION='Reduce a list of feature files by removing features zero features.'
+DESCRIPTION='Reduce a list of feature files by removing zero features.'
 
 
 def _reduce(file_name):
