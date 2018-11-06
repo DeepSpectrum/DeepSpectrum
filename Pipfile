@@ -8,6 +8,7 @@ name = "pypi"
 pandas = "*"
 tfplot = {git = "https://github.com/wookayin/tensorflow-plot.git"}
 dataclasses = "*"
+numpy = "*"
 
 [dev-packages]
 

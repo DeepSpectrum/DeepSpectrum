@@ -16,7 +16,7 @@ setup(name='deep_spectrum_extractor',
               'ds-help = deep_spectrum_extractor.cli.ds_help:main'
           ]
       },
-      install_requires=['numpy', 'scipy', 'pandas', 'imread', 'pysoundfile', 'tqdm', 'matplotlib', 'opencv-python', 'librosa', 'sklearn', 'liac-arff'],
+      install_requires=['numpy', 'scipy', 'pandas', 'imread', 'pysoundfile', 'tqdm', 'matplotlib', 'opencv-python', 'librosa', 'scikit-learn', 'liac-arff'],
       extras_require={'tensorflow-gpu': ['tensorflow-gpu'], 'tensorflow': ['tensorflow']},
       zip_safe=False
       )
