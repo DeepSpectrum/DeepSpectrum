@@ -83,18 +83,20 @@ def plot_chunk(chunk, mode='spectrogram', output_folder=None, size=227, nfft=Non
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
         spectrogram_axes = PLOTTING_FUNCTIONS[mode](audio, sr, nfft, **kwargs)
+        original_xlim = spectrogram_axes.get_xlim()
         if mode != 'chroma':
             kHz_ticks = np.apply_along_axis(lambda x: x/1000, 0, spectrogram_axes.get_yticks())
             spectrogram_axes.set_yticklabels(kHz_ticks)
             spectrogram_axes.set_ylabel('Frequency [kHz]', fontdict=label_font)
         else:
             spectrogram_axes.set_ylabel('Pitch Classes', fontdict=label_font)
-        spectrogram_axes.set_xticks(spectrogram_axes.get_xticks()[::2])
-
+        if labelling:
+            spectrogram_axes.set_xticks(spectrogram_axes.get_xticks()[::2])
         spectrogram_axes.set_xlabel('Time [s]', fontdict=label_font)
-
+        spectrogram_axes.set_xlim(original_xlim)
         del audio
     fig.add_axes(spectrogram_axes, id='spectrogram')
+
 
     if labelling:
         plt.colorbar(format='%+2.1f dB')
@@ -137,7 +139,7 @@ def _generate_chunks_filename_timestamp_wrapper(filepath, window, hop, start=0, 
 
 
 def plot_spectrogram(audio_data, sr, nfft=None, delta=None, **kwargs):
-    spectrogram = y_limited_spectrogram(audio_data, sr, nfft, ylim=kwargs['ylim'])
+    spectrogram = librosa.stft(audio_data, n_fft=nfft, hop_length=int(nfft / 2), center=False)
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
     spectrogram = librosa.amplitude_to_db(spectrogram, ref=np.max, top_db=None)
@@ -145,9 +147,9 @@ def plot_spectrogram(audio_data, sr, nfft=None, delta=None, **kwargs):
 
 
 def plot_mel_spectrogram(audio_data, sr, nfft=None, melbands=64, delta=None, **kwargs):
-    spectrogram = y_limited_spectrogram(audio_data, sr, nfft, ylim=kwargs['ylim'])
+    spectrogram = y_limited_spectrogram(audio_data, sr=sr, nfft=nfft, ylim=kwargs['ylim'])
     kwargs['scale'] = 'mel'
-    spectrogram = librosa.feature.melspectrogram(S=np.abs(spectrogram) ** 2, sr=sr, n_mels=melbands, fmax=kwargs['ylim'])
+    spectrogram = librosa.feature.melspectrogram(S=np.abs(spectrogram) ** 2, sr=sr, n_mels=melbands)
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
     spectrogram = librosa.power_to_db(spectrogram, ref=np.max, top_db=None)
@@ -155,7 +157,7 @@ def plot_mel_spectrogram(audio_data, sr, nfft=None, melbands=64, delta=None, **k
 
 
 def plot_chroma(audio_data, sr, nfft=None, delta=None, **kwargs):
-    spectrogram = y_limited_spectrogram(audio_data, sr, nfft, ylim=kwargs['ylim'])
+    spectrogram = librosa.stft(audio_data, n_fft=nfft, hop_length=int(nfft / 2), center=False)
     spectrogram = librosa.feature.chroma_stft(S=np.abs(spectrogram) ** 2, sr=sr)
     kwargs['scale'] = 'chroma'
     if delta:
@@ -172,11 +174,15 @@ def y_limited_spectrogram(audio_data, sr, nfft=None, ylim=None):
     return spectrogram
 
 
+
 def _create_plot(spectrogram, sr, nfft, ylim=None, cmap='viridis', scale='linear', **kwargs):
     if not ylim:
         ylim = sr/2
     spectrogram_axes = librosa.display.specshow(spectrogram, hop_length=int(nfft / 2), fmax=ylim, sr=sr, cmap=cmap,
                                                 y_axis=scale, x_axis='time')
+    if scale == 'linear':
+        spectrogram_axes.set_ylim(0, ylim)
+
     return spectrogram_axes
 
 
