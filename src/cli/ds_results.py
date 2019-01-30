@@ -1,9 +1,10 @@
 import argparse
-from os.path import dirname, basename, splitext, abspath, join
 from os import makedirs
+from os.path import dirname, basename, splitext, abspath, join
+
 from .ds_help import DESCRIPTION_RESULTS
-from ..learn.results import ResultSet, CVResultSet, EvalPartitionResultSet, compare
 from ..learn.metrics import KEY_TO_METRIC, UAR
+from ..learn.results import ResultSet, CVResultSet, EvalPartitionResultSet, compare
 
 __SHOW = 'show'
 __EXPORT = 'export'
@@ -56,6 +57,7 @@ def __export_subparser(subparsers):
         help='The directory for the predictions. If omitted, saves predictions to directory of results.')
     parser.set_defaults(action=__export)
 
+
 def __import_subparser(subparsers):
     parser = subparsers.add_parser(
         __IMPORT,
@@ -63,11 +65,13 @@ def __import_subparser(subparsers):
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         'input',
-        help='The prediction files to import into a resultset. Creates a crossvalidation resultset if you pass multiple prediction csv files (each belonging to a specific fold).', nargs='+')
+        help='The prediction files to import into a resultset. Creates a crossvalidation resultset if you pass multiple prediction csv files (each belonging to a specific fold).',
+        nargs='+')
     parser.add_argument(
         '-o', '--output', default=None,
         help='Name of the resultset file to be created. Defaults to "results.json" in the directory of input.')
     parser.set_defaults(action=__import)
+
 
 def __import(args):
     print(f'Loading predictions from "{args.input}"')
@@ -88,7 +92,7 @@ def __import(args):
 def __compare_subparser(subparsers):
     parser = subparsers.add_parser(
         __COMPARE,
-        help='Import a result set from prediction csv(s). Can create a simple eval partition result set or a cross-validation result set, depending on the number of passed prediction csv files.',
+        help='Compare two result sets. Depending on the type of results (Crossvalidation or simple evaluation) different statistical methods will be employd.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         'input',
@@ -99,6 +103,7 @@ def __compare_subparser(subparsers):
                         help='Metric that should be used for comparing the results.')
     parser.set_defaults(action=__compare)
 
+
 def __compare(args):
     first_result = ResultSet.load(args.input[0], comparison_metric=KEY_TO_METRIC[args.metric])
     second_result = ResultSet.load(args.input[1], comparison_metric=KEY_TO_METRIC[args.metric])
@@ -107,8 +112,6 @@ def __compare(args):
     print("\nStatistics:")
     for key, value in stats.items():
         print(f'\n {key}:\n   statistic: {value[0]}\n   pvalue: {value[1]}\n')
-
-
 
 
 def __export(args):
