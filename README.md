@@ -35,6 +35,11 @@ Or for windows:
 .\ds_virtualenv\Scripts\activate.bat
 ```
 
+Once the virtualenv is activated, the tool can be installed from th source directory (containing setup.py) with this command:
+```bash
+pip install -e .
+```
+
 ## Configuration
 If you used the included script to download the AlexNet model, the tool is already configured correctly for [usage](#using-the-tool). Otherwise, you have to adjust your configuration file. The default file can be found in `deep-spectrum/src/cli/deep.conf`:
 ```
