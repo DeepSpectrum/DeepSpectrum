@@ -11,28 +11,32 @@ If you use DeepSpectrum or any code from DeepSpectrum in your research work, you
 
 
 # Installation
-This program supports pipenv for dependency resolution and installation and we highly recommend you to use it. In addition to the actual tool in `deep-spectrum` there is also another tool which helps with aquiring the pre-trained AlexNet model and converting it to a tensorflow compatible format. This relies on the `caffe-tensorflow` conversion tool found at https://github.com/ethereon/caffe-tensorflow 
+This program provides a setup.py script which declares all dependencies.
 
 ## Dependencies
-* Python 3.6 with pipenv for the Deep Spectrum tool (`pip install pipenv`)
+* Python >=3.6
 
 ## Deep Spectrum tool
-Install the Deep Spectrum tool from the repository directory with pipenv (which also handles the creation of a virtualenv for you):
+We recommend that you install the DeepSpectrum tool into a virtual environment. To do so first create a new virtualenvironment:
 ```bash
-cd deep-spectrum
-pipenv --site-packages install
+virtualenv -p python3 ds_virtualenv
 ```
-If you already have installed a recent version (> 1.5) of tensorflow on your system, continue with the [configuration](#configuration). Otherwise, install tensorflow (version 1.8.0 is tested): 
+If you have a recent installation of tensorflow (>=1.12) on your system, you can also create a virtualenvironment that incorporates you system python packages:
 ```bash
-pipenv install tensorflow==1.11.0
+virtualenv -p python3 --system-site-packages ds_virtualenv
 ```
-Or the CUDA enabled version:
+This creates a minimal python installation in the folder "ds_virtualenv". You can choose a different name instead of "ds_virtualenv" if you like, but the guide assumes this name.
+You can then activate the virtualenv (Linux):
 ```bash
-pipenv install tensorflow-gpu==1.11.0
+source ds_virtualenv/bin/activate
+```
+Or for windows:
+```bash
+.\ds_virtualenv\Scripts\activate.bat
 ```
 
 ## Configuration
-If you used the included script to download the AlexNet model, the tool is already configured correctly for [usage](#using-the-tool). Otherwise, you have to adjust your configuration file. The default file can be found in `deep-spectrum/deep_spectrum_extractor/cli/deep.conf`:
+If you used the included script to download the AlexNet model, the tool is already configured correctly for [usage](#using-the-tool). Otherwise, you have to adjust your configuration file. The default file can be found in `deep-spectrum/src/cli/deep.conf`:
 ```
 [main]
 size = 227
@@ -42,19 +46,10 @@ backend = tensorflow
 [tensorflow-nets]
 alexnet = AlexNet.pb
 ```
-Under `tensorflow-nets` you can define network names and their corresponding model files (in .pb format). Currently, only the converted AlexNet model is officially supported. You can try it with different models but might have to adjust code in `deep-spectrum/deep_spectrum_extractor/backend/extractor.py` in order to correctly identify your model's layer outputs in the graph's tensors. We plan on including a extraction backend for the new TensorFlow Hub (https://www.tensorflow.org/hub/) in the near future to make using different models easier.
+Under `tensorflow-nets` you can define network names and their corresponding model files (in .pb format). Currently, only the converted AlexNet model is officially supported. You can try it with different models but might have to adjust code in `deep-spectrum/src/backend/extractor.py` in order to correctly identify your model's layer outputs in the graph's tensors. We plan on including a extraction backend for the new TensorFlow Hub (https://www.tensorflow.org/hub/) in the near future to make using different models easier.
 
 # Using the tool
- If you have installed the tool with pipenv, you can run it in different ways. Calling
- ```bash
- pipenv run ds-features -h
-```
-from inside the `deep-spectrum` directory will run the tool from the virtualenv pipenv created for you automatically. You can also run
-```bash
-pipenv shell
-ds-features -h
-```
-from the same place. This will start a new shell for you in which the virtualenv is activated. For the following examples, we assume you used the second method.
+You can access the scripts provided by the tool from the virtualenvironment. The feature extraction component is provided by `ds-features`.
 
 ## Features for AVEC2018 CES
 The command below extracts features from overlapping 1 second windows spaced with a hop size of 0.1 seconds (`-t 1 0.1`) of the the file `Train_DE_01.wav`. It plots mel spectrograms (`-mode mel`) and feeds them to a pre-trained AlexNet model (`-net alexnet`). The activations on the fc7 layer (`-layer fc7`) are finally written to `Train_DE_01.arff` as feature vectors in arff format. `--no_labels` suppresses writing any labels to the output file.
@@ -140,29 +135,14 @@ ds-help
 | ds-image-features | Extract CNN-descriptors from images.                      |
 | ds-plot | Create plots from wav files.                                     |
 | ds-reduce | Reduce a list of feature files by removing zero features.      |
-| ds-svm | Train and evaluate a linear Support Vector Machine.              |
+| ds-scikit | Train and evaluate optimized scikit-learn models.             |
 | ds-dnn | Interface for training and evaluating a Deep Neural Network.     |
 | ds-rnn | Interface for training and evaluating a Recurrent Neural Network.|
 | ds-cm | Create a pdf plot from the textual representation of a confusion matrix. |
-
+| ds-results | Tool to inspect, load and export results. |
 
 For each tool, detailed usage descriptions are available with: 'ds-[tool] --help'
 
-## Linear SVM
-
-If the package is installed, a linear SVM classifier can be called with: 
-
-```bash
-ds-svm train.arff devel.arff test.arff
-```
-
-per default, this evaluates SVM complexities on a logarithmic scale between 1 
-and 10^-9 by training the classifier on the first feature file and evaluating it 
-on the second one. Another evaluation is done by combining the first to partitions
-and evaluating on the last. If only two partitions are given, the first evaluation 
-is performed by 10-fold CV. Additional arguments (e.g. for writing the results, 
-specifying the complexities by hand or plotting a confusion matrix) are described 
-by calling `-h`.
 
 ## Neural Networks
 
@@ -176,7 +156,7 @@ ds-dnn|ds-rnn train|eval|predict [feature_files]
 ```
 
 `train` takes two feature files as input: training data and evaluation 
-data, whereas `eval` and `predict` use a single input file. All cli interface share
+data, whereas `eval` and `predict` use a single input file. All cli interfaces share
 the `--model_dir` argument which specifies where checkpoints should be written
 during trainig and from where a trained model should be loaded for evaluation/prediction.
 All additional parameters for each network and operating mode are accessible via `-h`.
