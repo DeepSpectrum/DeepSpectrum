@@ -1,22 +1,106 @@
+#!/usr/bin/env python
+import re
+import sys
 from setuptools import setup, find_packages
+from subprocess import CalledProcessError, check_output
 
-setup(name='deep_spectrum_extractor',
-      version='0.2',
-      packages=find_packages(),
-      entry_points={
-          'console_scripts': [
-              'ds-features = deep_spectrum_extractor.cli.ds_extract:main',
-              'ds-reduce = deep_spectrum_extractor.tools.feature_reduction:main',
-              'ds-svm = deep_spectrum_extractor.learn.scikit_models:main',
-              'ds-dnn = deep_spectrum_extractor.learn.tf.dnn.__main__:main',
-              'ds-rnn = deep_spectrum_extractor.learn.tf.rnn.__main__:main',
-              'ds-cm = deep_spectrum_extractor.tools.performance_stats:main',
-              'ds-image-features = deep_spectrum_extractor.cli.image_features:main',
-              'ds-plot = deep_spectrum_extractor.cli.ds_plot:main',
-              'ds-help = deep_spectrum_extractor.cli.ds_help:main'
-          ]
-      },
-      install_requires=['numpy', 'scipy', 'pandas', 'imread', 'pysoundfile', 'tqdm', 'matplotlib', 'opencv-python', 'librosa', 'scikit-learn', 'liac-arff'],
-      extras_require={'tensorflow-gpu': ['tensorflow-gpu'], 'tensorflow': ['tensorflow']},
-      zip_safe=False
-      )
+PROJECT = "DeepSpectrum"
+VERSION = "0.3.1"
+LICENSE = "GPLv3+"
+AUTHOR = "Maurice Gerczuk"
+AUTHOR_EMAIL = "gerczuk@fim.uni-passau.de"
+
+dependencies = [
+    'numpy>=1.16',
+    'scipy>=1.2.0',
+    'pandas>=0.24.0',
+    'imread>=0.7.0',
+    'pysoundfile',
+    'tqdm>=4.30.0',
+    'matplotlib>=3.0.2',
+    'opencv-python>=4.0.0.21',
+    'librosa',
+    'scikit-learn>=0.20.2',
+    'liac-arff>=2.3.1',
+    'statsmodels>=0.9',
+    'tensorflow-plot>=0.2.0',
+    'dataclasses>=0.6'
+]
+
+
+if sys.version_info < (3,7):
+    if sys.version_info >= (3,6):
+        dependencies.append('dataclasses>=0.6')
+    else:
+        sys.exit('Python < 3.6 is not supported')
+
+try:
+    import tensorflow
+
+    tensorflow_found = True
+except ImportError:
+    tensorflow_found = False
+
+if not tensorflow_found:
+    # inspired by cmake's FindCUDA
+    nvcc_version_regex = re.compile("release (?P<major>[0-9]+)\\.(?P<minor>[0-9]+)")
+    use_gpu = False
+
+    try:
+        output = str(check_output(["nvcc", "--version"]))
+        version_string = nvcc_version_regex.search(output)
+
+        if version_string:
+            major = int(version_string.group("major"))
+            minor = int(version_string.group("minor"))
+
+            if major != 8 or (major == 9 and minor != 0):
+                print("detected incompatible CUDA version %d.%d" % (major, minor))
+            else:
+                print("detected compatible CUDA version %d.%d" % (major, minor))
+
+                use_gpu = True
+        else:
+            print("CUDA detected, but unable to parse version")
+    except CalledProcessError:
+        print("no CUDA detected")
+    except Exception as e:
+        print("error during CUDA detection: %s", e)
+
+    if use_gpu:
+        dependencies.append("tensorflow-gpu>=1.12.0")
+    else:
+        dependencies.append("tensorflow>=1.12.0")
+else:
+    print("tensorflow already installed, skipping CUDA detection")
+
+setup(
+    name=PROJECT,
+    version=VERSION,
+    license=LICENSE,
+    author=AUTHOR,
+    author_email=AUTHOR_EMAIL,
+    platforms=["Any"],
+    scripts=[],
+    provides=[],
+    python_requires='>=3.6',
+    install_requires=dependencies,
+    namespace_packages=[],
+    packages=find_packages(),
+    include_package_data=True,
+    entry_points = {
+                   'console_scripts': [
+                       'ds-features = src.cli.ds_features:main',
+                       'ds-reduce = src.tools.feature_reduction:main',
+                       'ds-scikit = src.cli.ds_scikit:main',
+                       'ds-dnn = src.learn.tf.dnn.__main__:main',
+                       'ds-rnn = src.learn.tf.rnn.__main__:main',
+                       'ds-cm = src.tools.performance_stats:main',
+                       'ds-image-features = src.cli.image_features:main',
+                       'ds-plot = src.cli.ds_plot:main',
+                       'ds-help = src.cli.ds_help:main',
+                       'ds-results = src.cli.ds_results:main'
+                   ]
+               },
+    zip_safe = False
+)
