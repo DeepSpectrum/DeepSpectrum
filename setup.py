@@ -54,7 +54,7 @@ if not tensorflow_found:
             major = int(version_string.group("major"))
             minor = int(version_string.group("minor"))
 
-            if major != 8 or (major == 9 and minor != 0):
+            if major != 9 or (major == 9 and minor != 0):
                 print("detected incompatible CUDA version %d.%d" % (major, minor))
             else:
                 print("detected compatible CUDA version %d.%d" % (major, minor))

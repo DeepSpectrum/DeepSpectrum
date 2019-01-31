@@ -8,7 +8,6 @@ from os import listdir, makedirs, walk
 from matplotlib import cm
 from os.path import abspath, join, isfile, basename, expanduser, dirname, isdir, realpath
 
-import src.tf_models as tf_models
 from src.backend.plotting import PLOTTING_FUNCTIONS
 from ..backend.extractor import TensorFlowExtractor, TensorflowHubExtractor, CaffeExtractor
 from src.tools.label_parser import LabelParser
@@ -443,13 +442,12 @@ class Configuration:
             print('Writing standard config to ' + self.config)
             main_conf = {'size': str(227), 'gpu': str(1), 'backend': 'caffe'}
             tensorflow_net_conf = {
-                model.__name__: '# Path to model weights (.npy) go here.'
-                for model in tf_models.get_models()
+                'alexnet': '# Path to model weights (.npy) go here.'
+
             }
             caffe_net_conf = {
-                model.__name__:
+                'alexnet':
                 '# Path to model folder containing model definition (.prototxt) and weights (.caffemodel) go here.'
-                for model in tf_models.get_models()
             }
             hub_conf = {'#module_name': '#module_path'}
             conf_parser['main'] = main_conf
