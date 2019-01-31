@@ -106,8 +106,8 @@ def _generate_chunks_filename_timestamp_wrapper(filepath, window, hop, start=0, 
             yield AudioChunk(basename(filepath), sr, ts, audio)
 
 
-def plot_spectrogram(audio_data, sr, ylim, nfft=None, delta=None, **kwargs):
-    spectrogram = y_limited_spectrogram(audio_data, sr, nfft, ylim=ylim)
+def plot_spectrogram(audio_data, sr, nfft=None, delta=None, **kwargs):
+    spectrogram = y_limited_spectrogram(audio_data, sr, nfft, ylim=kwargs['ylim'])
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
     spectrogram = librosa.amplitude_to_db(spectrogram, ref=np.max, top_db=None)
