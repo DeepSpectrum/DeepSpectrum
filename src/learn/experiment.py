@@ -16,7 +16,7 @@ RESULT_EXT = 'json'
 
 class Modes(Enum):
     CLASSIFICATION = 'Classification'
-    #REGRESSION = 'Regression'
+    REGRESSION = 'Regression'
 
     def __str__(self):
         return self.value
