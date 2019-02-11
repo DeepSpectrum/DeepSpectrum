@@ -327,7 +327,8 @@ class Configuration:
         # check if labels are missing for specific files
         missing_labels = file_names.difference(self.writer_args['label_dict'])
         if missing_labels:
-            self.parser.error('No labels for: ' + ', '.join(missing_labels))
+            print(f'No labels for: {len(missing_labels)} files. Only processing files with labels.')
+            self.files = [file for file in self.files if basename(file) in self.writer_args['label_dict']]
 
     def _create_labels_from_folder_structure(self):
         """

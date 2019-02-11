@@ -248,12 +248,3 @@ class PlotGenerator():
             self.pool.close()
             self.pool.join()
             raise StopIteration
-
-    @staticmethod
-    def _find_wav_files(folder):
-        globexpression = '*.wav'
-        reg_expr = re.compile(fnmatch.translate(globexpression), re.IGNORECASE)
-        wavs = []
-        for root, dirs, files in walk(folder, topdown=True):
-            wavs += [join(root, j) for j in files if re.match(reg_expr, j)]
-        return wavs
