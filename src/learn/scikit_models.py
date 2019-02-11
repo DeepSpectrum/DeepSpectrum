@@ -127,12 +127,12 @@ class ScikitExperiment(Experiment):
         if self.mode == Modes.CLASSIFICATION:
             self._grid_search = GridSearchCV(estimator=self.pipeline, param_grid=self.parameter_grid,
                                              scoring=SCIKIT_CLASSIFICATION_SCORERS,
-                                             n_jobs=1, cv=cv, refit=metric.__name__, verbose=1, iid=False,
+                                             n_jobs=-1, cv=cv, refit=metric.__name__, verbose=1, iid=False,
                                              return_train_score=False)
         else:
             self._grid_search = GridSearchCV(estimator=self.pipeline, param_grid=self.parameter_grid,
                                              scoring=SCIKIT_REGRESSION_SCORERS,
-                                             n_jobs=1, cv=cv, refit=metric.__name__, verbose=1, iid=False,
+                                             n_jobs=-1, cv=cv, refit=metric.__name__, verbose=1, iid=False,
                                              return_train_score=False)
 
         self._grid_search.fit(X, y)
