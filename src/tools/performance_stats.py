@@ -1,21 +1,23 @@
-import argparse
-import numpy as np
-import tfplot
 import itertools
+
+import argparse
 import matplotlib
+import numpy as np
+import pandas as pd
+import tfplot
+
 matplotlib.use('Agg')
 from matplotlib import rcParams
+
 rcParams.update({'figure.autolayout': True})
-import matplotlib.pyplot as plt
 from os.path import splitext, dirname, abspath
 from os import makedirs
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib import cm as colourmaps
 from sklearn.metrics import confusion_matrix
 
-DESCRIPTION='Create a pdf plot from the textual representation of a confusion matrix.'
+DESCRIPTION = 'Create a pdf plot from the textual representation of a confusion matrix.'
 
-matplotlib.rcParams.update({'font.size': 13})
 
 def plot_confusion_matrix_from_pred(pred,
                                     true,
@@ -23,9 +25,12 @@ def plot_confusion_matrix_from_pred(pred,
                                     normalize=True,
                                     title='Confusion matrix',
                                     cmap='summer_r',
-                                    save_path=None,
                                     predicted_label='Predicted label',
-                                    true_label='True label'):
+                                    true_label='True label',
+                                    percentages=False,
+                                    figsize=(5, 5)):
+    if classes is None:
+        classes = sorted(set(true))
     cm = confusion_matrix(true, pred, labels=classes)
     return plot_confusion_matrix(
         cm,
@@ -34,7 +39,9 @@ def plot_confusion_matrix_from_pred(pred,
         title=title,
         cmap=cmap,
         predicted_label=predicted_label,
-        true_label=true_label)
+        true_label=true_label,
+        percentages=percentages,
+        figsize=figsize)
 
 
 def plot_confusion_matrix(cm,
@@ -44,16 +51,17 @@ def plot_confusion_matrix(cm,
                           cmap='summer_r',
                           predicted_label='Predicted label',
                           true_label='True label',
-                          percentages=True):
+                          percentages=True,
+                          figsize=(5, 5)):
     """
     This function prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
     """
-    fig = matplotlib.figure.Figure(dpi=200)
+    fig = matplotlib.figure.Figure(dpi=300, figsize=figsize, tight_layout=True)
     original_cm = cm
     total_samples = np.sum(original_cm)
     if normalize:
-        with np.errstate(divide='ignore',invalid='ignore'):
+        with np.errstate(divide='ignore', invalid='ignore'):
             cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
     ax = fig.add_subplot(1, 1, 1)
     im = ax.imshow(cm, vmin=0, vmax=1, cmap=cmap)
@@ -73,7 +81,7 @@ def plot_confusion_matrix(cm,
             range(original_cm.shape[0]), range(original_cm.shape[1])):
         text = format(original_cm[i, j], fmt)
         if percentages:
-            text += '\n{0:.1%}'.format(original_cm[i,j]/total_samples)
+            text += '\n{0:.1%}'.format(original_cm[i, j] / total_samples)
         ax.text(
             j,
             i,
@@ -107,11 +115,14 @@ def isqrt(n):
 def main():
     parser = argparse.ArgumentParser(
         description=
-        'Create nice looking plot from textual representation of confusion matrix.'
+        'Plot a confusion matrix. Either from a predictions csv or a textual representation given as argument.'
     )
+    parser.add_argument('-i', required=False,
+                        help='Path to predictions csv file. Needs columns "pred_label" and "true_label".', default=None)
     parser.add_argument(
-        '-i',
-        required=True,
+        '-ti',
+        required=False,
+        default=None,
         nargs='+',
         type=int,
         help=
@@ -134,29 +145,61 @@ def main():
         '-o', required=True, help='Output path for confusionmatrix.')
     parser.add_argument(
         '-classes',
-        required=True,
+        required=False,
+        default=None,
         nargs='+',
         help=
         'Name of the classes for the confusion matrix in the order they should appear on the top.'
     )
     parser.add_argument('-p', '--percentages', help='Show percentages.', default=False, action='store_true')
+    parser.add_argument('-s', '--size', help='Dimensions of the cm plot in (width, height).', type=int, nargs=2,
+                        default=(5, 5))
+    parser.add_argument('-fs', '--fontsize', help='Fontisize for cm plot.', type=int, default=13)
     args = parser.parse_args()
-    number_of_classes = isqrt(len(args.i))
-    assert (number_of_classes**2 == len(args.i)), 'Not a quadratic matrix!'
-    cm = np.reshape(args.i, (isqrt(len(args.i)), isqrt(len(args.i))))
-    assert (number_of_classes == len(args.classes)
-            ), 'Invalid combination of confusion matrix and class labels!'
+    matplotlib.rcParams.update({'font.size': args.fontsize})
+
+    if args.ti is not None:
+        print('Using textual confusion matrix given on commandline.')
+        if args.classes is None:
+            parser.error('Class names have to be given when using textual input.')
+        number_of_classes = isqrt(len(args.i))
+        assert (number_of_classes ** 2 == len(args.i)), 'Not a quadratic matrix!'
+        cm = np.reshape(args.i, (isqrt(len(args.i)), isqrt(len(args.i))))
+        assert (number_of_classes == len(args.classes)
+                ), 'Invalid combination of confusion matrix and class labels!'
+
+        fig = plot_confusion_matrix(
+            cm,
+            classes=args.classes,
+            normalize=True,
+            title=args.title,
+            cmap=args.colour,
+            predicted_label=args.pl,
+            true_label=args.tl,
+            percentages=args.percentages,
+            figsize=args.size)
+
+    elif args.i is not None:
+        print('Creating confusion matrix from predictions csv file.')
+        df = pd.read_csv(args.i)
+        pred = df['pred_label']
+        true = df['true_label']
+        fig = plot_confusion_matrix_from_pred(pred=pred, true=true, classes=args.classes,
+                                              normalize=True,
+                                              title=args.title,
+                                              cmap=args.colour,
+                                              predicted_label=args.pl,
+                                              true_label=args.tl,
+                                              percentages=args.percentages,
+                                              figsize=args.size)
+
+    else:
+        parser.error(
+            'Either a textual representation of the confusion matrix or a csv file with predictions has to be given.')
+        return
+
     save_path = abspath(args.o)
     makedirs(dirname(save_path), exist_ok=True)
-    fig = plot_confusion_matrix(
-        cm,
-        classes=args.classes,
-        normalize=True,
-        title=args.title,
-        cmap=args.colour,
-        predicted_label=args.pl,
-        true_label=args.tl,
-        percentages=args.percentages)
     save_fig(fig, args.o)
 
 
