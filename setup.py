@@ -24,7 +24,8 @@ dependencies = [
     'liac-arff>=2.3.1',
     'statsmodels>=0.9',
     'tensorflow-plot>=0.2.0',
-    'dataclasses>=0.6'
+    'dataclasses>=0.6',
+    'click'
 ]
 
 
@@ -53,13 +54,19 @@ if not tensorflow_found:
         if version_string:
             major = int(version_string.group("major"))
             minor = int(version_string.group("minor"))
-
-            if major != 9 or (major == 9 and minor != 0):
-                print("detected incompatible CUDA version %d.%d" % (major, minor))
-            else:
+            if major == 10:
                 print("detected compatible CUDA version %d.%d" % (major, minor))
+                dependencies.append("tensorflow-gpu>=1.13.0")
+                use_gpu=True
 
-                use_gpu = True
+            if major == 9:
+                print("detected compatible CUDA version %d.%d" % (major, minor))
+                dependencies.append("tensorflow-gpu==1.12.0")
+                use_gpu=True
+
+            else:
+                print("detected incompatible CUDA version %d.%d" % (major, minor))
+
         else:
             print("CUDA detected, but unable to parse version")
     except CalledProcessError:
@@ -67,10 +74,8 @@ if not tensorflow_found:
     except Exception as e:
         print("error during CUDA detection: %s", e)
 
-    if use_gpu:
-        dependencies.append("tensorflow-gpu>=1.12.0")
-    else:
-        dependencies.append("tensorflow>=1.12.0")
+    if not use_gpu:
+        dependencies.append("tensorflow>=1.13.0")
 else:
     print("tensorflow already installed, skipping CUDA detection")
 
@@ -90,16 +95,17 @@ setup(
     include_package_data=True,
     entry_points = {
                    'console_scripts': [
-                       'ds-features = src.cli.ds_features:main',
-                       'ds-reduce = src.tools.feature_reduction:main',
-                       'ds-scikit = src.cli.ds_scikit:main',
-                       'ds-dnn = src.learn.tf.dnn.__main__:main',
-                       'ds-rnn = src.learn.tf.rnn.__main__:main',
-                       'ds-cm = src.tools.performance_stats:main',
-                       'ds-image-features = src.cli.image_features:main',
-                       'ds-plot = src.cli.ds_plot:main',
-                       'ds-help = src.cli.ds_help:main',
-                       'ds-results = src.cli.ds_results:main'
+                       'ds-features = deepspectrum.cli.ds_features:main',
+                       'ds-reduce = deepspectrum.tools.feature_reduction:main',
+                       'ds-scikit = deepspectrum.cli.ds_scikit:main',
+                       'ds-dnn = deepspectrum.learn.tf.dnn.__main__:main',
+                       'ds-rnn = deepspectrum.learn.tf.rnn.__main__:main',
+                       'ds-cm = deepspectrum.tools.performance_stats:main',
+                       'ds-image-features = deepspectrum.cli.image_features:main',
+                       'ds-plot = deepspectrum.cli.ds_plot:main',
+                       'ds-help = deepspectrum.cli.ds_help:main',
+                       'ds-results = deepspectrum.cli.ds_results:main',
+                       'deepspectrum = deepspectrum.__main__:cli'
                    ]
                },
     zip_safe = False
