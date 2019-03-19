@@ -37,10 +37,10 @@ CLASSIFIER_GRID = [
     {'scaler': [StandardScaler(), MinMaxScaler()],
      'estimator': [LinearSVC(random_state=RANDOM_SEED)],
      'estimator__loss': ['hinge', 'squared_hinge'],
-     'estimator__C': np.logspace(-3, -8, num=5),
+     'estimator__C': np.logspace(0, -8, num=9),
      'estimator__class_weight': ['balanced'],
      'estimator__max_iter': [10000]},
-    {'scaler': [StandardScaler(), MinMaxScaler(), None], 'estimator': [SGDClassifier(random_state=RANDOM_SEED)],
+    {'scaler': [StandardScaler(), MinMaxScaler(), None], 'estimator': [SGDClassifier(random_state=RANDOM_SEED, tol=0.001)],
       'estimator__loss': ['hinge', 'log', 'modified_huber', 'squared_hinge', 'perceptron'],
       'estimator__class_weight': ['balanced'], 'estimator__early_stopping': [True],
       'estimator__n_iter_no_change': [5],
@@ -717,5 +717,5 @@ def main_old():
         write_predictions(prediction_path, best_prediction, names=names, true_labels=true_labels)
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()

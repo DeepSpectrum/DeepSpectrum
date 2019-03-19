@@ -8,10 +8,8 @@ import librosa.display
 import numpy as np
 import soundfile as sf
 import pathlib
-import re
-import fnmatch
 from imread import imread_from_blob
-from os import environ, makedirs, walk
+from os import environ, makedirs
 from os.path import basename, join, dirname
 from multiprocessing import cpu_count, Pool
 from functools import partial

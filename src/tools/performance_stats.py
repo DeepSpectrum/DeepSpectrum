@@ -19,24 +19,28 @@ from sklearn.metrics import confusion_matrix
 DESCRIPTION = 'Create a pdf plot from the textual representation of a confusion matrix.'
 
 
-def plot_confusion_matrix_from_pred(pred,
-                                    true,
+def plot_confusion_matrix_from_pred(preds,
+                                    trues,
                                     classes,
                                     normalize=True,
-                                    title='Confusion matrix',
+                                    titles='Confusion matrix',
                                     cmap='summer_r',
                                     predicted_label='Predicted label',
                                     true_label='True label',
                                     percentages=False,
                                     figsize=(5, 5)):
-    if classes is None:
-        classes = sorted(set(true))
-    cm = confusion_matrix(true, pred, labels=classes)
+
+    cms = []
+    for pred, true in zip(preds, trues):
+        if classes is None:
+            classes = sorted(set(true))
+        cm = confusion_matrix(true, pred, labels=classes)
+        cms.append(cm)
     return plot_confusion_matrix(
-        cm,
+        cms,
         classes,
         normalize=normalize,
-        title=title,
+        titles=titles,
         cmap=cmap,
         predicted_label=predicted_label,
         true_label=true_label,
@@ -44,10 +48,10 @@ def plot_confusion_matrix_from_pred(pred,
         figsize=figsize)
 
 
-def plot_confusion_matrix(cm,
+def plot_confusion_matrix(cms,
                           classes,
                           normalize=False,
-                          title='Confusion matrix',
+                          titles='Confusion matrix',
                           cmap='summer_r',
                           predicted_label='Predicted label',
                           true_label='True label',
@@ -58,37 +62,39 @@ def plot_confusion_matrix(cm,
     Normalization can be applied by setting `normalize=True`.
     """
     fig = matplotlib.figure.Figure(dpi=300, figsize=figsize, tight_layout=True)
-    original_cm = cm
-    total_samples = np.sum(original_cm)
-    if normalize:
-        with np.errstate(divide='ignore', invalid='ignore'):
-            cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-    ax = fig.add_subplot(1, 1, 1)
-    im = ax.imshow(cm, vmin=0, vmax=1, cmap=cmap)
-    fig.colorbar(im)
-    ax.set_title(title)
-    tick_marks = np.arange(len(classes))
-    ax.set_xlabel(predicted_label)
-    ax.set_xticks(tick_marks)
-    ax.set_xticklabels(classes, rotation=45)
-    ax.set_ylabel(true_label)
-    ax.set_yticks(tick_marks)
-    ax.set_yticklabels(classes, rotation=45)
+    for i, (cm, title) in enumerate(zip(cms, titles)):
+        original_cm = cm
+        if normalize:
+            with np.errstate(divide='ignore', invalid='ignore'):
+                cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        ax = fig.add_subplot(1, len(cms), 1+i)
+        im = ax.imshow(cm, vmin=0, vmax=1, cmap=cmap)
 
-    fmt = 'd'
-    thresh = cm.max() / 2.
-    for i, j in itertools.product(
-            range(original_cm.shape[0]), range(original_cm.shape[1])):
-        text = format(original_cm[i, j], fmt)
-        if percentages:
-            text += '\n{0:.1%}'.format(original_cm[i, j] / total_samples)
-        ax.text(
-            j,
-            i,
-            text,
-            horizontalalignment="center",
-            verticalalignment="center",
-            color="white" if cm[i, j] > thresh else "black")
+        ax.set_title(title)
+        tick_marks = np.arange(len(classes))
+        ax.set_xlabel(predicted_label)
+        ax.set_xticks(tick_marks)
+        ax.set_xticklabels(classes, rotation=45)
+        ax.set_ylabel(true_label)
+        ax.set_yticks(tick_marks)
+        ax.set_yticklabels(classes, rotation=45)
+
+        fmt = 'd'
+        thresh = cm.max() / 2.
+        for i, j in itertools.product(
+                range(original_cm.shape[0]), range(original_cm.shape[1])):
+            text = format(original_cm[i, j], fmt)
+            if percentages:
+                text += '\n{0:.1%}'.format(original_cm[i, j] / original_cm.sum(axis=1)[i])
+            ax.text(
+                j,
+                i,
+                text,
+                horizontalalignment="center",
+                verticalalignment="center",
+                color="white" if cm[i, j] > thresh else "black")
+
+    fig.colorbar(im)
     fig.set_tight_layout(True)
     return fig
 
@@ -134,8 +140,9 @@ def main():
         '-tl', help='Name for true label.', default='True label')
     parser.add_argument(
         '-title',
+        nargs='+',
         help='Title for confusionmatrix.',
-        default='Confusion Matrix')
+        default=['Confusion Matrix'])
     parser.add_argument(
         '-colour',
         help='matplotlib colourmap to use.',
@@ -153,8 +160,9 @@ def main():
     )
     parser.add_argument('-p', '--percentages', help='Show percentages.', default=False, action='store_true')
     parser.add_argument('-s', '--size', help='Dimensions of the cm plot in (width, height).', type=int, nargs=2,
-                        default=(5, 5))
+                        default=(6, 5))
     parser.add_argument('-fs', '--fontsize', help='Fontisize for cm plot.', type=int, default=13)
+    parser.add_argument('--two', nargs=2)
     args = parser.parse_args()
     matplotlib.rcParams.update({'font.size': args.fontsize})
 
@@ -162,17 +170,17 @@ def main():
         print('Using textual confusion matrix given on commandline.')
         if args.classes is None:
             parser.error('Class names have to be given when using textual input.')
-        number_of_classes = isqrt(len(args.i))
-        assert (number_of_classes ** 2 == len(args.i)), 'Not a quadratic matrix!'
-        cm = np.reshape(args.i, (isqrt(len(args.i)), isqrt(len(args.i))))
+        number_of_classes = isqrt(len(args.ti))
+        assert (number_of_classes ** 2 == len(args.ti)), 'Not a quadratic matrix!'
+        cm = np.reshape(args.ti, (isqrt(len(args.ti)), isqrt(len(args.ti))))
         assert (number_of_classes == len(args.classes)
                 ), 'Invalid combination of confusion matrix and class labels!'
 
         fig = plot_confusion_matrix(
-            cm,
+            [cm],
             classes=args.classes,
             normalize=True,
-            title=args.title,
+            titles=args.title,
             cmap=args.colour,
             predicted_label=args.pl,
             true_label=args.tl,
@@ -184,9 +192,25 @@ def main():
         df = pd.read_csv(args.i)
         pred = df['pred_label']
         true = df['true_label']
-        fig = plot_confusion_matrix_from_pred(pred=pred, true=true, classes=args.classes,
+        fig = plot_confusion_matrix_from_pred(preds=[pred], trues=[true], classes=args.classes,
                                               normalize=True,
-                                              title=args.title,
+                                              titles=args.title,
+                                              cmap=args.colour,
+                                              predicted_label=args.pl,
+                                              true_label=args.tl,
+                                              percentages=args.percentages,
+                                              figsize=args.size)
+    elif args.two is not None:
+        print('Creating confusion matrix from two predictions csv file.')
+        df = pd.read_csv(args.two[0])
+        pred_one = df['pred_label']
+        true_one = df['true_label']
+        df = pd.read_csv(args.two[1])
+        pred_two = df['pred_label']
+        true_two = df['true_label']
+        fig = plot_confusion_matrix_from_pred(preds=[pred_one, pred_two], trues=[true_one, true_two], classes=args.classes,
+                                              normalize=True,
+                                              titles=args.title,
                                               cmap=args.colour,
                                               predicted_label=args.pl,
                                               true_label=args.tl,

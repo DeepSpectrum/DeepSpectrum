@@ -69,7 +69,7 @@ def __train_subparser(subparsers):
              'folds are created.')
     train_parser.add_argument('-vd', '--validation_data', default=None,
                               help='Define a separate validation partition that should be used for model optimization.')
-    train_parser.add_argument('-cvf', '--cross_validation_folds', default=10,
+    train_parser.add_argument('-cvf', '--cross_validation_folds', type=int, default=10,
                               help='Define number of random stratified crossvalidation folds that should be created from the input file. Only applicable if using single training file and no separate validation data.')
     train_parser.set_defaults(action=__train)
     __add_basic_args(train_parser)

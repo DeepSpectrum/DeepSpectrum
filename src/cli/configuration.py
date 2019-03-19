@@ -9,7 +9,7 @@ from matplotlib import cm
 from os.path import abspath, join, isfile, basename, expanduser, dirname, isdir, realpath
 
 from src.backend.plotting import PLOTTING_FUNCTIONS
-from ..backend.extractor import TensorFlowExtractor, TensorflowHubExtractor, CaffeExtractor
+from ..backend.extractor import TensorFlowExtractor, TensorflowHubExtractor, CaffeExtractor, KerasExtractor
 from src.tools.label_parser import LabelParser
 
 getcontext().prec = 6
@@ -433,9 +433,29 @@ class Configuration:
                         self.parser.error(
                             'No model weights defined for {} in {}'.format(
                                 self.net, self.config))
+
+                elif self.backend == 'keras':
+                    print('Using keras backend as specified in {}'.
+                          format(self.config))
+                    try:
+                        import tensorflow
+                        import tensorflow.keras
+                        self.extractor = KerasExtractor
+                    except ImportError:
+                        self.parser.error(
+                            'No keras installation found!'
+                        )
+                    net_conf = conf_parser['keras-nets']
+                    if self.net in net_conf:
+                        self.extraction_args['weights_path'] = net_conf[self.net]
+                        self.extraction_args['model_key'] = self.net
+                    else:
+                        self.parser.error(
+                            'No model weights defined for {} in {}'.format(
+                                self.net, self.config))
                 else:
                     self.parser.error(
-                        'Unknown backend \'{}\' defined in {}. Available backends: tensorflow, caffe'.
+                        'Unknown backend \'{}\' defined in {}. Available backends: tensorflow, caffe, keras and tf-hub.'.
                         format(self.backend, self.config))
 
         # if not, create it with standard settings
@@ -450,11 +470,16 @@ class Configuration:
                 'alexnet':
                 '# Path to model folder containing model definition (.prototxt) and weights (.caffemodel) go here.'
             }
+            keras_net_conf = {
+                'vgg16':
+                    'imagenet'
+            }
             hub_conf = {'#module_name': '#module_path'}
             conf_parser['main'] = main_conf
             conf_parser['tensorflow-nets'] = tensorflow_net_conf
             conf_parser['caffe-nets'] = caffe_net_conf
             conf_parser['hub-nets'] = hub_conf
+            conf_parser['keras-nets'] = keras_net_conf
             with open(self.config, 'w') as configfile:
                 conf_parser.write(configfile)
                 self.parser.error(
