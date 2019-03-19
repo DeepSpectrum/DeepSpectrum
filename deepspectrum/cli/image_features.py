@@ -45,7 +45,3 @@ def image_features(**kwargs):
         log.info('Performing feature reduction...')
         fr.reduce_file(configuration.writer_args['output'],
                        configuration.reduced)
-
-
-if __name__ == '__main__':
-    main()
