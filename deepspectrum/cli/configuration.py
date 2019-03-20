@@ -244,7 +244,7 @@ class Configuration:
                                                     ) and time_continuous and self.label_file
             self.writer_args['labels'] = explicit_label
             # self.writer_args['no_timestamps'] = args['no_timestamps']
-            self.writer_args['write_timestamps'] = (window_size_and_hop is not None) and not no_timestamps
+            self.writer_args['write_timestamps'] = (window_size_and_hop != (None, None)) and not no_timestamps
             self.writer_args['no_labels'] = no_labels
             self.label_file = label_file
             self.reduced = reduced
