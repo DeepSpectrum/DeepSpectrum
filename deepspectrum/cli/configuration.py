@@ -359,7 +359,7 @@ class Configuration:
                         exit(1)
                 else:
                     log.error(
-                        f'Unknown backend \'{self.backend}\' defined in {self.config}. Available backends: tensorflow, caffe, keras and tf-hub.')
+                        f'Unknown backend \'{self.backend}\' defined in {self.config}. Available backends: keras')
                     exit(1)
 
         # if not, create it with standard settings

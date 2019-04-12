@@ -25,7 +25,8 @@ dependencies = [
     'statsmodels>=0.9',
     'tensorflow-plot>=0.2.0',
     'dataclasses>=0.6',
-    'click'
+    'click',
+    'Pillow'
 ]
 
 
