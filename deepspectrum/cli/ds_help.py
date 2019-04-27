@@ -1,12 +1,9 @@
-from ..tools.performance_stats import DESCRIPTION as ds_cm
-
 DESCRIPTION_EXTRACT = 'Extract deep spectrum features from wav files.'
 DESCRIPTION_IMAGE_FEATURES = 'Extract CNN-descriptors from images.'
 DESCRIPTION_PLOT = 'Create plots from wav files.'
 DESCRIPTION_SCIKIT = 'Train and evaluate optimized scikit-learn models.'
 DESCRIPTION_REDUCE= 'Reduce a list of feature files by removing zero features.'
 DESCRIPTION_NN = 'Interface for training and evaluating a {}.'
-
 DESCRIPTION_RESULTS = 'Tool to inspect, load and export results.'
 
 
@@ -20,11 +17,6 @@ def main():
 |**** {'ds-image-features : '+DESCRIPTION_IMAGE_FEATURES:81} ****|
 |**** {'ds-plot : '+DESCRIPTION_PLOT:81} ****|
 |**** {'ds-reduce : '+DESCRIPTION_REDUCE:81} ****|
-|**** {'ds-scikit : '+DESCRIPTION_SCIKIT:81} ****|
-|**** {'ds-dnn : '+DESCRIPTION_NN.format('Deep Neural Network'):81} ****|
-|**** {'ds-rnn : '+DESCRIPTION_NN.format('Recurrent Neural Network'):81} ****|
-|**** {'ds-cm : '+ds_cm:81} ****|
-|**** {'ds-results : '+DESCRIPTION_RESULTS:81} ****|
 |*                                                                                         *|
 |* For each tool, detailed usage descriptions are available with: \'ds-[tool] --help\'       *|
 |-------------------------------------------------------------------------------------------|'''

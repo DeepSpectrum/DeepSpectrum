@@ -6,7 +6,7 @@ from ..cli.ds_help import DESCRIPTION_REDUCE
 
 import numpy as np
 
-import src.tools.custom_arff as arff
+import deepspectrum.tools.custom_arff as arff
 
 
 

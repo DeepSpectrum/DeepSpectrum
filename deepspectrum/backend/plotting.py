@@ -28,6 +28,10 @@ font = {'family': 'normal',
 
 matplotlib.rc('font', **font)
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 def _read_wav_data(wav_file, start=0, end=None):
     """
@@ -37,6 +41,7 @@ def _read_wav_data(wav_file, start=0, end=None):
     :return: np array of audio data, frame rate
     """
     sound_info, frame_rate, = sf.read(wav_file)
+    log.debug(f'Read audio file {wav_file}. Shape: {sound_info.shape} Samplerate: {frame_rate}')
     # convert stereo to mono
     if len(sound_info.shape) > 1:
         sound_info = sound_info.astype(float)
@@ -66,6 +71,7 @@ def plot_chunk(chunk, mode='spectrogram', output_folder=None, size=227, nfft=Non
     write_index = ts is not None
     if not nfft:
         nfft = _next_power_of_two(int(sr * 0.025))
+    log.debug(f'Using nfft={nfft} for the FFT.')
     fig = plt.figure(frameon=False, tight_layout=False)
 
     if labelling:
@@ -114,8 +120,9 @@ def plot_chunk(chunk, mode='spectrogram', output_folder=None, size=227, nfft=Non
     try:
         img = imread_from_blob(img_blob, 'png')
         img = img[:, :, :-1]
+        log.debug(f'Read spectrogram plot with shape {img.shape}.')
     except IOError:
-        print('Error while reading the spectrogram blob.')
+        log.error('Error while reading the spectrogram blob.')
         return None
     return PlotTuple(name=filename, timestamp=ts, plot=img)
 

@@ -41,59 +41,69 @@ pip install -e .
 ```
 
 ## Configuration
-If you used the included script to download the AlexNet model, the tool is already configured correctly for [usage](#using-the-tool). Otherwise, you have to adjust your configuration file. The default file can be found in `deep-spectrum/src/cli/deep.conf`:
+If you just want to start working with ImageNet pretrained keras-application models, skip to [usage](#using-the-tool). Otherwise, you can adjust your configuration file to use other weights for the supported models. The default file can be found in `deep-spectrum/src/cli/deep.conf`:
 ```
 [main]
 size = 227
-gpu = 1
-backend = tensorflow
+backend = keras
 
-[tensorflow-nets]
-alexnet = AlexNet.pb
+[keras-nets]
+vgg16 = imagenet
+vgg19 = imagenet
+resnet50 = imagenet
+inception_resnet_v2 = imagenet
+xception = imagenet
+densenet121 = imagenet
+densenet169 = imagenet
+densenet201 = imagenet
+mobilenet= imagenet
+mobilenet_v2 = imagenet
+nasnet_large = imagenet
+nasnet_mobile = imagenet
+
 ```
-Under `tensorflow-nets` you can define network names and their corresponding model files (in .pb format). Currently, only the converted AlexNet model is officially supported. You can try it with different models but might have to adjust code in `deep-spectrum/src/backend/extractor.py` in order to correctly identify your model's layer outputs in the graph's tensors. We plan on including a extraction backend for the new TensorFlow Hub (https://www.tensorflow.org/hub/) in the near future to make using different models easier.
+Under `keras-nets` you can define network weights for the supported models. Setting the weights for a model to `imagenet` is the default and uses ImageNet pretrained models from `keras-aplications`.
 
 # Using the tool
-You can access the scripts provided by the tool from the virtualenvironment. The feature extraction component is provided by `ds-features`.
+You can access the scripts provided by the tool from the virtualenvironment by calling `deepspectrum`. The feature extraction component is provided by the subcommand `features`.
 
 ## Features for AVEC2018 CES
-The command below extracts features from overlapping 1 second windows spaced with a hop size of 0.1 seconds (`-t 1 0.1`) of the the file `Train_DE_01.wav`. It plots mel spectrograms (`-mode mel`) and feeds them to a pre-trained AlexNet model (`-net alexnet`). The activations on the fc7 layer (`-layer fc7`) are finally written to `Train_DE_01.arff` as feature vectors in arff format. `--no_labels` suppresses writing any labels to the output file.
+The command below extracts features from overlapping 1 second windows spaced with a hop size of 0.1 seconds (`-t 1 0.1`) of the the file `Train_DE_01.wav`. It plots mel spectrograms (`-m mel`) and feeds them to a pre-trained VGG16 model (`-en vgg16`). The activations on the fc2 layer (`-fl fc2`) are finally written to `Train_DE_01.arff` as feature vectors in arff format. `-nl` suppresses writing any labels to the output file. The first argument after `deepspectrum features` must be the path to the audiofile(s).
 ```bash
-ds-features -i Train_DE_01.wav -t 1 0.1 --no_labels -net alexnet -layer fc7 -mode mel -o Train_DE_01.arff
+deepspectrum features Train_DE_01.wav -t 1 0.1 -nl -en alexnet -fl fc2 -m mel -o Train_DE_01.arff
 ```
 
 ## Commandline Options
-All options can also be displayed using `ds-features -h`.
+All options can also be displayed using `deepspectrum features --help`.
 ### Required options
 | Option   | Description | Default |
 |----------|-------------|---------|
-| **-i**   | Specify the directory containing your *.wav* files or the path to a single *.wav* file. | None |
-| **-o** | The location of the output feature file. Supported output formats are: Comma separated value files and arff files. If the specified output file's extension is *.arff*, arff is chosen as format, otherwise the output will be in comma separated value format. | None |
+| -o, --output | The location of the output feature file. Supported output formats are: Comma separated value files and arff files. If the specified output file's extension is *.arff*, arff is chosen as format, otherwise the output will be in comma separated value format. | None |
 
 
 ### Extracting features from audio chunks
 | Option   | Description | Default |
 |----------|-------------|---------|
-| -t | Define window and hopsize for feature extraction. E.g `-t 1 0.5` extracts features from 1 second chunks every 0.5 seconds. | Extract from the whole audio file. |
-| -start | Set a start time (in seconds) from which features should be extracted from the audio files. | 0 |
-| -end | Set an end time until which features should be extracted from the audio files. | None |
+| -t, --window-size-and-hop | Define window and hopsize for feature extraction. E.g `-t 1 0.5` extracts features from 1 second chunks every 0.5 seconds. | Extract from the whole audio file. |
+| -s, --start | Set a start time (in seconds) from which features should be extracted from the audio files. | 0 |
+| -e, --end | Set an end time until which features should be extracted from the audio files. | None |
 
 ### Setting parameters for the audio plots
 | Option   | Description | Default |
 |----------|-------------|---------|
-| -mode | Type of plot to use in the system (Choose from: 'spectrogram', 'mel', 'chroma'). | spectrogram |
-| -scale | Scale for the y-axis of the plots used by the system (Choose from: 'linear', 'log' and 'mel'). This is ignored if mode=chroma or mode=mel. (default: linear)
-| -ylim | Specify a limit for the y-axis in the spectrogram plot in frequency. | None |
-| -delta | If specified, derivatives of the given order of the selected features are displayed in the plots used by the system. | None |
-| -nmel | Number of melbands used for computing the melspectrogram. Only takes effect with mode=mel. | 128 |
+| -m, --mode | Type of plot to use in the system (Choose from: 'spectrogram', 'mel', 'chroma'). | spectrogram |
+| -fs, --frequency-scale | Scale for the y-axis of the plots used by the system (Choose from: 'linear', 'log' and 'mel'). This is ignored if mode=chroma or mode=mel. (default: linear)
+| -fl, --frequency-limit | Specify a limit for the y-axis in the spectrogram plot in frequency. | None |
+| -d, --delta | If specified, derivatives of the given order of the selected features are displayed in the plots used by the system. | None |
+| -nm, --number-of-melbands | Number of melbands used for computing the melspectrogram. Only takes effect with mode=mel. | 128 |
 | -nfft | The length of the FFT window used for creating the spectrograms in number of samples. Consider choosing smaller values when extracting from small segments. | The next power of two from 0.025 x sampling_rate_of_wav |
-| -cmap | Choose a matplotlib colourmap for creating the spectrogram plots. | viridis |
+| -cm, --colour-map | Choose a matplotlib colourmap for creating the spectrogram plots. | viridis |
 
 ### Parameters for the feature extractor CNN
 | Option   | Description | Default |
 |----------|-------------|---------|
-| -net | Choose the net for feature extraction as specified in the config file | alexnet |
-| -layer | Name of the layer from which features should be extracted as specified in your caffe .prototxt file. | fc7 |
+| -en, --extraction-network | Choose the net for feature extraction as specified in the config file | alexnet |
+| -fl, --feature-layer | Name of the layer from which features should be extracted. | fc2 |
 
 ### Defining label information
 You can use csv files for label information or explicitly set a fixed label for all input files. If you use csv files, numerical features are supported (e.g. for regression). If you do neither of those, each file is assigned the name of its parent directory as label. This can be useful if your folder structure already represents the class labels, e.g.
@@ -110,58 +120,21 @@ data                          Base Directory of your data
 
 | Option   | Description | Default |
 |----------|-------------|---------|
-| -l | Specify a comma separated values file containing labels for each *.wav* file. It has to include a header and the first column must specify the name of the audio file (with extension!) | None |
-| --tc | Set labeling of features to time continuous mode. Only works in conjunction with -t and the specified label file has to provide labels for the specified hops in its second column. | False |
-| -el | Specify a single label that will be used for every input file explicitly. | None |
-| --no_timestamps | Remove timestamps from the output. | Write timestamps in feature file. |
-| --no_labels | Remove labels from the output. | Write labels in feature file. |
+| -lf, --label-file | Specify a comma separated values file containing labels for each *.wav* file. It has to include a header and the first column must specify the name of the audio file (with extension!) | None |
+| -tc, --time-continuous | Set labeling of features to time continuous mode. Only works in conjunction with -t and the specified label file has to provide labels for the specified hops in its second column. | False |
+| -el, --explicit-label | Specify a single label that will be used for every input file explicitly. | None |
+| -nts, --no-timestamps | Remove timestamps from the output. | Write timestamps in feature file. |
+| -nl, --no-labels | Remove labels from the output. | Write labels in feature file. |
 
 ### Additional output 
 | Option   | Description | Default |
 |----------|-------------|---------|
-| -specout | Specify a folder to save the plots used during extraction as .pngs | None |
-| -wavout | Convenience function to write the chunks of audio data used in the extraction to the specified folder. | None |
+| -so, --spectrogram-out | Specify a folder to save the plots used during extraction as .pngs | None |
+| -wo, --wav-out | Convenience function to write the chunks of audio data used in the extraction to the specified folder. | None |
 
 ### Configuration and Help
 | Option   | Description | Default |
 |----------|-------------|---------|
-| -np | Specify the number of processes used for the extraction. Defaults to the number of available CPU cores | None |
-| -config | The path to the configuration file used by the program can be given here. If the file does not exist yet, it is created and filled with standard settings. | deep.conf |
-| -h | Show help. | None |
-
-# Toolkit
-Apart from the main feature extraction functionality, the toolkit also includes various other commandline scripts. An overview can be shown on via:
-```bash
-ds-help
-```
-| Script | Description |
-|-----------------------------------------|--------------------------------------------------|
-| ds-features | Extract deep spectrum features from wav files.                   |
-| ds-image-features | Extract CNN-descriptors from images.                      |
-| ds-plot | Create plots from wav files.                                     |
-| ds-reduce | Reduce a list of feature files by removing zero features.      |
-| ds-scikit | Train and evaluate optimized scikit-learn models.             |
-| ds-dnn | Interface for training and evaluating a Deep Neural Network.     |
-| ds-rnn | Interface for training and evaluating a Recurrent Neural Network.|
-| ds-cm | Create a pdf plot from the textual representation of a confusion matrix. |
-| ds-results | Tool to inspect, load and export results. |
-
-For each tool, detailed usage descriptions are available with: 'ds-[tool] --help'
-
-
-## Neural Networks
-
-Two types of neural network models are available: A regular feed-forward network 
-and a recurrent neural network usable with either gru or lstm cells. The 
-networks can be run with `ds-dnn` and `ds-rnn` and support three operating modes: 
-`train`, `eval` and `predict`. All commands have the following common structure: 
-
-```bash
-ds-dnn|ds-rnn train|eval|predict [feature_files]
-```
-
-`train` takes two feature files as input: training data and evaluation 
-data, whereas `eval` and `predict` use a single input file. All cli interfaces share
-the `--model_dir` argument which specifies where checkpoints should be written
-during trainig and from where a trained model should be loaded for evaluation/prediction.
-All additional parameters for each network and operating mode are accessible via `-h`.
+| -np, --number-of-processes | Specify the number of processes used for the extraction. Defaults to the number of available CPU cores | None |
+| -c, --config | The path to the configuration file used by the program can be given here. If the file does not exist yet, it is created and filled with standard settings. | deep.conf |
+| --help | Show help. | None |
