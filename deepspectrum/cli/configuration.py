@@ -5,7 +5,7 @@ import re
 from decimal import *
 from multiprocessing import cpu_count
 from os import makedirs, walk
-from os.path import abspath, join, isfile, basename, dirname, realpath
+from os.path import abspath, join, isfile, basename, dirname, realpath, splitext
 
 from deepspectrum.backend.plotting import PLOTTING_FUNCTIONS
 from deepspectrum.tools.label_parser import LabelParser
@@ -261,12 +261,20 @@ class Configuration:
 
 
     def _find_files(self, folder):
+        log.debug(f'Input file type is "{self.file_type}".')
+        if isfile(folder) and splitext(folder)[1] == '.'+self.file_type:
+            log.debug(f'{folder} is a single {self.file_type}-file.')
+            return [folder]
         globexpression = '*.' + self.file_type
         reg_expr = re.compile(fnmatch.translate(globexpression), re.IGNORECASE)
-        wavs = []
+        input_files = []
+        log.debug(f'Searching {folder} for {self.file_type}-files.')
         for root, dirs, files in walk(folder, topdown=True):
-            wavs += [join(root, j) for j in files if re.match(reg_expr, j)]
-        return wavs
+            new_files = [join(root, j) for j in files if re.match(reg_expr, j)]
+            log.debug(f'Found {len(new_files)} {self.file_type}-files in {root}.')
+            input_files += new_files
+        log.debug(f'Found a total of {len(input_files)} {self.file_type}-files.')
+        return input_files
 
     def _read_label_file(self):
         """
