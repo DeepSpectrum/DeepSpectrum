@@ -1,7 +1,6 @@
 import io
-import warnings
-
 import matplotlib
+import warnings
 
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -9,10 +8,8 @@ import librosa.display
 import numpy as np
 import soundfile as sf
 import pathlib
-import re
-import fnmatch
 from imread import imread_from_blob
-from os import environ, makedirs, walk
+from os import environ, makedirs
 from os.path import basename, join, dirname
 from multiprocessing import cpu_count, Pool
 from functools import partial
@@ -23,6 +20,18 @@ AudioChunk = namedtuple('AudioChunk', ['name', 'samplerate', 'timestamp', 'audio
 
 environ['GLOG_minloglevel'] = '2'
 
+label_font = {'family': 'normal',
+              'size': 14}
+
+font = {'family': 'normal',
+        'size': 12}
+
+matplotlib.rc('font', **font)
+
+import logging
+
+log = logging.getLogger(__name__)
+
 
 def _read_wav_data(wav_file, start=0, end=None):
     """
@@ -32,6 +41,7 @@ def _read_wav_data(wav_file, start=0, end=None):
     :return: np array of audio data, frame rate
     """
     sound_info, frame_rate, = sf.read(wav_file)
+    log.debug(f'Read audio file {wav_file}. Shape: {sound_info.shape} Samplerate: {frame_rate}')
     # convert stereo to mono
     if len(sound_info.shape) > 1:
         sound_info = sound_info.astype(float)
@@ -45,7 +55,8 @@ def _read_wav_data(wav_file, start=0, end=None):
     return sound_info, frame_rate
 
 
-def plot_chunk(chunk, mode='spectrogram', output_folder=None, size=227, nfft=None, **kwargs):
+def plot_chunk(chunk, mode='spectrogram', output_folder=None, size=227, nfft=None, file_type='png', labelling=False,
+               **kwargs):
     """
     Plot spectrograms for a chunk of a wav-file using the described parameters.
     :param chunk: audio chunk to be plotted.
@@ -60,23 +71,45 @@ def plot_chunk(chunk, mode='spectrogram', output_folder=None, size=227, nfft=Non
     write_index = ts is not None
     if not nfft:
         nfft = _next_power_of_two(int(sr * 0.025))
-    fig = plt.figure(frameon=False)
-    fig.set_size_inches(1, 1)
-    ax = plt.Axes(fig, [0., 0., 1., 1.], )
-    ax.set_axis_off()
-    fig.add_axes(ax)
+    log.debug(f'Using nfft={nfft} for the FFT.')
+    fig = plt.figure(frameon=False, tight_layout=False)
+
+    if labelling:
+        pass
+    else:
+        fig.set_size_inches(1, 1)
+        ax = plt.Axes(fig, [0., 0., 1., 1.])
+        ax.set_axis_off()
+        fig.add_axes(ax)
+
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
         spectrogram_axes = PLOTTING_FUNCTIONS[mode](audio, sr, nfft, **kwargs)
+        if labelling:
+            original_xlim = spectrogram_axes.get_xlim()
+            if mode != 'chroma':
+                kHz_ticks = np.apply_along_axis(lambda x: x / 1000, 0, spectrogram_axes.get_yticks())
+                spectrogram_axes.set_yticklabels(kHz_ticks)
+                spectrogram_axes.set_ylabel('Frequency [kHz]', fontdict=label_font)
+            else:
+                spectrogram_axes.set_ylabel('Pitch Classes', fontdict=label_font)
+            if labelling:
+                spectrogram_axes.set_xticks(spectrogram_axes.get_xticks()[::2])
+            spectrogram_axes.set_xlabel('Time [s]', fontdict=label_font)
+            spectrogram_axes.set_xlim(original_xlim)
         del audio
     fig.add_axes(spectrogram_axes, id='spectrogram')
+
+    if labelling:
+        plt.colorbar(format='%+2.1f dB')
+        plt.tight_layout()
 
     if output_folder:
         file_name = basename(filename)[:-4]
         outfile = join(output_folder, '{}_{:.4f}'.format(file_name, ts).rstrip('0').rstrip(
-            '.') + '.png') if write_index else join(output_folder,
-                                                    file_name + '.png')
-        fig.savefig(outfile, format='png', dpi=size)
+            '.') + '.' + file_type) if write_index else join(output_folder,
+                                                             file_name + '.' + file_type)
+        fig.savefig(outfile, format=file_type, dpi=size)
     buf = io.BytesIO()
     fig.savefig(buf, format='png', dpi=size)
     buf.seek(0)
@@ -87,8 +120,9 @@ def plot_chunk(chunk, mode='spectrogram', output_folder=None, size=227, nfft=Non
     try:
         img = imread_from_blob(img_blob, 'png')
         img = img[:, :, :-1]
+        log.debug(f'Read spectrogram plot with shape {img.shape}.')
     except IOError:
-        print('Error while reading the spectrogram blob.')
+        log.error('Error while reading the spectrogram blob.')
         return None
     return PlotTuple(name=filename, timestamp=ts, plot=img)
 
@@ -107,7 +141,7 @@ def _generate_chunks_filename_timestamp_wrapper(filepath, window, hop, start=0, 
 
 
 def plot_spectrogram(audio_data, sr, nfft=None, delta=None, **kwargs):
-    spectrogram = y_limited_spectrogram(audio_data, sr, nfft, ylim=kwargs['ylim'])
+    spectrogram = librosa.stft(audio_data, n_fft=nfft, hop_length=int(nfft / 2), center=False)
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
     spectrogram = librosa.amplitude_to_db(spectrogram, ref=np.max, top_db=None)
@@ -115,17 +149,19 @@ def plot_spectrogram(audio_data, sr, nfft=None, delta=None, **kwargs):
 
 
 def plot_mel_spectrogram(audio_data, sr, nfft=None, melbands=64, delta=None, **kwargs):
-    spectrogram = y_limited_spectrogram(audio_data, sr, nfft, ylim=kwargs['ylim'])
-    spectrogram = librosa.feature.melspectrogram(S=np.abs(spectrogram) ** 2, sr=sr, n_mels=melbands)
+    spectrogram = y_limited_spectrogram(audio_data, sr=sr, nfft=nfft, ylim=kwargs['ylim'])
+    kwargs['scale'] = 'mel'
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
+    spectrogram = librosa.feature.melspectrogram(S=np.abs(spectrogram) ** 2, sr=sr, n_mels=melbands)
     spectrogram = librosa.power_to_db(spectrogram, ref=np.max, top_db=None)
     return _create_plot(spectrogram, sr, nfft, **kwargs)
 
 
 def plot_chroma(audio_data, sr, nfft=None, delta=None, **kwargs):
-    spectrogram = y_limited_spectrogram(audio_data, sr, nfft, ylim=kwargs['ylim'])
+    spectrogram = librosa.stft(audio_data, n_fft=nfft, hop_length=int(nfft / 2), center=False)
     spectrogram = librosa.feature.chroma_stft(S=np.abs(spectrogram) ** 2, sr=sr)
+    kwargs['scale'] = 'chroma'
     if delta:
         spectrogram = librosa.feature.delta(spectrogram, order=delta)
     return _create_plot(spectrogram, sr, nfft, **kwargs)
@@ -141,8 +177,13 @@ def y_limited_spectrogram(audio_data, sr, nfft=None, ylim=None):
 
 
 def _create_plot(spectrogram, sr, nfft, ylim=None, cmap='viridis', scale='linear', **kwargs):
+    if not ylim:
+        ylim = sr / 2
     spectrogram_axes = librosa.display.specshow(spectrogram, hop_length=int(nfft / 2), fmax=ylim, sr=sr, cmap=cmap,
-                                                y_axis=scale)
+                                                y_axis=scale, x_axis='time')
+    if scale == 'linear':
+        spectrogram_axes.set_ylim(0, ylim)
+
     return spectrogram_axes
 
 
@@ -207,16 +248,8 @@ class PlotGenerator():
     def __next__(self):
         try:
             return next(self.plots)
+
         except StopIteration:
             self.pool.close()
             self.pool.join()
             raise StopIteration
-
-    @staticmethod
-    def _find_wav_files(folder):
-        globexpression = '*.wav'
-        reg_expr = re.compile(fnmatch.translate(globexpression), re.IGNORECASE)
-        wavs = []
-        for root, dirs, files in walk(folder, topdown=True):
-            wavs += [join(root, j) for j in files if re.match(reg_expr, j)]
-        return wavs

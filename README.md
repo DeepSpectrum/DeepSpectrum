@@ -11,100 +11,99 @@ If you use DeepSpectrum or any code from DeepSpectrum in your research work, you
 
 
 # Installation
-This program supports pipenv for dependency resolution and installation and we highly recommend you to use it. In addition to the actual tool in `deep-spectrum` there is also another tool which helps with aquiring the pre-trained AlexNet model and converting it to a tensorflow compatible format. This relies on the `caffe-tensorflow` conversion tool found at https://github.com/ethereon/caffe-tensorflow 
+This program provides a setup.py script which declares all dependencies.
 
 ## Dependencies
-* Python 3.6 with pipenv for the Deep Spectrum tool (`pip install pipenv`)
-* Python 2.7 to download and convert the AlexNet model
-
-## Download and convert AlexNet model
-The Deep Spectrum tool uses the ImageNet pretrained AlexNet model to extract features. To download and convert it to a tensorflow compatible format, a script `download_alexnet.sh` is included. The script performs these general steps:
-1. Create a python2 virtual environment with tensorflow in `convert-models/`
-2. Clone the caffe-tensorflow repository (https://github.com/ethereon/caffe-tensorflow) that is later used to convert the model
-3. Fix incompatibilities of the repository with new tensorflow versions
-4. Download the model files from https://github.com/BVLC/caffe/tree/master/models/bvlc_alexnet
-5. Run the conversion script `convert-models/caffe-tensorflow/convert.py` to convert the weights to .npy format
-6. Load the model into a tensorflow graph and save it to `.pb` format (`convert_to_pb.py`)
-7. Move the file to `deep-spectrum/AlexNet.pb`
+* Python >=3.6
 
 ## Deep Spectrum tool
-Install the Deep Spectrum tool from the `deep-spectrum/` directory with pipenv (which also handles the creation of a virtualenv for you):
+We recommend that you install the DeepSpectrum tool into a virtual environment. To do so first create a new virtualenvironment:
 ```bash
-cd deep-spectrum
-pipenv --site-packages install
+virtualenv -p python3 ds_virtualenv
 ```
-If you already have installed a recent version (> 1.5) of tensorflow on your system, continue with the [configuration](#configuration). Otherwise, install tensorflow (version 1.8.0 is tested): 
+If you have a recent installation of tensorflow (>=1.12) on your system, you can also create a virtualenvironment that incorporates you system python packages:
 ```bash
-pipenv install tensorflow==1.8.0
+virtualenv -p python3 --system-site-packages ds_virtualenv
 ```
-Or the CUDA enabled version:
+This creates a minimal python installation in the folder "ds_virtualenv". You can choose a different name instead of "ds_virtualenv" if you like, but the guide assumes this name.
+You can then activate the virtualenv (Linux):
 ```bash
-pipenv install tensorflow-gpu==1.8.0
+source ds_virtualenv/bin/activate
+```
+Or for windows:
+```bash
+.\ds_virtualenv\Scripts\activate.bat
+```
+
+Once the virtualenv is activated, the tool can be installed from th source directory (containing setup.py) with this command:
+```bash
+pip install -e .
 ```
 
 ## Configuration
-If you used the included script to download the AlexNet model, the tool is already configured correctly for [usage](#using-the-tool). Otherwise, you have to adjust your configuration file. The default file can be found in `deep-spectrum/deep_spectrum_extractor/cli/deep.conf`:
+If you just want to start working with ImageNet pretrained keras-application models, skip to [usage](#using-the-tool). Otherwise, you can adjust your configuration file to use other weights for the supported models. The default file can be found in `deep-spectrum/src/cli/deep.conf`:
 ```
 [main]
 size = 227
-gpu = 1
-backend = tensorflow
+backend = keras
 
-[tensorflow-nets]
-alexnet = AlexNet.pb
-```
-Under `tensorflow-nets` you can define network names and their corresponding model files (in .pb format). Currently, only the converted AlexNet model is officially supported. You can try it with different models but might have to adjust code in `deep-spectrum/deep_spectrum_extractor/backend/extractor.py` in order to correctly identify your model's layer outputs in the graph's tensors. We plan on including a extraction backend for the new TensorFlow Hub (https://www.tensorflow.org/hub/) in the near future to make using different models easier.
+[keras-nets]
+vgg16 = imagenet
+vgg19 = imagenet
+resnet50 = imagenet
+inception_resnet_v2 = imagenet
+xception = imagenet
+densenet121 = imagenet
+densenet169 = imagenet
+densenet201 = imagenet
+mobilenet= imagenet
+mobilenet_v2 = imagenet
+nasnet_large = imagenet
+nasnet_mobile = imagenet
 
- # Using the tool
- If you have installed the tool with pipenv, you can run it in different ways. Calling
- ```bash
- pipenv run extract_ds_features -h
 ```
-from inside the `deep-spectrum` directory will run the tool from the virtualenv pipenv created for you automatically. You can also run
-```bash
-pipenv shell
-extract_ds_features -h
-```
-from the same place. This will start a new shell for you in which the virtualenv is activated. For the following examples, we assume you used the second method.
+Under `keras-nets` you can define network weights for the supported models. Setting the weights for a model to `imagenet` is the default and uses ImageNet pretrained models from `keras-aplications`.
+
+# Using the tool
+You can access the scripts provided by the tool from the virtualenvironment by calling `deepspectrum`. The feature extraction component is provided by the subcommand `features`.
 
 ## Features for AVEC2018 CES
-The command below extracts features from overlapping 1 second windows spaced with a hop size of 0.1 seconds (`-t 1 0.1`) of the the file `Train_DE_01.wav`. It plots mel spectrograms (`-mode mel`) and feeds them to a pre-trained AlexNet model (`-net alexnet`). The activations on the fc7 layer (`-layer fc7`) are finally written to `Train_DE_01.arff` as feature vectors in arff format. `--no_labels` suppresses writing any labels to the output file.
+The command below extracts features from overlapping 1 second windows spaced with a hop size of 0.1 seconds (`-t 1 0.1`) of the the file `Train_DE_01.wav`. It plots mel spectrograms (`-m mel`) and feeds them to a pre-trained VGG16 model (`-en vgg16`). The activations on the fc2 layer (`-fl fc2`) are finally written to `Train_DE_01.arff` as feature vectors in arff format. `-nl` suppresses writing any labels to the output file. The first argument after `deepspectrum features` must be the path to the audiofile(s).
 ```bash
-extract_ds_features -i Train_DE_01.wav -t 1 0.1 --no_labels -net alexnet -layer fc7 -mode mel -o Train_DE_01.arff
+deepspectrum features Train_DE_01.wav -t 1 0.1 -nl -en vgg16 -fl fc2 -m mel -o Train_DE_01.arff
 ```
 
 ## Commandline Options
-All options can also be displayed using `extract_ds_features -h`.
+All options can also be displayed using `deepspectrum features --help`.
 ### Required options
 | Option   | Description | Default |
 |----------|-------------|---------|
-| **-i**   | Specify the directory containing your *.wav* files or the path to a single *.wav* file. | None |
-| **-o** | The location of the output feature file. Supported output formats are: Comma separated value files and arff files. If the specified output file's extension is *.arff*, arff is chosen as format, otherwise the output will be in comma separated value format. | None |
+| -o, --output | The location of the output feature file. Supported output formats are: Comma separated value files and arff files. If the specified output file's extension is *.arff*, arff is chosen as format, otherwise the output will be in comma separated value format. | None |
 
 
 ### Extracting features from audio chunks
 | Option   | Description | Default |
 |----------|-------------|---------|
-| -t | Define window and hopsize for feature extraction. E.g `-t 1 0.5` extracts features from 1 second chunks every 0.5 seconds. | Extract from the whole audio file. |
-| -start | Set a start time (in seconds) from which features should be extracted from the audio files. | 0 |
-| -end | Set an end time until which features should be extracted from the audio files. | None |
+| -t, --window-size-and-hop | Define window and hopsize for feature extraction. E.g `-t 1 0.5` extracts features from 1 second chunks every 0.5 seconds. | Extract from the whole audio file. |
+| -s, --start | Set a start time (in seconds) from which features should be extracted from the audio files. | 0 |
+| -e, --end | Set an end time until which features should be extracted from the audio files. | None |
 
 ### Setting parameters for the audio plots
 | Option   | Description | Default |
 |----------|-------------|---------|
-| -mode | Type of plot to use in the system (Choose from: 'spectrogram', 'mel', 'chroma'). | spectrogram |
-| -scale | Scale for the y-axis of the plots used by the system (Choose from: 'linear', 'log' and 'mel'). This is ignored if mode=chroma or mode=mel. (default: linear)
-| -ylim | Specify a limit for the y-axis in the spectrogram plot in frequency. | None |
-| -delta | If specified, derivatives of the given order of the selected features are displayed in the plots used by the system. | None |
-| -nmel | Number of melbands used for computing the melspectrogram. Only takes effect with mode=mel. | 128 |
+| -m, --mode | Type of plot to use in the system (Choose from: 'spectrogram', 'mel', 'chroma'). | spectrogram |
+| -fs, --frequency-scale | Scale for the y-axis of the plots used by the system (Choose from: 'linear', 'log' and 'mel'). This is ignored if mode=chroma or mode=mel. (default: linear)
+| -fl, --frequency-limit | Specify a limit for the y-axis in the spectrogram plot in frequency. | None |
+| -d, --delta | If specified, derivatives of the given order of the selected features are displayed in the plots used by the system. | None |
+| -nm, --number-of-melbands | Number of melbands used for computing the melspectrogram. Only takes effect with mode=mel. | 128 |
 | -nfft | The length of the FFT window used for creating the spectrograms in number of samples. Consider choosing smaller values when extracting from small segments. | The next power of two from 0.025 x sampling_rate_of_wav |
-| -cmap | Choose a matplotlib colourmap for creating the spectrogram plots. | viridis |
+| -cm, --colour-map | Choose a matplotlib colourmap for creating the spectrogram plots. | viridis |
 
 ### Parameters for the feature extractor CNN
 | Option   | Description | Default |
 |----------|-------------|---------|
-| -net | Choose the net for feature extraction as specified in the config file | alexnet |
-| -layer | Name of the layer from which features should be extracted as specified in your caffe .prototxt file. | fc7 |
+| -en, --extraction-network | Choose the net for feature extraction as specified in the config file | alexnet |
+| -fl, --feature-layer | Name of the layer from which features should be extracted. | fc2 |
 
 ### Defining label information
 You can use csv files for label information or explicitly set a fixed label for all input files. If you use csv files, numerical features are supported (e.g. for regression). If you do neither of those, each file is assigned the name of its parent directory as label. This can be useful if your folder structure already represents the class labels, e.g.
@@ -121,21 +120,21 @@ data                          Base Directory of your data
 
 | Option   | Description | Default |
 |----------|-------------|---------|
-| -l | Specify a comma separated values file containing labels for each *.wav* file. It has to include a header and the first column must specify the name of the audio file (with extension!) | None |
-| --tc | Set labeling of features to time continuous mode. Only works in conjunction with -t and the specified label file has to provide labels for the specified hops in its second column. | False |
-| -el | Specify a single label that will be used for every input file explicitly. | None |
-| --no_timestamps | Remove timestamps from the output. | Write timestamps in feature file. |
-| --no_labels | Remove labels from the output. | Write labels in feature file. |
+| -lf, --label-file | Specify a comma separated values file containing labels for each *.wav* file. It has to include a header and the first column must specify the name of the audio file (with extension!) | None |
+| -tc, --time-continuous | Set labeling of features to time continuous mode. Only works in conjunction with -t and the specified label file has to provide labels for the specified hops in its second column. | False |
+| -el, --explicit-label | Specify a single label that will be used for every input file explicitly. | None |
+| -nts, --no-timestamps | Remove timestamps from the output. | Write timestamps in feature file. |
+| -nl, --no-labels | Remove labels from the output. | Write labels in feature file. |
 
 ### Additional output 
 | Option   | Description | Default |
 |----------|-------------|---------|
-| -specout | Specify a folder to save the plots used during extraction as .pngs | None |
-| -wavout | Convenience function to write the chunks of audio data used in the extraction to the specified folder. | None |
+| -so, --spectrogram-out | Specify a folder to save the plots used during extraction as .pngs | None |
+| -wo, --wav-out | Convenience function to write the chunks of audio data used in the extraction to the specified folder. | None |
 
 ### Configuration and Help
 | Option   | Description | Default |
 |----------|-------------|---------|
-| -np | Specify the number of processes used for the extraction. Defaults to the number of available CPU cores | None |
-| -config | The path to the configuration file used by the program can be given here. If the file does not exist yet, it is created and filled with standard settings. | deep.conf |
-| -h | Show help. | None |
+| -np, --number-of-processes | Specify the number of processes used for the extraction. Defaults to the number of available CPU cores | None |
+| -c, --config | The path to the configuration file used by the program can be given here. If the file does not exist yet, it is created and filled with standard settings. | deep.conf |
+| --help | Show help. | None |

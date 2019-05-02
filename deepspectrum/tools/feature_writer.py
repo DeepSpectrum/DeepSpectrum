@@ -5,6 +5,9 @@ from tqdm import tqdm
 
 from .custom_arff import ArffWriter
 
+import logging
+
+log = logging.getLogger(__name__)
 
 class FeatureWriter:
     def __init__(self, output, label_dict, labels, continuous_labels, write_timestamps, no_labels):
@@ -27,10 +30,9 @@ class FeatureWriter:
             return None, self.label_dict[file_name]
 
 
-
 class ArffFeatureWriter(FeatureWriter):
     def write_features(self, names, features, hide_progress=False):
-        with open(self.output, 'w', newline='') as output_file, tqdm(total=len(names), disable=hide_progress) as pbar:
+        with open(self.output, 'w', newline='') as output_file, tqdm(total=len(names), disable=log.getEffectiveLevel() >= logging.ERROR) as pbar:
             writer = None
             first = True
             for batch in features:
@@ -67,7 +69,7 @@ class ArffFeatureWriter(FeatureWriter):
 
 class CsvFeatureWriter(FeatureWriter):
     def write_features(self, names, features, hide_progress=False):
-        with open(self.output, 'w', newline='') as output_file, tqdm(total=len(names), disable=hide_progress) as pbar:
+        with open(self.output, 'w', newline='') as output_file, tqdm(total=len(names), disable=log.getEffectiveLevel() >= logging.ERROR) as pbar:
             writer = None
             first = True
             for batch in features:
@@ -102,6 +104,7 @@ class CsvFeatureWriter(FeatureWriter):
                         old_name = feature_tuple.name
             pbar.update()
 
+
 def _determine_attributes(timestamp, feature_vector, classes):
     if timestamp:
         attributes = [('name', 'string'), ('timeStamp', 'numeric')
@@ -119,5 +122,5 @@ def _determine_attributes(timestamp, feature_vector, classes):
 def get_writer(**kwargs):
     if kwargs['output'].endswith('.arff'):
         return ArffFeatureWriter(**kwargs)
-    else:
+    elif kwargs['output'].endswith('.csv'):
         return CsvFeatureWriter(**kwargs)
