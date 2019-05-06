@@ -5,6 +5,7 @@ import warnings
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import librosa.display
+import librosa
 import numpy as np
 import soundfile as sf
 import pathlib
@@ -33,29 +34,22 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def _read_wav_data(wav_file, start=0, end=None):
+def _read_wav_data(wav_file, start=0, end=None, resample=None):
     """
     Reads data from a wav-file, converts this data to single channel and trims zeros at beginning and end of the
     audio data.
     :param wav_file: path to an existing .wav file
     :return: np array of audio data, frame rate
     """
-    sound_info, frame_rate, = sf.read(wav_file)
-    log.debug(f'Read audio file {wav_file}. Shape: {sound_info.shape} Samplerate: {frame_rate}')
-    # convert stereo to mono
-    if len(sound_info.shape) > 1:
-        sound_info = sound_info.astype(float)
-        sound_info = sound_info.sum(axis=1) / 2
-        sound_info = np.array(sound_info)
-    # remove zeros at beginning and end of audio file
-    sound_info = np.trim_zeros(sound_info)
-    start = int(start * frame_rate)
-    end = int(end * frame_rate) if end else None
-    sound_info = sound_info[start:end] if end else sound_info[start:]
-    return sound_info, frame_rate
+    start = float(start) if start is not None else None
+    end = float(end) if end is not None else None
+    y, sr, = librosa.core.load(wav_file, mono=True, offset=start, duration=end, sr=resample)
+    log.debug(f'Read audio file {wav_file}. Shape: {y.shape} Samplerate: {sr}')
+
+    return y,sr
 
 
-def plot_chunk(chunk, mode='spectrogram', output_folder=None, size=227, nfft=None, file_type='png', labelling=False,
+def plot_chunk(chunk, mode='spectrogram', output_folder=None, base_path=None, size=227, nfft=None, file_type='png', labelling=False,
                **kwargs):
     """
     Plot spectrograms for a chunk of a wav-file using the described parameters.
@@ -106,9 +100,18 @@ def plot_chunk(chunk, mode='spectrogram', output_folder=None, size=227, nfft=Non
 
     if output_folder:
         file_name = basename(filename)[:-4]
-        outfile = join(output_folder, '{}_{:.4f}'.format(file_name, ts).rstrip('0').rstrip(
-            '.') + '.' + file_type) if write_index else join(output_folder,
-                                                             file_name + '.' + file_type)
+        if base_path is None:
+            outfile = join(output_folder, '{}_{:.4f}'.format(file_name, ts).rstrip('0').rstrip(
+                '.') + '.' + file_type) if write_index else join(output_folder,
+                                                                 file_name + '.' + file_type)
+        else:
+            relative_path = get_relative_path(filename, base_path)
+            outfile = join(output_folder, relative_path, '{}_{:.4f}'.format(file_name, ts).rstrip('0').rstrip(
+                '.') + '.' + file_type) if write_index else join(output_folder, relative_path,
+                                                                 file_name + '.' + file_type)
+
+        log.debug(f'Saving spectrogram plot to {outfile}.')
+        makedirs(dirname(outfile), exist_ok=True)
         fig.savefig(outfile, format=file_type, dpi=size)
     buf = io.BytesIO()
     fig.savefig(buf, format='png', dpi=size)
@@ -127,8 +130,8 @@ def plot_chunk(chunk, mode='spectrogram', output_folder=None, size=227, nfft=Non
     return PlotTuple(name=filename, timestamp=ts, plot=img)
 
 
-def _generate_chunks_filename_timestamp_wrapper(filepath, window, hop, start=0, end=None, nfft=256, wav_out=None):
-    sound_info, sr = _read_wav_data(filepath, start=start, end=end)
+def _generate_chunks_filename_timestamp_wrapper(filepath, window, hop, start=0, end=None, resample=None, nfft=256, wav_out=None):
+    sound_info, sr = _read_wav_data(filepath, start=start, end=end, resample=resample)
     if not nfft:
         nfft = _next_power_of_two(int(sr * 0.025))
     for idx, audio in enumerate(_generate_chunks(sound_info, sr, window, hop, start, wav_out)):
@@ -137,7 +140,7 @@ def _generate_chunks_filename_timestamp_wrapper(filepath, window, hop, start=0, 
         else:
             ts = None
         if len(audio) >= nfft:  # cannot plot chunks that are too short
-            yield AudioChunk(basename(filepath), sr, ts, audio)
+            yield AudioChunk(filepath, sr, ts, audio)
 
 
 def plot_spectrogram(audio_data, sr, nfft=None, delta=None, **kwargs):
@@ -217,7 +220,7 @@ def get_relative_path(file, prefix):
 
 
 class PlotGenerator():
-    def __init__(self, files, output_spectrograms=None, output_wavs=None, number_of_processes=None,
+    def __init__(self, files, output_spectrograms=None, output_wavs=None, number_of_processes=None, base_path=None,
                  **kwargs):
         self.files = files
         self.number_of_processes = number_of_processes
@@ -231,9 +234,9 @@ class PlotGenerator():
                        _generate_chunks_filename_timestamp_wrapper(filename, wav_out=output_wavs,
                                                                    window=kwargs['window'], hop=kwargs['hop'],
                                                                    start=kwargs['start'], end=kwargs['end'],
-                                                                   nfft=kwargs['nfft']))
+                                                                   nfft=kwargs['nfft'], resample=kwargs['resample']))
         plotting_func = partial(
-            plot_chunk, output_folder=output_spectrograms,
+            plot_chunk, output_folder=output_spectrograms, base_path=base_path,
             **kwargs)
 
         self.pool = Pool(processes=self.number_of_processes)

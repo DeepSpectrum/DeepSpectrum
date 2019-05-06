@@ -77,6 +77,11 @@ PLOTTING_OPTIONS = [
         type=int,
         help='define a limit for the frequency axis for plotting the spectrograms',
         default=None),
+    click.option(
+            '-sr', '--sample-rate',
+            type=int,
+            help='define a target sample rate for reading the audio files. Audio files will be resampled to this rate before spectrograms are extracted.',
+            default=None),
 
     click.option(
         '-so', '--spectrogram-out',
@@ -189,7 +194,7 @@ class Configuration:
                  window_size_and_hop=None, number_of_melbands=128, spectrogram_out=None, wav_out=None,
                  pretty_pdfs=False, extraction_network='vgg16', feature_layer='fc7', batch_size=128, output=None,
                  time_continuous=False, label_file=None, explicit_label=None, no_timestamps=False, no_labels=False,
-                 reduced=None):
+                 reduced=None, sample_rate=None):
 
         self.input = input
         self.config = config
@@ -215,6 +220,8 @@ class Configuration:
             self.plotting_args['end'] = end
             self.plotting_args['window'] = window_size_and_hop[0] if window_size_and_hop else None
             self.plotting_args['hop'] = window_size_and_hop[1] if window_size_and_hop else None
+            self.plotting_args['resample'] = sample_rate
+            self.plotting_args['base_path'] = self.input
             if self.plotting_args['mode'] == 'mel':
                 self.plotting_args['melbands'] = number_of_melbands
             if self.plotting_args['mode'] == 'chroma':

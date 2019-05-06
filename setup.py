@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 from subprocess import CalledProcessError, check_output
 
 PROJECT = "DeepSpectrum"
-VERSION = "0.3.1"
+VERSION = "0.3.2"
 LICENSE = "GPLv3+"
 AUTHOR = "Maurice Gerczuk"
 AUTHOR_EMAIL = "gerczuk@fim.uni-passau.de"
@@ -23,7 +23,6 @@ dependencies = [
     'scikit-learn>=0.20.2',
     'liac-arff>=2.3.1',
     'statsmodels>=0.9',
-    'tensorflow-plot>=0.2.0',
     'dataclasses>=0.6',
     'click',
     'Pillow'
@@ -55,7 +54,7 @@ if not tensorflow_found:
         if version_string:
             major = int(version_string.group("major"))
             minor = int(version_string.group("minor"))
-            if major == 10:
+            if major == 10 and minor == 0:
                 print("detected compatible CUDA version %d.%d" % (major, minor))
                 dependencies.append("tensorflow-gpu>=1.13.0")
                 use_gpu=True
