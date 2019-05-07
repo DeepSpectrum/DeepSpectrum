@@ -3,4 +3,5 @@ def add_options(options):
         for option in reversed(options):
             func = option(func)
         return func
+
     return _add_options
