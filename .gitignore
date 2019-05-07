@@ -9,7 +9,6 @@ venv/*
 *.png
 *.arff
 *.wav
-*.txt
 *.ipynb
 *_old.py
 *_conflict*
