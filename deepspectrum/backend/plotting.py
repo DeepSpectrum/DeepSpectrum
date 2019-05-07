@@ -5,7 +5,10 @@ import warnings
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import librosa.display
+<<<<<<< HEAD
 import librosa
+=======
+>>>>>>> 3780bbc8df491a2e2ca0c6a667a4cab782901605
 import numpy as np
 import soundfile as sf
 import pathlib

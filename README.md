@@ -70,7 +70,7 @@ You can access the scripts provided by the tool from the virtualenvironment by c
 ## Features for AVEC2018 CES
 The command below extracts features from overlapping 1 second windows spaced with a hop size of 0.1 seconds (`-t 1 0.1`) of the the file `Train_DE_01.wav`. It plots mel spectrograms (`-m mel`) and feeds them to a pre-trained VGG16 model (`-en vgg16`). The activations on the fc2 layer (`-fl fc2`) are finally written to `Train_DE_01.arff` as feature vectors in arff format. `-nl` suppresses writing any labels to the output file. The first argument after `deepspectrum features` must be the path to the audiofile(s).
 ```bash
-deepspectrum features Train_DE_01.wav -t 1 0.1 -nl -en alexnet -fl fc2 -m mel -o Train_DE_01.arff
+deepspectrum features Train_DE_01.wav -t 1 0.1 -nl -en vgg16 -fl fc2 -m mel -o Train_DE_01.arff
 ```
 
 ## Commandline Options
