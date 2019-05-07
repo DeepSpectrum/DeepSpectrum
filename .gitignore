@@ -15,3 +15,4 @@ venv/*
 *_conflict*
 *.conf
 *.pdf
+.vscode/*
