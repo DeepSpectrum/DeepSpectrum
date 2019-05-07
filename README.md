@@ -93,7 +93,7 @@ All options can also be displayed using `deepspectrum features --help`.
 |----------|-------------|---------|
 | -m, --mode | Type of plot to use in the system (Choose from: 'spectrogram', 'mel', 'chroma'). | spectrogram |
 | -fs, --frequency-scale | Scale for the y-axis of the plots used by the system (Choose from: 'linear', 'log' and 'mel'). This is ignored if mode=chroma or mode=mel. (default: linear)
-| -fl, --frequency-limit | Specify a limit for the y-axis in the spectrogram plot in frequency. | None |
+| -fql, --frequency-limit | Specify a limit for the y-axis in the spectrogram plot in frequency. | None |
 | -d, --delta | If specified, derivatives of the given order of the selected features are displayed in the plots used by the system. | None |
 | -nm, --number-of-melbands | Number of melbands used for computing the melspectrogram. Only takes effect with mode=mel. | 128 |
 | -nfft | The length of the FFT window used for creating the spectrograms in number of samples. Consider choosing smaller values when extracting from small segments. | The next power of two from 0.025 x sampling_rate_of_wav |
