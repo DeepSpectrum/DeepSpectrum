@@ -1,3 +1,8 @@
+import logging
+
+log = logging.getLogger(__name__)
+
+
 class ArffReader():
     def __init__(self, file_object):
         self.arff_file = file_object
@@ -10,7 +15,8 @@ class ArffReader():
             if line.lower().startswith('@relation'):
                 self.relation = ' '.join(line.split(' ')[1:])[1:-1]
             if line.lower().startswith('@attribute'):
-                self.attributes.append((line.split(' ')[1], line.split(' ')[2]))
+                self.attributes.append(
+                    (line.split(' ')[1], line.split(' ')[2]))
             if line.lower().startswith('@data'):
                 break
 
@@ -33,13 +39,15 @@ class ArffWriter():
         self._write_header()
 
     def _write_header(self):
-        self.arff_file.write(' '.join(['@relation', '\'{}\''.format(self.relation_name)+'\n']))
+        self.arff_file.write(' '.join(
+            ['@relation', '\'{}\''.format(self.relation_name) + '\n']))
         self.arff_file.write('\n')
         for attribute_name, attribute_type in self.attributes:
-            self.arff_file.write(' '.join(['@attribute', attribute_name, attribute_type]) + '\n')
+            self.arff_file.write(
+                ' '.join(['@attribute', attribute_name, attribute_type]) +
+                '\n')
         self.arff_file.write('\n')
         self.arff_file.write('@data\n')
 
     def writerow(self, row):
-        self.arff_file.write(','.join(row)+'\n')
-
+        self.arff_file.write(','.join(row) + '\n')

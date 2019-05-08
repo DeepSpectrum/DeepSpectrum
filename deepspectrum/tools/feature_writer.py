@@ -1,6 +1,5 @@
 import csv
 
-
 from tqdm import tqdm
 
 from .custom_arff import ArffWriter
@@ -9,8 +8,10 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 class FeatureWriter:
-    def __init__(self, output, label_dict, labels, continuous_labels, write_timestamps, no_labels):
+    def __init__(self, output, label_dict, labels, continuous_labels,
+                 write_timestamps, no_labels):
         self.output = output
         self.label_dict = label_dict
         self.labels = labels
@@ -32,7 +33,9 @@ class FeatureWriter:
 
 class ArffFeatureWriter(FeatureWriter):
     def write_features(self, names, features, hide_progress=False):
-        with open(self.output, 'w', newline='') as output_file, tqdm(total=len(names), disable=log.getEffectiveLevel() >= logging.ERROR) as pbar:
+        with open(self.output, 'w', newline='') as output_file, tqdm(
+                total=len(names),
+                disable=log.getEffectiveLevel() >= logging.ERROR) as pbar:
             writer = None
             first = True
             for batch in features:
@@ -43,14 +46,17 @@ class ArffFeatureWriter(FeatureWriter):
                     if self.no_labels:
                         classes = None
                     else:
-                        classes = [(class_name, '{' + ','.join(class_type) + '}')
-                                if class_type else (class_name, 'numeric')
-                                for class_name, class_type in self.labels]
+                        classes = [(class_name, '{' + ','.join(class_type) +
+                                    '}') if class_type else
+                                   (class_name, 'numeric')
+                                   for class_name, class_type in self.labels]
                     if not writer:
                         attributes = _determine_attributes(
-                            self.write_timestamps, feature_tuple.features, classes)
-                        writer = ArffWriter(
-                            output_file, 'Deep Spectrum Features', attributes)
+                            self.write_timestamps, feature_tuple.features,
+                            classes)
+                        writer = ArffWriter(output_file,
+                                            'Deep Spectrum Features',
+                                            attributes)
                     time_stamp, label = self.timestamp_and_label(
                         feature_tuple.name, feature_tuple.timestamp)
                     row = [feature_tuple.name]
@@ -69,7 +75,9 @@ class ArffFeatureWriter(FeatureWriter):
 
 class CsvFeatureWriter(FeatureWriter):
     def write_features(self, names, features, hide_progress=False):
-        with open(self.output, 'w', newline='') as output_file, tqdm(total=len(names), disable=log.getEffectiveLevel() >= logging.ERROR) as pbar:
+        with open(self.output, 'w', newline='') as output_file, tqdm(
+                total=len(names),
+                disable=log.getEffectiveLevel() >= logging.ERROR) as pbar:
             writer = None
             first = True
             for batch in features:
@@ -80,13 +88,15 @@ class CsvFeatureWriter(FeatureWriter):
                     if self.no_labels:
                         classes = None
                     else:
-                        classes = [(class_name, '{' + ','.join(class_type) + '}')
-                                if class_type else (class_name, 'numeric')
-                                for class_name, class_type in self.labels]
+                        classes = [(class_name, '{' + ','.join(class_type) +
+                                    '}') if class_type else
+                                   (class_name, 'numeric')
+                                   for class_name, class_type in self.labels]
 
                     if not writer:
                         attributes = _determine_attributes(
-                            self.write_timestamps, feature_tuple.features, classes)
+                            self.write_timestamps, feature_tuple.features,
+                            classes)
                         writer = csv.writer(output_file, delimiter=',')
                         writer.writerow(
                             [attribute[0] for attribute in attributes])

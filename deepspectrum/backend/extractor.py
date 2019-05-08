@@ -73,12 +73,11 @@ class KerasExtractor(Extractor):
     @staticmethod
     def __resize(x, target_size=(224, 224)):
         if (x.shape[1], x.shape[2]) != target_size:
-            x = np.array(
-                [
-                    np.array(Image.fromarray(image, mode="RGB").resize(target_size))
-                    for image in x
-                ]
-            )
+            x = np.array([
+                np.array(
+                    Image.fromarray(image, mode="RGB").resize(target_size))
+                for image in x
+            ])
         return x
 
     @staticmethod
@@ -86,39 +85,68 @@ class KerasExtractor(Extractor):
         x = x[:, :, :, ::-1]
         return x
 
-    def __init__(
-        self, images, model_key, layer, weights_path="imagenet", batch_size=256
-    ):
+    def __init__(self,
+                 images,
+                 model_key,
+                 layer,
+                 weights_path="imagenet",
+                 batch_size=256):
         super().__init__(images, batch_size)
         self.models = {
-            "vgg16": self.tf.keras.applications.vgg16.VGG16,
-            "vgg19": self.tf.keras.applications.vgg19.VGG19,
-            "resnet50": self.tf.keras.applications.resnet50.ResNet50,
-            "xception": self.tf.keras.applications.xception.Xception,
-            "inception_v3": self.tf.keras.applications.inception_v3,
-            "densenet121": self.tf.keras.applications.densenet.DenseNet121,
-            "densenet169": self.tf.keras.applications.densenet.DenseNet169,
-            "densenet201": self.tf.keras.applications.densenet.DenseNet201,
-            "mobilenet": self.tf.keras.applications.mobilenet.MobileNet,
-            "mobilenet_v2": self.tf.keras.applications.mobilenet_v2.MobileNetV2,
-            "nasnet_large": self.tf.keras.applications.nasnet.NASNetLarge,
-            "nasnet_mobile": self.tf.keras.applications.nasnet.NASNetMobile,
-            "inception_resnet_v2": self.tf.keras.applications.inception_resnet_v2.InceptionResNetV2,
+            "vgg16":
+            self.tf.keras.applications.vgg16.VGG16,
+            "vgg19":
+            self.tf.keras.applications.vgg19.VGG19,
+            "resnet50":
+            self.tf.keras.applications.resnet50.ResNet50,
+            "xception":
+            self.tf.keras.applications.xception.Xception,
+            "inception_v3":
+            self.tf.keras.applications.inception_v3,
+            "densenet121":
+            self.tf.keras.applications.densenet.DenseNet121,
+            "densenet169":
+            self.tf.keras.applications.densenet.DenseNet169,
+            "densenet201":
+            self.tf.keras.applications.densenet.DenseNet201,
+            "mobilenet":
+            self.tf.keras.applications.mobilenet.MobileNet,
+            "mobilenet_v2":
+            self.tf.keras.applications.mobilenet_v2.MobileNetV2,
+            "nasnet_large":
+            self.tf.keras.applications.nasnet.NASNetLarge,
+            "nasnet_mobile":
+            self.tf.keras.applications.nasnet.NASNetMobile,
+            "inception_resnet_v2":
+            self.tf.keras.applications.inception_resnet_v2.InceptionResNetV2,
         }
         self.preprocessors = {
-            "vgg16": self.__preprocess_vgg,
-            "vgg19": self.__preprocess_vgg,
-            "resnet50": self.tf.keras.applications.resnet50.preprocess_input,
-            "xception": self.tf.keras.applications.xception.preprocess_input,
-            "inception_v3": self.tf.keras.applications.inception_v3,
-            "densenet121": self.tf.keras.applications.densenet.preprocess_input,
-            "densenet169": self.tf.keras.applications.densenet.preprocess_input,
-            "densenet201": self.tf.keras.applications.densenet.preprocess_input,
-            "mobilenet": self.tf.keras.applications.mobilenet.preprocess_input,
-            "mobilenet_v2": self.tf.keras.applications.mobilenet_v2.preprocess_input,
-            "nasnet_large": self.tf.keras.applications.nasnet.preprocess_input,
-            "nasnet_mobile": self.tf.keras.applications.nasnet.preprocess_input,
-            "inception_resnet_v2": self.tf.keras.applications.inception_resnet_v2.preprocess_input,
+            "vgg16":
+            self.__preprocess_vgg,
+            "vgg19":
+            self.__preprocess_vgg,
+            "resnet50":
+            self.tf.keras.applications.resnet50.preprocess_input,
+            "xception":
+            self.tf.keras.applications.xception.preprocess_input,
+            "inception_v3":
+            self.tf.keras.applications.inception_v3,
+            "densenet121":
+            self.tf.keras.applications.densenet.preprocess_input,
+            "densenet169":
+            self.tf.keras.applications.densenet.preprocess_input,
+            "densenet201":
+            self.tf.keras.applications.densenet.preprocess_input,
+            "mobilenet":
+            self.tf.keras.applications.mobilenet.preprocess_input,
+            "mobilenet_v2":
+            self.tf.keras.applications.mobilenet_v2.preprocess_input,
+            "nasnet_large":
+            self.tf.keras.applications.nasnet.preprocess_input,
+            "nasnet_mobile":
+            self.tf.keras.applications.nasnet.preprocess_input,
+            "inception_resnet_v2":
+            self.tf.keras.applications.inception_resnet_v2.preprocess_input,
         }
         self.batch_size = batch_size
         self.layer = layer
@@ -126,29 +154,26 @@ class KerasExtractor(Extractor):
         if log.getEffectiveLevel() < logging.INFO:
             base_model.summary()
         self.layers = [layer.name for layer in base_model.layers]
-        assert (
-            layer in self.layers
-        ), f"Invalid layer key. Available layers: {self.layers}"
+        assert (layer in self.layers
+                ), f"Invalid layer key. Available layers: {self.layers}"
         inputs = base_model.input
-        outputs = (
-            base_model.get_layer(layer)
-            if not hasattr(base_model.get_layer(layer), "output")
-            else base_model.get_layer(layer).output
-        )
+        outputs = (base_model.get_layer(layer)
+                   if not hasattr(base_model.get_layer(layer), "output") else
+                   base_model.get_layer(layer).output)
         self.model = self.tf.keras.models.Model(inputs=inputs, outputs=outputs)
         self.preprocess = self.preprocessors[model_key]
 
     def extract_features(self, tuple_batch):
         name_batch, ts_batch, image_batch = tuple_batch
-        image_batch = self.__resize(
-            image_batch, target_size=self.model.input.shape[1:-1]
-        )
+        image_batch = self.__resize(image_batch,
+                                    target_size=self.model.input.shape[1:-1])
         image_batch = self.preprocess(image_batch)
         feature_batch = self.model.predict(image_batch)
         dim = np.prod(feature_batch.shape[1:])
         feature_batch = np.reshape(feature_batch, [-1, dim])
 
-        return map(FeatureTuple._make, zip(name_batch, ts_batch, feature_batch))
+        return map(FeatureTuple._make, zip(name_batch, ts_batch,
+                                           feature_batch))
 
 
 def _batch_images(images, batch_size=256):

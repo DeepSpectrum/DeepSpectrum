@@ -15,3 +15,4 @@ venv/*
 *.conf
 *.pdf
 .vscode/*
+.coverage*

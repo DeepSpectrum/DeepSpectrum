@@ -3,7 +3,7 @@ import click
 import configparser
 import fnmatch
 import re
-from decimal import *
+import decimal
 from multiprocessing import cpu_count
 from os import makedirs, walk
 from matplotlib import cm
@@ -11,11 +11,11 @@ from os.path import abspath, join, isfile, basename, dirname, realpath, splitext
 
 from deepspectrum.backend.plotting import PLOTTING_FUNCTIONS
 from deepspectrum.tools.label_parser import LabelParser
-from ..backend.extractor import KerasExtractor
+from deepspectrum.backend.extractor import KerasExtractor
 
 max_np = cpu_count()
 
-getcontext().prec = 6
+decimal.getcontext().prec = 6
 
 log = logging.getLogger(__name__)
 
@@ -55,14 +55,14 @@ PLOTTING_OPTIONS = [
         "-s",
         "--start",
         help="Set a start time from which features should be extracted from the audio files.",
-        type=Decimal,
+        type=decimal.Decimal,
         default=0,
     ),
     click.option(
         "-e",
         "--end",
         help="Set a end time until which features should be extracted from the audio files.",
-        type=Decimal,
+        type=decimal.Decimal,
         default=None,
     ),
     click.option(
@@ -70,7 +70,7 @@ PLOTTING_OPTIONS = [
         "--window-size-and-hop",
         help="Extract deep spectrum features from windows with specified length and hopsize in seconds.",
         nargs=2,
-        type=Decimal,
+        type=decimal.Decimal,
         default=[None, None],
     ),
     click.option(
@@ -155,12 +155,12 @@ EXTRACTION_OPTIONS = [
         "-en",
         "--extraction-network",
         help="specify the CNN that will be used for the feature extraction. You need to specify a valid weight file in .npy format in your configuration file for this network.",
-        default="AlexNet",
+        default="vgg16",
     ),
     click.option(
         "-fl",
         "--feature-layer",
-        default="fc7",
+        default="fc2",
         help="name of CNN layer from which to extract the features.",
     ),
     click.option(
@@ -218,6 +218,7 @@ LABEL_OPTIONS = [
     click.option(
         "-el",
         "--explicit-label",
+        type=str,
         nargs=1,
         help="Define an explicit label for the input files.",
         default=None,
@@ -296,7 +297,7 @@ class Configuration:
                 window_size_and_hop[1] if window_size_and_hop else None
             )
             self.plotting_args["resample"] = sample_rate
-            self.plotting_args["base_path"] = self.input
+            self.plotting_args["base_path"] = self.input if not isfile(self.input) else dirname(self.input)
             if self.plotting_args["mode"] == "mel":
                 self.plotting_args["melbands"] = number_of_melbands
             if self.plotting_args["mode"] == "chroma":
@@ -322,8 +323,9 @@ class Configuration:
             )
             exit(1)
         if self.writer:
+            self.label_file = label_file
             self.writer_args["output"] = output
-            makedirs(dirname(self.writer_args["output"]), exist_ok=True)
+            makedirs(dirname(abspath(self.writer_args["output"])), exist_ok=True)
             self.writer_args["continuous_labels"] = (
                 ("window" in self.plotting_args) and time_continuous and self.label_file
             )
@@ -331,9 +333,8 @@ class Configuration:
             # self.writer_args['no_timestamps'] = args['no_timestamps']
             self.writer_args["write_timestamps"] = (
                 window_size_and_hop != (None, None)
-            ) and not no_timestamps
+            ) and not no_timestamps and self.plotting
             self.writer_args["no_labels"] = no_labels
-            self.label_file = label_file
             self.reduced = reduced
             # list all .wavs for the extraction found in the given folders
 
@@ -411,15 +412,16 @@ class Configuration:
                 basename(wav): [basename(dirname(wav))] for wav in self.files
             }
         else:
-            # map the labels given on the commandline to all files in a given folder in the order both appear in the
-            # parsed options.
+            # map the labels given on the commandline to all files in a given folder to all input files
             self.writer_args["label_dict"] = {
-                basename(wav): self.writer_args["labels"] for wav in self.files
+                basename(wav): [str(self.writer_args["labels"])] for wav in self.files
             }
         labels = sorted(
             list(map(lambda x: x[0], self.writer_args["label_dict"].values()))
         )
+
         self.writer_args["labels"] = [("class", set(labels))]
+
 
     def _load_config(self):
         """

@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Replace with correct paths
-challengePath="/path/to/Official_AVEC_SPLITS_v2.1"
-outputPath="/output/folder"
+challengePath="/home/maurice/Desktop/compare2019/AVEC2019_CES_traindevel_v0.2"
+outputPath="/home/maurice/Desktop/compare2019/AVEC2019_CES_traindevel_v0.2"
 
 
 # Leave as it is
@@ -11,7 +11,7 @@ taskPath="$outputPath/$taskName"
 windowSize="4"; hopSize="1"; mode="mel"; nmel="128"
 nets="vgg16 densenet201"
 cmaps="viridis"
-partitions="Development Train Test"
+partitions="TrainDevel"
 
 ###################
 #one feature file per each audio clip
@@ -19,7 +19,7 @@ partitions="Development Train Test"
 for n in $nets; do
 	for c in $cmaps; do
 		for p in $partitions; do
-			wavPath="$challengePath/$p/audio"
+			wavPath="$challengePath/audio"
 			cd $wavPath
 			for f in *; do
 				featPath="$taskPath/audio_features_deepspectrum/$p/$taskName-net=$n-winSize=$windowSize-hopSize=$hopSize-cmap=$c-mode=$mode"
