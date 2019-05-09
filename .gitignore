@@ -11,7 +11,6 @@ venv/*
 *.ipynb
 *_old.py
 *_conflict*
-*.conf
 *.pdf
 .vscode/*
 .coverage*
