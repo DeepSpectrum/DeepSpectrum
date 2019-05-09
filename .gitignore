@@ -13,4 +13,4 @@ venv/*
 *_conflict*
 *.pdf
 .vscode/*
-.coverage*
+.coverage
