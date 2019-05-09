@@ -12,7 +12,7 @@ python:
  - '3.6'
 install:
  - pip install .
- - pip install requirements-test.txt
+ - pip install -r requirements-test.txt
 script:
  - pytest --cov=deepspectrum tests/
 after_success: coveralls
