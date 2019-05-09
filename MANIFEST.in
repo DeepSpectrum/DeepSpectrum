@@ -1,1 +1,1 @@
-include deepspectrum/cli/deep.conf
+include src/deepspectrum/cli/deep.conf
