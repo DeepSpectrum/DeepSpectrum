@@ -1,0 +1,18 @@
+dist: trusty
+sudo: required
+before_install:
+language: python
+notifications:
+  email:
+    recipients:
+      - mailme@mauricege.com
+    on_success: never
+    on_failure: always
+python:
+ - '3.6'
+install:
+ - pip install .
+ - pip install -r requirements-test.txt
+script:
+ - pytest --cov=deepspectrum tests/
+after_success: coveralls
