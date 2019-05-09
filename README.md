@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/DeepSpectrum/DeepSpectrum.svg?branch=master)](https://travis-ci.org/DeepSpectrum/DeepSpectrum)
+[![Coverage Status](https://coveralls.io/repos/github/DeepSpectrum/DeepSpectrum/badge.svg)](https://coveralls.io/github/DeepSpectrum/DeepSpectrum)
 
 **DeepSpectrum** is a Python toolkit for feature extraction from audio data with pre-trained Image Convolutional Neural Networks (CNNs). It features an extraction pipeline which first creates visual representations for audio data - plots of spectrograms or chromagrams - and then feeds them to a pre-trained Image CNN. Activations of a specific layer then form the final feature vectors.
 
