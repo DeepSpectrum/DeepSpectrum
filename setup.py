@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 from subprocess import CalledProcessError, check_output
 
 PROJECT = "DeepSpectrum"
-VERSION = "0.3.3"
+VERSION = "0.3.4"
 LICENSE = "GPLv3+"
 AUTHOR = "Maurice Gerczuk"
 AUTHOR_EMAIL = "gerczuk@fim.uni-passau.de"
@@ -93,7 +93,8 @@ setup(
     python_requires=">=3.6",
     install_requires=dependencies,
     namespace_packages=[],
-    packages=find_packages(),
+    packages=find_packages('src'),
+    package_dir={'': 'src'},
     include_package_data=True,
     entry_points={
         "console_scripts": [
