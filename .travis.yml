@@ -8,6 +8,7 @@ install:
  - pip install .
  - pip install -r requirements-test.txt
 script:
- - pytest --cov=deepspectrum tests/
+ - py.test tests/ --cov deepspectrum  --cov-report term-missing
+after_success:
  - coverage combine
-after_success: coveralls
+ - coveralls
