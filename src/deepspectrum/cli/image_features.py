@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import click
 import logging
-import deepspectrum.tools.feature_reduction as fr
 from os import environ
 from os.path import basename
 from .configuration import Configuration, GENERAL_OPTIONS, EXTRACTION_OPTIONS, LABEL_OPTIONS, WRITER_OPTIONS
@@ -46,8 +45,4 @@ def image_features(**kwargs):
     writer = get_writer(**configuration.writer_args)
     writer.write_features(configuration.files, extractor)
 
-    if configuration.reduced:
-        log.info('Performing feature reduction...')
-        fr.reduce_file(configuration.writer_args['output'],
-                       configuration.reduced)
     log.info('Done extracting features.')

@@ -11,15 +11,14 @@ examples = join(dirname(dirname(cur_dir)), 'examples')
 def test_image_features():
     rmtree('/tmp/deepspectrumtest', ignore_errors=True)
     runner = CliRunner()
-    result = runner.invoke(
-        cli,
-        args=[
-            '-vv', 'image-features',
-            join(examples, 'pictures'), '-np',
-            cpu_count(), '-o', '/tmp/deepspectrumtest/image-features.arff',
-            '-r', '/tmp/deepspectrumtest/image-features-reduced.arff', '-en',
-            'vgg19', '-el', 'justAnimals'
-        ])
+    result = runner.invoke(cli,
+                           args=[
+                               '-vv', 'image-features',
+                               join(examples, 'pictures'), '-np',
+                               cpu_count(), '-o',
+                               '/tmp/deepspectrumtest/image-features.arff',
+                               '-en', 'vgg19', '-el', 'justAnimals'
+                           ])
     assert 'Total params' in result.output
     assert 'Done' in result.output
     assert result.exit_code == 0

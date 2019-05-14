@@ -26,8 +26,7 @@ def test_features_file_level():
                                join(examples, 'audio'), '-np',
                                cpu_count(), '-cm', 'viridis', '-o',
                                '/tmp/deepspectrumtest/features.csv', '-so',
-                               '/tmp/deepspectrumtest/spectrograms', '-r',
-                               '/tmp/deepspectrumtest/reduced.csv', '-en',
+                               '/tmp/deepspectrumtest/spectrograms', '-en',
                                'vgg16', '-sr', 16000, '-m', 'mel', '-fs',
                                'mel', '-c', '/tmp/deepspectrumtest/deep.conf'
                            ])
