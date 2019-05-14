@@ -22,6 +22,7 @@ def image_reader(files, size=500):
     for image in files:
         img = cv2.imread(image, cv2.IMREAD_COLOR)
         img = cv2.resize(img, dsize=(size, size))
+        img = img[:, :, :3]
         yield PlotTuple(name=basename(image),
                         timestamp=None,
                         plot=np.array(img))
@@ -33,7 +34,9 @@ def image_reader(files, size=500):
 @add_options(LABEL_OPTIONS)
 @add_options(WRITER_OPTIONS)
 def image_features(**kwargs):
-    configuration = Configuration(plotting=False, file_type='jpg', **kwargs)
+    configuration = Configuration(plotting=False,
+                                  file_types=['jpg', 'png'],
+                                  **kwargs)
     plots = image_reader(configuration.files)
     log.info('Loading model and weights...')
     extractor = configuration.extractor(images=plots,

@@ -238,7 +238,7 @@ class Configuration:
         plotting=True,
         extraction=True,
         writer=True,
-        file_type="wav",
+        file_types=["wav", "mp3"],
         input=None,
         config="deep.conf",
         number_of_processes=max_np,
@@ -272,7 +272,7 @@ class Configuration:
         self.config = config
         self.number_of_processes = number_of_processes
         self.model_weights = "imagenet"
-        self.file_type = file_type
+        self.file_types = file_types
         self.plotting = plotting
         self.plotting_args = {}
         self.extraction = extraction
@@ -347,19 +347,21 @@ class Configuration:
         self._load_config()
 
     def _find_files(self, folder):
-        log.debug(f'Input file type is "{self.file_type}".')
-        if isfile(folder) and splitext(folder)[1] == "." + self.file_type:
-            log.debug(f"{folder} is a single {self.file_type}-file.")
+        log.debug(f'Input file types are "{self.file_types}".')
+        if isfile(folder) and splitext(folder)[1][1:] in self.file_types:
+            log.debug(f"{folder} is a single {self.file_types}-file.")
             return [folder]
-        globexpression = "*." + self.file_type
-        reg_expr = re.compile(fnmatch.translate(globexpression), re.IGNORECASE)
+            
         input_files = []
-        log.debug(f"Searching {folder} for {self.file_type}-files.")
-        for root, dirs, files in walk(folder, topdown=True):
-            new_files = [join(root, j) for j in files if re.match(reg_expr, j)]
-            log.debug(f"Found {len(new_files)} {self.file_type}-files in {root}.")
-            input_files += new_files
-        log.debug(f"Found a total of {len(input_files)} {self.file_type}-files.")
+        for file_type in self.file_types:
+            globexpression = "*." + file_type
+            reg_expr = re.compile(fnmatch.translate(globexpression), re.IGNORECASE)
+            log.debug(f"Searching {folder} for {file_type}-files.")
+            for root, dirs, files in walk(folder, topdown=True):
+                new_files = [join(root, j) for j in files if re.match(reg_expr, j)]
+                log.debug(f"Found {len(new_files)} {file_type}-files in {root}.")
+                input_files += new_files
+        log.debug(f"Found a total of {len(input_files)} {self.file_types}-files.")
         return input_files
 
     def _read_label_file(self):

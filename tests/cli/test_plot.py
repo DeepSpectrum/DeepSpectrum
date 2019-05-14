@@ -14,7 +14,7 @@ def test_plot():
     result = runner.invoke(cli,
                            args=[
                                '-v', 'plot',
-                               join(examples, 'wav'), '-np',
+                               join(examples, 'audio'), '-np',
                                cpu_count(), '-cm', 'twilight', '-so',
                                '/tmp/deepspectrumtest/pretty-spectrograms',
                                '-sr', 16000, '-m', 'mel', '-fs', 'spectrogram',

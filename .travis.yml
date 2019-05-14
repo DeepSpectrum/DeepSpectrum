@@ -1,9 +1,11 @@
-dist: trusty
+dist: bionic
 sudo: required
 before_install:
 language: python
 python:
  - '3.6'
+before_install:
+ - sudo apt-get install ffmpeg
 install:
  - pip install .
  - pip install -r requirements-test.txt
