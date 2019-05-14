@@ -14,7 +14,7 @@ def test_features_file_level():
     result = runner.invoke(cli,
                            args=[
                                '-v', 'features',
-                               join(examples, 'wav'), '-c',
+                               join(examples, 'audio'), '-c',
                                '/tmp/deepspectrumtest/deep.conf', '-o',
                                '/tmp/deepspectrumtest/features.csv'
                            ])
@@ -23,7 +23,7 @@ def test_features_file_level():
     result = runner.invoke(cli,
                            args=[
                                '-v', 'features',
-                               join(examples, 'wav'), '-np',
+                               join(examples, 'audio'), '-np',
                                cpu_count(), '-cm', 'viridis', '-o',
                                '/tmp/deepspectrumtest/features.csv', '-so',
                                '/tmp/deepspectrumtest/spectrograms', '-r',
@@ -41,7 +41,7 @@ def test_features_time_continuous():
     result = runner.invoke(cli,
                            args=[
                                '-v', 'features',
-                               join(examples, 'wav'), '-np',
+                               join(examples, 'audio'), '-np',
                                cpu_count(), '-cm', 'twilight', '-o',
                                '/tmp/deepspectrumtest/features-tc.csv', '-en',
                                'densenet201', '-sr', 16000, '-m', 'chroma',

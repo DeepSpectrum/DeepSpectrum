@@ -14,3 +14,4 @@ venv/*
 *.pdf
 .vscode/*
 .coverage
+.coverage.*

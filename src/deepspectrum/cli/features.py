@@ -27,7 +27,7 @@ def features(**kwargs):
     configuration = Configuration(plotting=True,
                                   extraction=True,
                                   writer=True,
-                                  file_type='wav',
+                                  file_types=['wav', 'mp3'],
                                   **kwargs)
     plots = PlotGenerator(
         files=configuration.files,
