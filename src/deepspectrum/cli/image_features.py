@@ -31,7 +31,7 @@ def image_reader(files, size=500):
 @add_options(GENERAL_OPTIONS)
 @add_options(EXTRACTION_OPTIONS)
 @add_options(LABEL_OPTIONS)
-@add_options(WRITER_OPTIONS)
+@add_options(WRITER_OPTIONS[:-2])
 def image_features(**kwargs):
     configuration = Configuration(plotting=False,
                                   file_types=['jpg', 'png'],

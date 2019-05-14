@@ -141,3 +141,8 @@ data                          Base Directory of your data
 | -np, --number-of-processes | Specify the number of processes used for the extraction. Defaults to the number of available CPU cores | None |
 | -c, --config | The path to the configuration file used by the program can be given here. If the file does not exist yet, it is created and filled with standard settings. | deep.conf |
 | --help | Show help. | None |
+
+
+### Extracting CNN-Descriptors from images
+
+The tool also provides a commandline utility for extracting CNN descriptors from image data. It can be accessed through `deepspectrum image-features` with a reduced set of options. As with `deepspectrum features`, the first argument should be a folder containing the input image files (.png or .jpg). The available options are: `-o`, `-c`, `-np`, `-en`, `-fl`, `-bs`, `-lf`, `-el`,`-nl` and `--help`. These function the same as described above for `deepspectrum features`.

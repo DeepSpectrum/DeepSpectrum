@@ -176,15 +176,10 @@ WRITER_OPTIONS = [
     click.option(
         "-o",
         "--output",
-        help="The file which the features are written to. Supports csv and arff formats",
+        help=
+        "The file which the features are written to. Supports csv and arff formats",
         required=True,
         type=click.Path(writable=True, dir_okay=False),
-    ),
-    click.option(
-        "-nts",
-        "--no-timestamps",
-        is_flag=True,
-        help="Remove timestamps from the output.",
     ),
     click.option(
         "-nl",
@@ -193,10 +188,17 @@ WRITER_OPTIONS = [
         help="Do not write class labels to the output.",
     ),
     click.option(
+        "-nts",
+        "--no-timestamps",
+        is_flag=True,
+        help="Remove timestamps from the output.",
+    ),
+    click.option(
         "-tc",
         "--time-continuous",
         is_flag=True,
-        help='Set labelling of features to timecontinuous mode. Only works in conjunction with "-t" and a label file with a matching timestamp column.',
+        help=
+        'Set labelling of features to timecontinuous mode. Only works in conjunction with "-t" and a label file with a matching timestamp column.',
     ),
 ]
 
@@ -340,7 +342,7 @@ class Configuration:
         if isfile(folder) and splitext(folder)[1][1:] in self.file_types:
             log.debug(f"{folder} is a single {self.file_types}-file.")
             return [folder]
-            
+
         input_files = []
         for file_type in self.file_types:
             globexpression = "*." + file_type
