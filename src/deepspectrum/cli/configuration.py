@@ -181,13 +181,6 @@ WRITER_OPTIONS = [
         type=click.Path(writable=True, dir_okay=False),
     ),
     click.option(
-        "-r",
-        "--reduced",
-        type=click.Path(writable=True, dir_okay=False),
-        default=None,
-        help="A reduced version of the feature set is written to the given location.",
-    ),
-    click.option(
         "-nts",
         "--no-timestamps",
         is_flag=True,
@@ -264,7 +257,6 @@ class Configuration:
         explicit_label=None,
         no_timestamps=False,
         no_labels=False,
-        reduced=None,
         sample_rate=None,
     ):
 
@@ -330,13 +322,10 @@ class Configuration:
                 ("window" in self.plotting_args) and time_continuous and self.label_file
             )
             self.writer_args["labels"] = explicit_label
-            # self.writer_args['no_timestamps'] = args['no_timestamps']
             self.writer_args["write_timestamps"] = (
                 window_size_and_hop != (None, None)
             ) and not no_timestamps and self.plotting
             self.writer_args["no_labels"] = no_labels
-            self.reduced = reduced
-            # list all .wavs for the extraction found in the given folders
 
             log.info("Parsing labels...")
             if self.label_file is None:
@@ -367,11 +356,8 @@ class Configuration:
     def _read_label_file(self):
         """
         Read labels from either .csv or .tsv files
-        :param parser: commandline parser
         :return: Nothing
         """
-
-        # delimiters are decided by the extension of the labels file
         if self.label_file.endswith(".tsv"):
             parser = LabelParser(
                 self.label_file,

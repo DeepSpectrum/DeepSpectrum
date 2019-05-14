@@ -1,6 +1,5 @@
 import logging
 import click
-import deepspectrum.tools.feature_reduction as fr
 from os import environ
 from deepspectrum.cli.configuration import Configuration, GENERAL_OPTIONS, PLOTTING_OPTIONS, EXTRACTION_OPTIONS, \
     LABEL_OPTIONS, WRITER_OPTIONS
@@ -42,12 +41,3 @@ def features(**kwargs):
     writer.write_features(configuration.files, extractor, hide_progress=False)
 
     log.info('Done extracting features.')
-
-    if configuration.reduced:
-        log.info('Performing feature reduction...')
-        fr.reduce_file(configuration.writer_args['output'],
-                       configuration.reduced)
-
-
-if __name__ == '__main__':
-    features()
