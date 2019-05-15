@@ -4,7 +4,7 @@ import click
 import logging
 from os import environ
 from os.path import basename
-from .configuration import Configuration, GENERAL_OPTIONS, EXTRACTION_OPTIONS, LABEL_OPTIONS, WRITER_OPTIONS
+from .configuration import Configuration, GENERAL_OPTIONS, EXTRACTION_OPTIONS, LABEL_OPTIONS, WRITER_OPTIONS, Filetypes
 from ..backend.plotting import PlotTuple
 from ..tools.feature_writer import get_writer
 from .utils import add_options
@@ -34,7 +34,7 @@ def image_reader(files, size=500):
 @add_options(WRITER_OPTIONS[:-2])
 def image_features(**kwargs):
     configuration = Configuration(plotting=False,
-                                  file_types=['jpg', 'png'],
+                                  file_type=Filetypes.IMAGE,
                                   **kwargs)
     plots = image_reader(configuration.files)
     log.info('Loading model and weights...')

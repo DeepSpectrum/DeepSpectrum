@@ -2,7 +2,7 @@ import logging
 import click
 from os import environ
 from deepspectrum.cli.configuration import Configuration, GENERAL_OPTIONS, PLOTTING_OPTIONS, EXTRACTION_OPTIONS, \
-    LABEL_OPTIONS, WRITER_OPTIONS
+    LABEL_OPTIONS, WRITER_OPTIONS, Filetypes
 from ..backend.plotting import PlotGenerator
 from ..tools.feature_writer import get_writer
 from .utils import add_options
@@ -26,7 +26,7 @@ def features(**kwargs):
     configuration = Configuration(plotting=True,
                                   extraction=True,
                                   writer=True,
-                                  file_types=['wav', 'mp3'],
+                                  file_type=Filetypes.AUDIO,
                                   **kwargs)
     plots = PlotGenerator(
         files=configuration.files,

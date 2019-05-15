@@ -13,3 +13,4 @@ script:
  - py.test tests/ --cov deepspectrum  --cov-report term
 after_success:
  - coveralls
+ 
