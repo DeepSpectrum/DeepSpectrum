@@ -13,16 +13,11 @@ AUTHOR_EMAIL = "gerczuk@fim.uni-passau.de"
 dependencies = [
     "numpy>=1.16",
     "scipy>=1.2.0",
-    "pandas>=0.24.0",
     "imread>=0.7.0",
     "tqdm>=4.30.0",
     "matplotlib>=3.0.2",
     "opencv-python>=4.0.0.21",
     "librosa>=0.6.3",
-    "scikit-learn>=0.20.2",
-    "liac-arff>=2.3.1",
-    "statsmodels>=0.9",
-    "dataclasses>=0.6",
     "click>=7.0",
     "Pillow>=6.0.0",
 ]
