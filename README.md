@@ -38,7 +38,7 @@ Or for windows:
 .\ds_virtualenv\Scripts\activate.bat
 ```
 
-Once the virtualenv is activated, the tool can be installed from th source directory (containing setup.py) with this command:
+Once the virtualenv is activated, the tool can be installed from the source directory (containing setup.py) with this command:
 ```bash
 pip install -e .
 ```
