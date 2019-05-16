@@ -5,7 +5,6 @@ matrix:
 include:
   - name: "Standard Ubuntu pip install"
     python: 
-      - "3.5"
       - "3.6"
       - "3.7"
     before_install:
