@@ -15,3 +15,4 @@ venv/*
 .vscode/*
 .coverage
 .coverage.*
+.empty/
