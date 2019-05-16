@@ -9,29 +9,19 @@ VERSION = "0.4.0"
 LICENSE = "GPLv3+"
 AUTHOR = "Maurice Gerczuk"
 AUTHOR_EMAIL = "gerczuk@fim.uni-passau.de"
+URL = 'https://github.com/DeepSpectrum/DeepSpectrum'
 
-dependencies = [
+install_requires = [
     "numpy>=1.16",
     "scipy>=1.2.0",
-    "pandas>=0.24.0",
     "imread>=0.7.0",
     "tqdm>=4.30.0",
     "matplotlib>=3.0.2",
     "opencv-python>=4.0.0.21",
     "librosa>=0.6.3",
-    "scikit-learn>=0.20.2",
-    "liac-arff>=2.3.1",
-    "statsmodels>=0.9",
-    "dataclasses>=0.6",
     "click>=7.0",
     "Pillow>=6.0.0",
 ]
-
-if sys.version_info < (3, 7):
-    if sys.version_info >= (3, 6):
-        dependencies.append("dataclasses>=0.6")
-    else:
-        sys.exit("Python < 3.6 is not supported")
 
 try:
     import tensorflow
@@ -56,13 +46,13 @@ if not tensorflow_found:
             if major == 10 and minor == 0:
                 print("detected compatible CUDA version %d.%d" %
                       (major, minor))
-                dependencies.append("tensorflow-gpu>=1.13.0")
+                install_requires.append("tensorflow-gpu>=1.13.0")
                 use_gpu = True
 
             if major == 9:
                 print("detected compatible CUDA version %d.%d" %
                       (major, minor))
-                dependencies.append("tensorflow-gpu==1.12.0")
+                install_requires.append("tensorflow-gpu==1.12.0")
                 use_gpu = True
 
             else:
@@ -77,9 +67,13 @@ if not tensorflow_found:
         print("error during CUDA detection: %s", e)
 
     if not use_gpu:
-        dependencies.append("tensorflow>=1.13.0")
+        install_requires.append("tensorflow>=1.13.0")
 else:
     pass
+
+tests_require = ['pytest>=4.4.1', 'pytest-cov>=2.7.1']
+needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
+setup_requires = ['pytest-runner'] if needs_pytest else []
 
 setup(
     name=PROJECT,
@@ -91,7 +85,9 @@ setup(
     scripts=[],
     provides=[],
     python_requires=">=3.6",
-    install_requires=dependencies,
+    install_requires=install_requires,
+    setup_requires=setup_requires,
+    tests_require=tests_require,
     namespace_packages=[],
     packages=find_packages('src'),
     package_dir={'': 'src'},
@@ -101,5 +97,6 @@ setup(
             "deepspectrum = deepspectrum.__main__:cli",
         ]
     },
+    url=URL,
     zip_safe=False,
 )

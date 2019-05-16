@@ -14,12 +14,13 @@ If you use DeepSpectrum or any code from DeepSpectrum in your research work, you
 
 
 # Installation
-This program provides a setup.py script which declares all dependencies.
+This program provides a setup.py script for easy installation with [pip](#installation-through-pip) and also an environment.yml for installing through [conda](#conda-installation) (recommended on Windows).
 
-## Dependencies
+## Dependencies (only for installation with pip)
 * Python >=3.6
+* ffmpeg
 
-## Deep Spectrum tool
+## Installation through pip
 We recommend that you install the DeepSpectrum tool into a virtual environment. To do so first create a new virtualenvironment:
 ```bash
 virtualenv -p python3 ds_virtualenv
@@ -38,9 +39,18 @@ Or for windows:
 .\ds_virtualenv\Scripts\activate.bat
 ```
 
-Once the virtualenv is activated, the tool can be installed from th source directory (containing setup.py) with this command:
+Once the virtualenv is activated, the tool can be installed from the source directory (containing setup.py) with this command:
 ```bash
-pip install -e .
+pip install .
+```
+## Conda installation
+You can use the included environment.yml file to create a new virtual python environment with DeepSpectrum by running:
+```bash
+conda env create -f environment.yml
+```
+Then activate the environmnet with:
+```bash
+conda activate DeepSpectrum
 ```
 
 ## Configuration
