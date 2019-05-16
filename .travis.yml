@@ -32,7 +32,7 @@ matrix:
       - conda info -a
       - conda env create -f environment.yml
       - source activate DeepSpectrum
-      - conda install --file requirements.txt
+      - conda install --file requirements-test.txt
 script:
  - py.test tests/ --cov deepspectrum  --cov-report term
 after_success:
