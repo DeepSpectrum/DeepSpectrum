@@ -79,7 +79,7 @@ if not tensorflow_found:
     if not use_gpu:
         dependencies.append("tensorflow>=1.13.0")
 else:
-    print("tensorflow already installed, skipping CUDA detection")
+    pass
 
 setup(
     name=PROJECT,
