@@ -1,14 +1,30 @@
 dist: bionic
 sudo: required
-before_install:
 language: python
-python:
- - '3.6'
-before_install:
- - sudo apt-get install ffmpeg
-install:
- - pip install .
- - pip install -r requirements-test.txt
+matrix:
+include:
+  - name: "Standard Ubuntu pip install"
+    python: 
+      - "3.5"
+      - "3.6"
+      - "3.7"
+    before_install:
+    - sudo apt-get install ffmpeg
+    install:
+    - pip install .
+    - pip install -r requirements-test.txt
+  - name: "Anaconda install"
+    install:
+    - sudo apt-get update
+    - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    - bash miniconda.sh -b -p $HOME/miniconda
+    - export PATH="$HOME/miniconda/bin:$PATH"
+    - hash -r
+    - conda config --set always_yes yes --set changeps1 no
+    - conda update -q conda
+    - conda info -a
+    - conda env create -f environment.yml
+    - source activate DeepSpectrum
 script:
  - py.test tests/ --cov deepspectrum  --cov-report term
 after_success:
