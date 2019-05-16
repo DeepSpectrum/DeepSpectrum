@@ -69,7 +69,7 @@ if not tensorflow_found:
     if not use_gpu:
         install_requires.append("tensorflow>=1.13.0")
 else:
-    print("tensorflow already installed, skipping CUDA detection")
+    pass
 
 tests_require = ['pytest>=4.4.1', 'pytest-cov>=2.7.1']
 needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
