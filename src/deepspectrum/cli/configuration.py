@@ -360,7 +360,7 @@ class Configuration:
 
     def _find_files(self, folder):
         log.debug(f'Input file types are "{self.file_type.value}".')
-        if isfile(folder) and splitext(folder)[1][1:] in self.file_type.values:
+        if isfile(folder) and splitext(folder)[1][1:] in self.file_type.value:
             log.debug(f"{folder} is a single {self.file_type.value}-file.")
             return [folder]
 
