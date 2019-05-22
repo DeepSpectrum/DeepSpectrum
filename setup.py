@@ -17,11 +17,19 @@ install_requires = [
     "imread>=0.7.0",
     "tqdm>=4.30.0",
     "matplotlib>=3.0.2",
-    "opencv-python>=4.0.0.21",
     "librosa>=0.6.3",
     "click>=7.0",
     "Pillow>=6.0.0",
 ]
+
+try:
+    import cv2
+    cv2_found = True
+except ImportError:
+    cv2_found = False
+
+if not cv2_found:
+    install_requires.append("opencv-python>=4.0.0.21")
 
 try:
     import tensorflow
