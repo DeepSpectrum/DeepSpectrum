@@ -16,8 +16,8 @@ def test_features_file_level(tmpdir):
                                join(tmpdir, 'deep.conf'), '-o',
                                join(tmpdir, 'features.csv')
                            ])
-    assert result.exit_code == 1
     assert 'Please initialize your configuration file' in result.output
+    assert result.exit_code == 1
     result = runner.invoke(cli,
                            args=[
                                '-v', 'features',
@@ -28,8 +28,8 @@ def test_features_file_level(tmpdir):
                                '-sr', 16000, '-m', 'mel', '-fs', 'mel', '-c',
                                join(tmpdir, 'deep.conf')
                            ])
-    assert result.exit_code == 0
     assert 'Done' in result.output
+    assert result.exit_code == 0
 
 
 def test_features_file_level_single_file(tmpdir):
@@ -43,8 +43,8 @@ def test_features_file_level_single_file(tmpdir):
                                join(tmpdir, 'spectrograms'), '-en', 'vgg16',
                                '-sr', 16000, '-m', 'mel', '-fs', 'mel'
                            ])
-    assert result.exit_code == 0
     assert 'Done' in result.output
+    assert result.exit_code == 0
 
 
 def test_features_time_continuous(tmpdir):
@@ -64,5 +64,6 @@ def test_features_time_continuous(tmpdir):
                                    'time-continuous.csv',
                                ), '-fl', 'global_average_pooling2d'
                            ])
-    assert result.exit_code == 0
     assert 'Done' in result.output
+    assert result.exit_code == 0
+    
