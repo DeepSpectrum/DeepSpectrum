@@ -1,5 +1,6 @@
-import io
 import matplotlib
+matplotlib.use('Agg')
+import io
 import warnings
 import matplotlib.pyplot as plt
 import librosa.display
@@ -14,7 +15,6 @@ from multiprocessing import cpu_count, Pool
 from functools import partial
 from collections import namedtuple
 
-matplotlib.use('Agg')
 
 PlotTuple = namedtuple('PlotTuple', ['name', 'timestamp', 'plot'])
 AudioChunk = namedtuple('AudioChunk',
@@ -62,9 +62,12 @@ def plot_chunk(chunk,
     Plot spectrograms for a chunk of a wav-file using the described parameters.
     :param chunk: audio chunk to be plotted.
     :param mode: type of audio plot to create.
-    :param nfft: number of samples for the fast fourier transformation (Default: 256)
-    :param size: size of the spectrogram plot in pixels. Height and width are always identical (Default: 227)
-    :param output_folder: if given, the plot is saved to this path in .png format (Default: None)
+    :param nfft: number of samples for the fast fourier transformation \
+        (Default: 256)
+    :param size: size of the spectrogram plot in pixels. Height and width are \
+        always identical (Default: 227)
+    :param output_folder: if given, the plot is saved to this path in .png \
+        format (Default: None)
     :param kwargs: keyword args for plotting functions
     :return: blob of the spectrogram plot
     """
