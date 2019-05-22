@@ -7,8 +7,7 @@ from deepspectrum.cli.features import features
 from deepspectrum.cli.image_features import image_features
 from deepspectrum.cli.plot import plot
 from deepspectrum.cli.utils import add_options
-
-VERSION = pkg_resources.require("DeepSpectrum")[0].version
+from deepspectrum import __version__ as VERSION
 
 _global_options = [
     click.option('-v', '--verbose', count=True),
