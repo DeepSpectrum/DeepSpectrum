@@ -37,8 +37,8 @@ def test_features_file_level_single_file(tmpdir):
     result = runner.invoke(cli,
                            args=[
                                '-v', 'features',
-                               join(examples, 'audio', 'dog', 'dog.flac'), '-np',
-                               cpu_count(), '-cm', 'viridis', '-o',
+                               join(examples, 'audio', 'dog', 'dog.flac'),
+                               '-np', cpu_count(), '-cm', 'viridis', '-o',
                                join(tmpdir, 'features-single-file.csv'), '-so',
                                join(tmpdir, 'spectrograms'), '-en', 'vgg16',
                                '-sr', 16000, '-m', 'mel', '-fs', 'mel'
@@ -55,14 +55,14 @@ def test_features_time_continuous(tmpdir):
                                join(examples, 'audio'), '-np',
                                cpu_count(), '-cm', 'twilight', '-o',
                                join(tmpdir,
-                                    'features-tc.csv'), '-en', 'densenet201',
+                                    'features-tc.csv'), '-en', 'mobilenet_v2',
                                '-sr', 16000, '-m', 'chroma', '-t', '1', '1',
                                '-tc', '-s', 0, '-e', '2', '-lf',
                                join(
                                    examples,
                                    'labels',
                                    'time-continuous.csv',
-                               ), '-fl', 'avg_pool'
+                               ), '-fl', 'global_average_pooling2d'
                            ])
     assert result.exit_code == 0
     assert 'Done' in result.output

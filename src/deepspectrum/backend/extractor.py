@@ -2,6 +2,8 @@ import gc
 from collections import namedtuple
 
 import numpy as np
+import os
+import tensorflow as tf
 from PIL import Image
 
 import logging
@@ -13,28 +15,11 @@ def tensorflow_shutup():
     """
     Make Tensorflow less verbose
     """
-    try:
-        # noinspection PyPackageRequirements
-        import os
-        from tensorflow import logging
 
-        logging.set_verbosity(logging.ERROR)
-        os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+    # noinspection PyPackageRequirements
 
-        # Monkey patching deprecation tools to shut it up! Maybe good idea to disable this once after upgrade
-        # noinspection PyUnusedLocal
-        def deprecated(date, instructions, warn_once=True):
-            def deprecated_wrapper(func):
-                return func
-
-            return deprecated_wrapper
-
-        from tensorflow.python.util import deprecation
-
-        deprecation.deprecated = deprecated
-
-    except ImportError:
-        pass
+    tf.logging.set_verbosity(logging.ERROR)
+    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 
 tensorflow_shutup()
@@ -60,8 +45,8 @@ class Extractor:
 
     def extract_features(self, images):
         raise NotImplementedError(
-            "Feature extractor must implement 'extract_features(self, images' !"
-        )
+            """Feature extractor must implement 'extract_features(self, images'\
+                 !""")
 
 
 class KerasExtractor(Extractor):
@@ -94,31 +79,31 @@ class KerasExtractor(Extractor):
         super().__init__(images, batch_size)
         self.models = {
             "vgg16":
-            self.tf.keras.applications.vgg16.VGG16,
+            tf.keras.applications.vgg16.VGG16,
             "vgg19":
-            self.tf.keras.applications.vgg19.VGG19,
+            tf.keras.applications.vgg19.VGG19,
             "resnet50":
-            self.tf.keras.applications.resnet50.ResNet50,
+            tf.keras.applications.resnet50.ResNet50,
             "xception":
-            self.tf.keras.applications.xception.Xception,
+            tf.keras.applications.xception.Xception,
             "inception_v3":
-            self.tf.keras.applications.inception_v3,
+            tf.keras.applications.inception_v3,
             "densenet121":
-            self.tf.keras.applications.densenet.DenseNet121,
+            tf.keras.applications.densenet.DenseNet121,
             "densenet169":
-            self.tf.keras.applications.densenet.DenseNet169,
+            tf.keras.applications.densenet.DenseNet169,
             "densenet201":
-            self.tf.keras.applications.densenet.DenseNet201,
+            tf.keras.applications.densenet.DenseNet201,
             "mobilenet":
-            self.tf.keras.applications.mobilenet.MobileNet,
+            tf.keras.applications.mobilenet.MobileNet,
             "mobilenet_v2":
-            self.tf.keras.applications.mobilenet_v2.MobileNetV2,
+            tf.keras.applications.mobilenet_v2.MobileNetV2,
             "nasnet_large":
-            self.tf.keras.applications.nasnet.NASNetLarge,
+            tf.keras.applications.nasnet.NASNetLarge,
             "nasnet_mobile":
-            self.tf.keras.applications.nasnet.NASNetMobile,
+            tf.keras.applications.nasnet.NASNetMobile,
             "inception_resnet_v2":
-            self.tf.keras.applications.inception_resnet_v2.InceptionResNetV2,
+            tf.keras.applications.inception_resnet_v2.InceptionResNetV2,
         }
         self.preprocessors = {
             "vgg16":
@@ -126,27 +111,27 @@ class KerasExtractor(Extractor):
             "vgg19":
             self.__preprocess_vgg,
             "resnet50":
-            self.tf.keras.applications.resnet50.preprocess_input,
+            tf.keras.applications.resnet50.preprocess_input,
             "xception":
-            self.tf.keras.applications.xception.preprocess_input,
+            tf.keras.applications.xception.preprocess_input,
             "inception_v3":
-            self.tf.keras.applications.inception_v3,
+            tf.keras.applications.inception_v3,
             "densenet121":
-            self.tf.keras.applications.densenet.preprocess_input,
+            tf.keras.applications.densenet.preprocess_input,
             "densenet169":
-            self.tf.keras.applications.densenet.preprocess_input,
+            tf.keras.applications.densenet.preprocess_input,
             "densenet201":
-            self.tf.keras.applications.densenet.preprocess_input,
+            tf.keras.applications.densenet.preprocess_input,
             "mobilenet":
-            self.tf.keras.applications.mobilenet.preprocess_input,
+            tf.keras.applications.mobilenet.preprocess_input,
             "mobilenet_v2":
-            self.tf.keras.applications.mobilenet_v2.preprocess_input,
+            tf.keras.applications.mobilenet_v2.preprocess_input,
             "nasnet_large":
-            self.tf.keras.applications.nasnet.preprocess_input,
+            tf.keras.applications.nasnet.preprocess_input,
             "nasnet_mobile":
-            self.tf.keras.applications.nasnet.preprocess_input,
+            tf.keras.applications.nasnet.preprocess_input,
             "inception_resnet_v2":
-            self.tf.keras.applications.inception_resnet_v2.preprocess_input,
+            tf.keras.applications.inception_resnet_v2.preprocess_input,
         }
         self.batch_size = batch_size
         self.layer = layer
@@ -160,7 +145,7 @@ class KerasExtractor(Extractor):
         outputs = (base_model.get_layer(layer)
                    if not hasattr(base_model.get_layer(layer), "output") else
                    base_model.get_layer(layer).output)
-        self.model = self.tf.keras.models.Model(inputs=inputs, outputs=outputs)
+        self.model = tf.keras.models.Model(inputs=inputs, outputs=outputs)
         self.preprocess = self.preprocessors[model_key]
 
     def extract_features(self, tuple_batch):
