@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 from subprocess import CalledProcessError, check_output
 
 PROJECT = "DeepSpectrum"
-VERSION = "0.5.2"
+VERSION = "0.5.3"
 LICENSE = "GPLv3+"
 AUTHOR = "Maurice Gerczuk"
 AUTHOR_EMAIL = "gerczuk@fim.uni-passau.de"
@@ -17,11 +17,19 @@ install_requires = [
     "imread>=0.7.0",
     "tqdm>=4.30.0",
     "matplotlib>=3.0.2",
-    "opencv-python>=4.0.0.21",
     "librosa>=0.6.3",
     "click>=7.0",
     "Pillow>=6.0.0",
 ]
+
+try:
+    import cv2
+    cv2_found = True
+except ImportError:
+    cv2_found = False
+
+if not cv2_found:
+    install_requires.append("opencv-python>=4.0.0.21")
 
 try:
     import tensorflow
