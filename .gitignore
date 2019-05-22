@@ -6,7 +6,6 @@ build/*
 dist/*
 *.egg-info
 venv/*
-*.png
 *.arff
 *.ipynb
 *_old.py
