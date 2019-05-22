@@ -21,17 +21,6 @@ def tensorflow_shutup():
     tf.logging.set_verbosity(logging.ERROR)
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
-    # Monkey patching deprecation tools to shut it up! Maybe good idea to
-    # disable this once after upgrade
-    # noinspection PyUnusedLocal
-    def deprecated(date, instructions, warn_once=True):
-        def deprecated_wrapper(func):
-            return func
-
-        return deprecated_wrapper
-
-    tf.python.util.deprecation.deprecated = deprecated
-
 
 tensorflow_shutup()
 
