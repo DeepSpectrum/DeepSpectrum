@@ -3,7 +3,7 @@ from collections import namedtuple
 
 import numpy as np
 import os
-import tensroflow as tf
+import tensorflow as tf
 from PIL import Image
 
 import logging
