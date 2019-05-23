@@ -15,7 +15,7 @@ def test_image_features(tmpdir):
                                join(examples, 'pictures'), '-np',
                                cpu_count(), '-o',
                                join(tmpdir, 'image-features.arff'), '-en',
-                               'vgg19', '-el', 'justAnimals'
+                               'vgg16', '-el', 'justAnimals'
                            ])
     assert 'Total params' in result.output
     assert 'Done' in result.output

@@ -55,14 +55,14 @@ def test_features_time_continuous(tmpdir):
                                join(examples, 'audio'), '-np',
                                cpu_count(), '-cm', 'twilight', '-o',
                                join(tmpdir,
-                                    'features-tc.csv'), '-en', 'mobilenet_v2',
+                                    'features-tc.csv'), '-en', 'vgg16',
                                '-sr', 16000, '-m', 'chroma', '-t', '1', '1',
                                '-tc', '-s', 0, '-e', '2', '-lf',
                                join(
                                    examples,
                                    'labels',
                                    'time-continuous.csv',
-                               ), '-fl', 'global_average_pooling2d'
+                               ), '-fl', 'fc1'
                            ])
     assert 'Done' in result.output
     assert result.exit_code == 0
