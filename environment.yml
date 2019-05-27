@@ -1,6 +1,7 @@
 name: DeepSpectrum
 channels:
   - conda-forge
+  - pytorch
   - defaults
 dependencies:
   - python>=3.6.0
@@ -15,5 +16,7 @@ dependencies:
   - scipy>=1.2.1
   - tensorflow-gpu>=1.13.0
   - tqdm>=4.32.1
+  - pytorch-cpu>=1.1.0
+  - torchvision-cpu>=0.3
   - pip:
     - .

@@ -37,11 +37,13 @@ def test_features_file_level_single_file(tmpdir):
     result = runner.invoke(cli,
                            args=[
                                '-v', 'features',
-                               join(examples, 'audio', 'dog', 'dog.flac'),
-                               '-np', cpu_count(), '-cm', 'viridis', '-o',
+                               join(examples, 'audio', 'dog',
+                                    'dog.flac'), '-np',
+                               cpu_count(), '-cm', 'viridis', '-o',
                                join(tmpdir, 'features-single-file.csv'), '-so',
-                               join(tmpdir, 'spectrograms'), '-en', 'vgg16',
-                               '-sr', 16000, '-m', 'mel', '-fs', 'mel'
+                               join(tmpdir,
+                                    'spectrograms'), '-en', 'alexnet', '-sr',
+                               16000, '-m', 'mel', '-fs', 'mel', '-fl', 'fc7'
                            ])
     assert result.exit_code == 0
     assert 'Done' in result.output
