@@ -174,6 +174,7 @@ class PytorchExtractor(Extractor):
     def __preprocess_alexnet(x):
         x = PytorchExtractor.__resize(x, target_size=(227, 227))
         x = x / 255.
+        x = np.array(x[:, :, :, ::-1])
         return x
 
     def __init__(self, images, model_key, layer, batch_size=256):
