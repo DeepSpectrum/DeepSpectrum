@@ -32,6 +32,16 @@ if not cv2_found:
     install_requires.append("opencv-python>=4.0.0.21")
 
 try:
+    import torch
+    torch_found = True
+except ImportError:
+    torch_found = False
+
+if not torch_found:
+    install_requires.append("torch>=1.1.0")
+    install_requires.append("torchvision>=0.3.0")
+
+try:
     import tensorflow
 
     tensorflow_found = True
