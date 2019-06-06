@@ -5,9 +5,8 @@ import numpy as np
 import os
 import tensorflow as tf
 import torch
-from torchvision import models
+from torchvision import models, transforms
 from PIL import Image
-from collections import OrderedDict
 
 import logging
 
@@ -161,20 +160,12 @@ class KerasExtractor(Extractor):
 
 class PytorchExtractor(Extractor):
     @staticmethod
-    def __resize(x, target_size=(227, 227)):
-        if (x.shape[1], x.shape[2]) != target_size:
-            x = np.array([
-                np.array(
-                    Image.fromarray(image, mode="RGB").resize(target_size))
-                for image in x
-            ])
-        return x
-
-    @staticmethod
     def __preprocess_alexnet(x):
-        x = PytorchExtractor.__resize(x, target_size=(227, 227))
-        x = x / 255.
-        x = np.array(x[:, :, :, ::-1])
+        preprocess = transforms.Compose(
+            [transforms.Resize(227),
+             transforms.ToTensor()])
+        x = torch.stack(
+            [preprocess(Image.fromarray(image, mode="RGB")) for image in x])
         return x
 
     def __init__(self, images, model_key, layer, batch_size=256):
@@ -185,13 +176,15 @@ class PytorchExtractor(Extractor):
         self.layer = layer
         self.model_key = model_key
 
-        self.__build_model(layer)
+        self.model, self.feature_layer, self.output_size = self.__build_model(
+            layer)
 
     def __build_model(self, layer):
 
-        assert (
-            self.model_key in self.models
-        ), f"Invalid model for pytorch extractor. Available models: {self.models}"
+        assert (self.model_key in self.models
+                ), f"Invalid model for pytorch extractor. Available models: \
+            {self.models}"
+
         base_model = self.models[self.model_key](pretrained=True)
         base_model.eval()
         if self.model_key == "alexnet":
@@ -200,32 +193,25 @@ class PytorchExtractor(Extractor):
             assert (layer in layers
                     ), f"Invalid layer key. Available layers: {layers}"
 
-            # taken from pytorch alexnet code
-            self.features = list(base_model.children())[0]
-            self.avgpool = list(base_model.children())[1]
-            self.classifier = list(base_model.children())[2][:layers[layer]]
-        else:
-            pass
-
-    def forward(self, x):
-        assert (
-            self.model_key in self.models
-        ), f"Invalid model for pytorch extractor. Available models: {self.models}"
-        if self.model_key == "alexnet":
-            x = self.features(x)
-            x = self.avgpool(x)
-            x = x.view(x.size(0), 256 * 6 * 6)
-            x = self.classifier(x)
-            return x
+            feature_layer = base_model.classifier[layers[layer]]
+            return base_model, feature_layer, 4096
         else:
             pass
 
     def extract_features(self, tuple_batch):
         name_batch, ts_batch, image_batch = tuple_batch
         image_batch = self.preprocessors[self.model_key](image_batch)
-        image_batch = torch.from_numpy(np.rollaxis(image_batch, 3, 1)).float()
-        feature_batch = self.forward(image_batch)
-        feature_batch = feature_batch.detach().numpy()
+        if self.model_key == 'alexnet':
+            feature_vec = torch.zeros(image_batch.shape[0], self.output_size)
+
+        def copy_data(m, i, o):
+            feature_vec.copy_(o.data)
+
+        hook = self.feature_layer.register_forward_hook(copy_data)
+        _ = self.model(image_batch)
+        hook.remove()
+
+        feature_batch = feature_vec.numpy()
         dim = np.prod(feature_batch.shape[1:])
         feature_batch = np.reshape(feature_batch, [-1, dim])
         return map(FeatureTuple._make, zip(name_batch, ts_batch,
