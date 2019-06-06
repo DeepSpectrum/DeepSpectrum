@@ -42,7 +42,8 @@ matrix:
       - hash -r
       - conda config --set always_yes yes --set changeps1 no
       - conda update -q conda
-      - conda config --add channels conda-forge deepspectrum
+      - conda config --add channels conda-forge
+      - conda config --add channels deepspectrum
       - conda info -a
       - conda create -n DeepSpectrum deepspectrum
       - source activate DeepSpectrum
