@@ -112,7 +112,7 @@ def plot_chunk(chunk,
         plt.tight_layout()
 
     if output_folder:
-        relative_file_name = f'{splitext(get_relative_path(filename, base_path))[0]}_{ts:g}.{file_type}' if write_index else f'{splitext(get_relative_path(filename, base_path))}.{file_type}'
+        relative_file_name = f'{splitext(get_relative_path(filename, base_path))[0]}_{ts:g}.{file_type}' if write_index else f'{splitext(get_relative_path(filename, base_path))[0]}.{file_type}'
         if base_path is None:
             outfile = join(output_folder, basename(relative_file_name))
         else:
