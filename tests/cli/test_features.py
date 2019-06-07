@@ -2,6 +2,7 @@ from multiprocessing import cpu_count
 from deepspectrum.__main__ import cli
 from click.testing import CliRunner
 from os.path import dirname, join
+from os import listdir
 
 cur_dir = dirname(__file__)
 examples = join(dirname(dirname(cur_dir)), 'examples')
@@ -29,6 +30,7 @@ def test_features_file_level(tmpdir):
                                join(tmpdir, 'deep.conf')
                            ])
     print(result.output)
+    print(listdir(join(tmpdir, 'spectrograms')))
     assert 'Done' in result.output
     assert result.exit_code == 0
 
@@ -45,6 +47,7 @@ def test_features_file_level_single_file(tmpdir):
                                '-sr', 16000, '-m', 'mel', '-fs', 'mel'
                            ])
     print(result.output)
+    print(listdir(join(tmpdir, 'spectrograms')))
     assert 'Done' in result.output
     assert result.exit_code == 0
 
