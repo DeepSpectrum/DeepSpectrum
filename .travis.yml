@@ -34,7 +34,7 @@ matrix:
       - source activate DeepSpectrum
       - conda install --file requirements-test.txt
 script:
- - py.test tests/ --cov deepspectrum  --cov-report term
+ - py.test -s tests/ --cov deepspectrum  --cov-report term
 after_success:
  - coveralls
  

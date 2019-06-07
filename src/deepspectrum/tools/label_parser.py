@@ -1,6 +1,6 @@
 import csv
 import decimal
-from os.path import splitext
+from os.path import splitext, normpath
 
 
 class LabelParser():
@@ -32,7 +32,8 @@ class LabelParser():
 
         # parse the label file line by line
         for row in reader:
-            name = splitext(row[0])[0] if self._remove_extension else row[0]
+            name = splitext(normpath(
+                row[0]))[0] if self._remove_extension else normpath(row[0])
             if self._timecontinuous:
                 if name not in self.label_dict:
                     self.label_dict[name] = {}

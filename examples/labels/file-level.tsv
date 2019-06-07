@@ -1,6 +1,5 @@
 filename	class
-sea-gulls.mp3	seagull
-sea-gulls.ogg	seagull
-dog.wav	dog
-dog.flac	dog
-
+seagull/1.mp3	seagull
+seagull/2.ogg	seagull
+dog/2.wav	dog
+dog/1.flac	dog
