@@ -7,6 +7,7 @@ from os.path import basename
 from .configuration import Configuration, GENERAL_OPTIONS, EXTRACTION_OPTIONS, LABEL_OPTIONS, WRITER_OPTIONS, Filetypes
 from ..backend.plotting import PlotTuple
 from ..tools.feature_writer import get_writer
+from ..tools.path import get_relative_path
 from .utils import add_options
 
 environ['GLOG_minloglevel'] = '2'
@@ -17,12 +18,12 @@ log = logging.getLogger(__name__)
 DESCRIPTION_IMAGE_FEATURES = 'Extract CNN-descriptors from images.'
 
 
-def image_reader(files, size=500):
+def image_reader(files, base_path=None, size=500):
     for image in files:
         img = cv2.imread(image, cv2.IMREAD_COLOR)
         img = cv2.resize(img, dsize=(size, size))
         img = img[:, :, :3]
-        yield PlotTuple(name=basename(image),
+        yield PlotTuple(name=get_relative_path(image, base_path),
                         timestamp=None,
                         plot=np.array(img))
 
@@ -36,7 +37,8 @@ def image_features(**kwargs):
     configuration = Configuration(plotting=False,
                                   file_type=Filetypes.IMAGE,
                                   **kwargs)
-    plots = image_reader(configuration.files)
+    plots = image_reader(configuration.files,
+                         base_path=configuration.input_folder)
     log.info('Loading model and weights...')
     extractor = configuration.extractor(images=plots,
                                         **configuration.extraction_args)

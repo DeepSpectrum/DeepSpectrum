@@ -13,6 +13,7 @@ from os.path import abspath, join, isfile, basename, dirname, realpath, splitext
 from deepspectrum.backend.plotting import PLOTTING_FUNCTIONS
 from deepspectrum.tools.label_parser import LabelParser
 from deepspectrum.backend.extractor import KerasExtractor, PytorchExtractor
+from deepspectrum.tools.path import get_relative_path
 
 max_np = cpu_count()
 
@@ -285,7 +286,7 @@ class Configuration:
             sample_rate=None,
     ):
 
-        self.input = input
+        self.input_folder = input if not isfile(input) else dirname(input)
         self.config = config
         self.number_of_processes = number_of_processes
         self.model_weights = "imagenet"
@@ -312,8 +313,7 @@ class Configuration:
             self.plotting_args["hop"] = (window_size_and_hop[1]
                                          if window_size_and_hop else None)
             self.plotting_args["resample"] = sample_rate
-            self.plotting_args["base_path"] = self.input if not isfile(
-                self.input) else dirname(self.input)
+            self.plotting_args["base_path"] = self.input_folder
             if self.plotting_args["mode"] == "mel":
                 self.plotting_args["melbands"] = number_of_melbands
             if self.plotting_args["mode"] == "chroma":
@@ -332,10 +332,10 @@ class Configuration:
             self.extraction_args["batch_size"] = batch_size
 
         self._load_config()
-        self.files = self._find_files(self.input)
+        self.files = self._find_files(input)
         if not self.files:
             log.error(
-                f"No files were found under the path {self.input}. Check the specified input path."
+                f"No files were found under the path {input}. Check the specified input path."
             )
             exit(1)
         if self.writer:
@@ -405,7 +405,10 @@ class Configuration:
         self.writer_args["label_dict"] = parser.label_dict
         self.writer_args["labels"] = parser.labels
 
-        file_names = set(map(basename, self.files))
+        file_names = set(
+            map(
+                lambda f: get_relative_path(
+                    f, prefix=self.input_folder), self.files))
 
         # check if labels are missing for specific files
         missing_labels = file_names.difference(self.writer_args["label_dict"])
@@ -425,14 +428,16 @@ class Configuration:
         """
         if self.writer_args["labels"] is None:
             self.writer_args["label_dict"] = {
-                basename(wav): [basename(dirname(wav))]
-                for wav in self.files
+                get_relative_path(
+                    f, prefix=self.input_folder): [basename(dirname(f))]
+                for f in self.files
             }
         else:
             # map the labels given on the commandline to all files in a given folder to all input files
             self.writer_args["label_dict"] = {
-                basename(wav): [str(self.writer_args["labels"])]
-                for wav in self.files
+                get_relative_path(f, prefix=self.input_folder):
+                [str(self.writer_args["labels"])]
+                for f in self.files
             }
         labels = sorted(
             list(map(lambda x: x[0], self.writer_args["label_dict"].values())))
@@ -462,27 +467,27 @@ class Configuration:
                 })
             self.file_type = filetypes[self.file_type.name]
             if self.extraction:
-                    keras_net_conf = conf_parser["keras-nets"]
-                    pytorch_net_conf = conf_parser["pytorch-nets"]
-                    if self.net in keras_net_conf:
-                        self.extractor = KerasExtractor
-                        self.extraction_args["weights_path"] = keras_net_conf[
-                            self.net]
-                        self.extraction_args["model_key"] = self.net
-                    elif self.net in pytorch_net_conf:
-                        self.extractor = PytorchExtractor
-                        self.extraction_args["model_key"] = self.net
-                    else:
-                        log.error(
-                            f"No model weights defined for {self.net} in {self.config}"
-                        )
-                        exit(1)
+                keras_net_conf = conf_parser["keras-nets"]
+                pytorch_net_conf = conf_parser["pytorch-nets"]
+                if self.net in keras_net_conf:
+                    self.extractor = KerasExtractor
+                    self.extraction_args["weights_path"] = keras_net_conf[
+                        self.net]
+                    self.extraction_args["model_key"] = self.net
+                elif self.net in pytorch_net_conf:
+                    self.extractor = PytorchExtractor
+                    self.extraction_args["model_key"] = self.net
+                else:
+                    log.error(
+                        f"No model weights defined for {self.net} in {self.config}"
+                    )
+                    exit(1)
                 
 
         # if not, create it with standard settings
         else:
             log.info("Writing standard config to " + self.config)
-            
+
             makedirs(dirname(abspath(self.config)), exist_ok=True)
             # Read the defaul config file included in the package
             conf_parser.read(join(dirname(realpath(__file__)), "deep.conf"))

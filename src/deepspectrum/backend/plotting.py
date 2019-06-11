@@ -1,5 +1,6 @@
-import io
 import matplotlib
+matplotlib.use('Agg')
+import io
 import warnings
 import matplotlib.pyplot as plt
 import librosa.display
@@ -13,8 +14,7 @@ from os.path import basename, join, dirname, splitext
 from multiprocessing import cpu_count, Pool
 from functools import partial
 from collections import namedtuple
-
-matplotlib.use('Agg')
+from ..tools.path import get_relative_path
 
 PlotTuple = namedtuple('PlotTuple', ['name', 'timestamp', 'plot'])
 AudioChunk = namedtuple('AudioChunk',
@@ -62,9 +62,12 @@ def plot_chunk(chunk,
     Plot spectrograms for a chunk of a wav-file using the described parameters.
     :param chunk: audio chunk to be plotted.
     :param mode: type of audio plot to create.
-    :param nfft: number of samples for the fast fourier transformation (Default: 256)
-    :param size: size of the spectrogram plot in pixels. Height and width are always identical (Default: 227)
-    :param output_folder: if given, the plot is saved to this path in .png format (Default: None)
+    :param nfft: number of samples for the fast fourier transformation \
+        (Default: 256)
+    :param size: size of the spectrogram plot in pixels. Height and width are \
+        always identical (Default: 227)
+    :param output_folder: if given, the plot is saved to this path in .png \
+        format (Default: None)
     :param kwargs: keyword args for plotting functions
     :return: blob of the spectrogram plot
     """
@@ -109,20 +112,11 @@ def plot_chunk(chunk,
         plt.tight_layout()
 
     if output_folder:
-        file_name = basename(filename)[:-4]
+        relative_file_name = f'{splitext(get_relative_path(filename, base_path))[0]}_{ts:g}.{file_type}' if write_index else f'{splitext(get_relative_path(filename, base_path))[0]}.{file_type}'
         if base_path is None:
-            outfile = join(
-                output_folder,
-                '{}_{:.4f}'.format(file_name, ts).rstrip('0').rstrip('.') +
-                '.' + file_type) if write_index else join(
-                    output_folder, file_name + '.' + file_type)
+            outfile = join(output_folder, basename(relative_file_name))
         else:
-            relative_path = get_relative_path(filename, base_path)
-            outfile = join(
-                output_folder, relative_path,
-                '{}_{:.4f}'.format(file_name, ts).rstrip('0').rstrip('.') +
-                '.' + file_type) if write_index else join(
-                    output_folder, relative_path, file_name + '.' + file_type)
+            outfile = join(output_folder, relative_file_name)
 
         log.debug(f'Saving spectrogram plot to {outfile}.')
         makedirs(dirname(outfile), exist_ok=True)
@@ -141,7 +135,9 @@ def plot_chunk(chunk,
     except IOError:
         log.error('Error while reading the spectrogram blob.')
         return None
-    return PlotTuple(name=basename(filename), timestamp=ts, plot=img)
+    return PlotTuple(name=get_relative_path(filename, base_path),
+                     timestamp=ts,
+                     plot=img)
 
 
 def _generate_chunks_filename_timestamp_wrapper(filepath,
@@ -161,7 +157,7 @@ def _generate_chunks_filename_timestamp_wrapper(filepath,
         nfft = _next_power_of_two(int(sr * 0.025))
     if wav_out_folder is not None:
         relative_path = get_relative_path(filepath, base_path)
-        wav_out = join(wav_out_folder, relative_path, basename(filepath))
+        wav_out = join(wav_out_folder, relative_path)
     else:
         wav_out = None
     for idx, audio in enumerate(
@@ -270,22 +266,13 @@ def _generate_chunks(sound_info, sr, window, hop, start=0, wav_out=None):
                                            window_samples, len(sound_info))]
         if wav_out:
             makedirs(dirname(wav_out), exist_ok=True)
-            chunk_out = '{}_{:.4f}'.format(
-                splitext(wav_out)[0],
-                start + n * hop).rstrip('0').rstrip('.') + '.wav'
+            chunk_out = f'{splitext(wav_out)[0]}_{(start + n * hop):g}.wav'
             librosa.output.write_wav(chunk_out, chunk, sr)
         yield chunk
 
 
 def _next_power_of_two(x):
     return 1 << (x - 1).bit_length()
-
-
-def get_relative_path(file, prefix):
-    filepath = pathlib.PurePath(dirname(file))
-    filepath = filepath.relative_to(prefix)
-
-    return str(filepath)
 
 
 class PlotGenerator():

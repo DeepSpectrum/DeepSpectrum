@@ -11,7 +11,7 @@ def test_plot(tmpdir):
     runner = CliRunner()
     result = runner.invoke(cli,
                            args=[
-                               '-v', 'plot',
+                               '-vv', 'plot',
                                join(examples, 'audio'), '-np',
                                cpu_count(), '-cm', 'twilight', '-so',
                                join(tmpdir, 'pretty-spectrograms'), '-sr',
