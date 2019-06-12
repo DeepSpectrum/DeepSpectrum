@@ -25,7 +25,8 @@ def test_features_file_level(tmpdir):
                                join(examples, 'audio'), '-np',
                                cpu_count(), '-cm', 'viridis', '-o',
                                join(tmpdir, 'features.csv'), '-so',
-                               join(tmpdir, 'spectrograms'), '-en', 'vgg16',
+                               join(tmpdir,
+                                    'spectrograms'), '-en', 'squeezenet',
                                '-sr', 16000, '-m', 'mel', '-fs', 'mel', '-c',
                                join(tmpdir, 'deep.conf')
                            ])
