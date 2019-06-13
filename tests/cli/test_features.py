@@ -25,7 +25,8 @@ def test_features_file_level(tmpdir):
                                join(examples, 'audio'), '-np',
                                cpu_count(), '-cm', 'viridis', '-o',
                                join(tmpdir, 'features.csv'), '-so',
-                               join(tmpdir, 'spectrograms'), '-en', 'vgg16',
+                               join(tmpdir,
+                                    'spectrograms'), '-en', 'squeezenet',
                                '-sr', 16000, '-m', 'mel', '-fs', 'mel', '-c',
                                join(tmpdir, 'deep.conf')
                            ])
@@ -43,8 +44,9 @@ def test_features_file_level_single_file(tmpdir):
                                join(examples, 'audio', 'dog', '1.flac'), '-np',
                                cpu_count(), '-cm', 'viridis', '-o',
                                join(tmpdir, 'features-single-file.csv'), '-so',
-                               join(tmpdir, 'spectrograms'), '-en', 'vgg16',
-                               '-sr', 16000, '-m', 'mel', '-fs', 'mel'
+                               join(tmpdir,
+                                    'spectrograms'), '-en', 'alexnet', '-sr',
+                               16000, '-m', 'mel', '-fs', 'mel', '-fl', 'fc7'
                            ])
     print(result.output)
     print(listdir(join(tmpdir, 'spectrograms')))

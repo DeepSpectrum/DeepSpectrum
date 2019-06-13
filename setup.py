@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 from subprocess import CalledProcessError, check_output
 
 PROJECT = "DeepSpectrum"
-VERSION = "0.5.5"
+VERSION = "0.6.0"
 LICENSE = "GPLv3+"
 AUTHOR = "Maurice Gerczuk"
 AUTHOR_EMAIL = "gerczuk@fim.uni-passau.de"
@@ -30,6 +30,16 @@ except ImportError:
 
 if not cv2_found:
     install_requires.append("opencv-python>=4.0.0.21")
+
+try:
+    import torch
+    torch_found = True
+except ImportError:
+    torch_found = False
+
+if not torch_found:
+    install_requires.append("torch>=1.1.0")
+    install_requires.append("torchvision>=0.3.0")
 
 try:
     import tensorflow

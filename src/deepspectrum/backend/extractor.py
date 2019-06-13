@@ -4,6 +4,8 @@ from collections import namedtuple
 import numpy as np
 import os
 import tensorflow as tf
+import torch
+from torchvision import models, transforms
 from PIL import Image
 
 import logging
@@ -50,11 +52,6 @@ class Extractor:
 
 
 class KerasExtractor(Extractor):
-    try:
-        import tensorflow as tf
-    except ImportError:
-        pass
-
     @staticmethod
     def __resize(x, target_size=(224, 224)):
         if (x.shape[1], x.shape[2]) != target_size:
@@ -157,6 +154,116 @@ class KerasExtractor(Extractor):
         dim = np.prod(feature_batch.shape[1:])
         feature_batch = np.reshape(feature_batch, [-1, dim])
 
+        return map(FeatureTuple._make, zip(name_batch, ts_batch,
+                                           feature_batch))
+
+
+class PytorchExtractor(Extractor):
+    @staticmethod
+    def __preprocess_alexnet(x):
+        preprocess = transforms.Compose(
+            [transforms.Resize(227),
+             transforms.ToTensor()])
+        x = torch.stack(
+            [preprocess(Image.fromarray(image, mode="RGB")) for image in x])
+        return x
+
+    @staticmethod
+    def __preprocess_squeezenet(x):
+        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                         std=[0.229, 0.224, 0.225])
+        preprocess = transforms.Compose(
+            [transforms.Resize(224),
+             transforms.ToTensor(), normalize])
+        x = torch.stack(
+            [preprocess(Image.fromarray(image, mode="RGB")) for image in x])
+        return x
+
+    @staticmethod
+    def __preprocess_googlenet(x):
+        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                         std=[0.229, 0.224, 0.225])
+        preprocess = transforms.Compose(
+            [transforms.Resize(224),
+             transforms.ToTensor(), normalize])
+        x = torch.stack(
+            [preprocess(Image.fromarray(image, mode="RGB")) for image in x])
+        return x
+
+    def __init__(self, images, model_key, layer, batch_size=256):
+        super().__init__(images, batch_size)
+        self.models = {
+            "alexnet": models.alexnet,
+            "squeezenet": models.squeezenet1_1,
+            "googlenet": models.googlenet
+        }
+        self.preprocessors = {
+            "alexnet": self.__preprocess_alexnet,
+            "squeezenet": self.__preprocess_squeezenet,
+            "googlenet": self.__preprocess_googlenet
+        }
+        self.batch_size = batch_size
+        self.layer = layer
+        self.model_key = model_key
+
+        self.model, self.feature_layer, self.output_size = self.__build_model(
+            layer)
+
+    def __build_model(self, layer):
+
+        assert (self.model_key in self.models
+                ), f"Invalid model for pytorch extractor. Available models: \
+            {self.models}"
+
+        base_model = self.models[self.model_key](pretrained=True)
+        base_model.eval()
+        if self.model_key == "alexnet":
+            log.debug(f'Layout of base model: \n{base_model}')
+            layers = {"fc6": -5, "fc7": -2}
+            assert (layer in layers
+                    ), f"Invalid layer key. Available layers: {layers.keys}"
+
+            feature_layer = base_model.classifier[layers[layer]]
+            return base_model, feature_layer, (4096, )
+        elif self.model_key == "squeezenet":
+            log.info(
+                f'Disregarding user choice of feature layer: Only one layer is currently available for squeezenet.'
+            )
+            base_model = torch.nn.Sequential(
+                base_model.features,
+                torch.nn.AdaptiveAvgPool2d(output_size=(2, 2)))
+            feature_layer = base_model[-1]
+            log.debug(f'Layout of model: \n{base_model}')
+
+            return base_model, feature_layer, (512, 2, 2)
+
+        elif self.model_key == "googlenet":
+            layers = {"avgpool": base_model.avgpool, "fc": base_model.fc}
+            assert (layer in layers
+                    ), f"Invalid layer key. Available layers: {layers.keys}"
+            feature_layer = layers[layer]
+            log.debug(f'Layout of model: \n{base_model}')
+            return base_model, feature_layer, (1024, 1, 1)
+
+        else:
+            pass
+
+    def extract_features(self, tuple_batch):
+        name_batch, ts_batch, image_batch = tuple_batch
+        image_batch = self.preprocessors[self.model_key](image_batch)
+
+        feature_vec = torch.zeros(image_batch.shape[0], *self.output_size)
+
+        def copy_data(m, i, o):
+            feature_vec.copy_(o.data)
+
+        hook = self.feature_layer.register_forward_hook(copy_data)
+        _ = self.model(image_batch)
+        hook.remove()
+
+        feature_batch = feature_vec.numpy()
+        dim = np.prod(feature_batch.shape[1:])
+        feature_batch = np.reshape(feature_batch, [-1, dim])
         return map(FeatureTuple._make, zip(name_batch, ts_batch,
                                            feature_batch))
 

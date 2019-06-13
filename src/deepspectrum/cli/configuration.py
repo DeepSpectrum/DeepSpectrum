@@ -12,8 +12,8 @@ from os.path import abspath, join, isfile, basename, dirname, realpath, splitext
 
 from deepspectrum.backend.plotting import PLOTTING_FUNCTIONS
 from deepspectrum.tools.label_parser import LabelParser
+from deepspectrum.backend.extractor import KerasExtractor, PytorchExtractor
 from deepspectrum.tools.path import get_relative_path
-from deepspectrum.backend.extractor import KerasExtractor
 
 max_np = cpu_count()
 
@@ -467,27 +467,22 @@ class Configuration:
                 })
             self.file_type = filetypes[self.file_type.name]
             if self.extraction:
-
-                if self.backend == "keras":
-                    log.info("Using keras backend as specified in {}".format(
-                        self.config))
+                keras_net_conf = conf_parser["keras-nets"]
+                pytorch_net_conf = conf_parser["pytorch-nets"]
+                if self.net in keras_net_conf:
                     self.extractor = KerasExtractor
-
-                    net_conf = conf_parser["keras-nets"]
-                    if self.net in net_conf:
-                        self.extraction_args["weights_path"] = net_conf[
-                            self.net]
-                        self.extraction_args["model_key"] = self.net
-                    else:
-                        log.error(
-                            f"No model weights defined for {self.net} in {self.config}"
-                        )
-                        exit(1)
+                    self.extraction_args["weights_path"] = keras_net_conf[
+                        self.net]
+                    self.extraction_args["model_key"] = self.net
+                elif self.net in pytorch_net_conf:
+                    self.extractor = PytorchExtractor
+                    self.extraction_args["model_key"] = self.net
                 else:
                     log.error(
-                        f"Unknown backend '{self.backend}' defined in {self.config}. Available backends: keras"
+                        f"No model weights defined for {self.net} in {self.config}"
                     )
                     exit(1)
+                
 
         # if not, create it with standard settings
         else:
