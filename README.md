@@ -74,8 +74,13 @@ mobilenet_v2 = imagenet
 nasnet_large = imagenet
 nasnet_mobile = imagenet
 
+[pytorch-nets]
+alexnet=
+squeezenet=
+googlenet=
+
 ```
-Under `keras-nets` you can define network weights for the supported models. Setting the weights for a model to `imagenet` is the default and uses ImageNet pretrained models from `keras-aplications`.
+Under `keras-nets` you can define network weights for the supported models. Setting the weights for a model to `imagenet` is the default and uses ImageNet pretrained models from `keras-aplications`. Three additional networks are also supported through pytorch: `alexnet`, `squeezenet` and `googlenet`. For these, no definition of the used weights is needed (or possible, for the time being).
 
 # Using the tool
 You can access the scripts provided by the tool from the virtualenvironment by calling `deepspectrum`. The feature extraction component is provided by the subcommand `features`.
