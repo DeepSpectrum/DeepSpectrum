@@ -20,7 +20,7 @@ This program provides a setup.py script for easy installation with [pip](#instal
 * Python >=3.6
 * ffmpeg
 
-## Installation through pip
+## Installation through pip (for Linux)
 We recommend that you install the DeepSpectrum tool into a virtual environment. To do so first create a new virtualenvironment:
 ```bash
 virtualenv -p python3 ds_virtualenv
@@ -33,10 +33,6 @@ This creates a minimal python installation in the folder "ds_virtualenv". You ca
 You can then activate the virtualenv (Linux):
 ```bash
 source ds_virtualenv/bin/activate
-```
-Or for windows:
-```bash
-.\ds_virtualenv\Scripts\activate.bat
 ```
 
 Once the virtualenv is activated, the tool can be installed from the source directory (containing setup.py) with this command:
