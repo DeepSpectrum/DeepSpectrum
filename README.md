@@ -14,11 +14,43 @@ If you use DeepSpectrum or any code from DeepSpectrum in your research work, you
 
 
 # Installation
-This program provides a setup.py script for easy installation with [pip](#installation-through-pip) and also an environment.yml for installing through [conda](#conda-installation) (recommended on Windows).
+The easiest way to install DeepSpectrum is through the packages on our official conda channel which will be built for every release tag on the master branch. For installing different branches or a more manual approach, you can also use the setup.py script with [pip](#installation-through-pip) (only for Linux) and also an environment.yml for installing through [conda](#conda-installation) (recommended on Windows and OSX).
 
 ## Dependencies (only for installation with pip)
 * Python >=3.6
 * ffmpeg
+
+## Installing the conda packages
+First, you have to add the pytorch and conda-forge channels to your conda channel configuration:
+```bash
+conda config --add channels pytorch
+conda config --add channels conda-forge
+```
+
+Then you can install DeepSpectrum into a new environment:
+```bash
+conda install -n DeepSpectrum -c deepspectrum 
+```
+
+Finally, activate your DeepSpectrum environment and start using the tool:
+```bash
+conda activate DeepSpectrum
+```
+Installation is now completed - you can skip to [configuration](#configuration) or [usage](#using-the-tool).
+
+
+## Manual Conda installation
+You can use the included environment.yml file to create a new virtual python environment with DeepSpectrum by running:
+```bash
+conda env create -f environment.yml
+```
+Then activate the environmnet with:
+```bash
+conda activate DeepSpectrum
+```
+
+Installation is now completed - you can skip to [configuration](#configuration) or [usage](#using-the-tool).
+
 
 ## Installation through pip (for Linux)
 We recommend that you install the DeepSpectrum tool into a virtual environment. To do so first create a new virtualenvironment:
@@ -39,15 +71,9 @@ Once the virtualenv is activated, the tool can be installed from the source dire
 ```bash
 pip install .
 ```
-## Conda installation
-You can use the included environment.yml file to create a new virtual python environment with DeepSpectrum by running:
-```bash
-conda env create -f environment.yml
-```
-Then activate the environmnet with:
-```bash
-conda activate DeepSpectrum
-```
+
+Installation is now completed - you can skip to [configuration](#configuration) or [usage](#using-the-tool).
+
 
 ## Configuration
 If you just want to start working with ImageNet pretrained keras-application models, skip to [usage](#using-the-tool). Otherwise, you can adjust your configuration file to use other weights for the supported models. The default file can be found in `deep-spectrum/src/cli/deep.conf`:
