@@ -33,7 +33,7 @@ conda config --add channels conda-forge
 
 Then you can install DeepSpectrum into a new environment:
 ```bash
-conda install -n DeepSpectrum -c deepspectrum 
+conda create -n DeepSpectrum -c deepspectrum deepspectrum
 ```
 
 Finally, activate your DeepSpectrum environment and start using the tool:
