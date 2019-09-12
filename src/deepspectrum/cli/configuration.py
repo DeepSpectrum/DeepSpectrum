@@ -418,8 +418,10 @@ class Configuration:
             )
             self.files = [
                 file for file in self.files
-                if basename(file) in self.writer_args["label_dict"]
+                if get_relative_path(
+                    file, prefix=self.input_folder) in self.writer_args["label_dict"]
             ]
+        log.info(f'Extracting features for {len(self.files)} files.')
 
     def _create_labels_from_folder_structure(self):
         """

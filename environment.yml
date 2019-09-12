@@ -1,7 +1,7 @@
 name: DeepSpectrum
 channels:
-  - conda-forge
   - pytorch
+  - conda-forge
   - defaults
 dependencies:
   - python>=3.6.0

@@ -1,5 +1,9 @@
 [![Coverage Status](https://coveralls.io/repos/github/DeepSpectrum/DeepSpectrum/badge.svg)](https://coveralls.io/github/DeepSpectrum/DeepSpectrum)
 [![Build Status](https://travis-ci.org/DeepSpectrum/DeepSpectrum.svg?branch=master)](https://travis-ci.org/DeepSpectrum/DeepSpectrum)
+[![Anaconda-Server Badge](https://anaconda.org/deepspectrum/deepspectrum/badges/version.svg)](https://anaconda.org/deepspectrum/deepspectrum)
+[![Anaconda-Server Badge](https://anaconda.org/deepspectrum/deepspectrum/badges/platforms.svg)](https://anaconda.org/deepspectrum/deepspectrum)
+[![Anaconda-Server Badge](https://anaconda.org/deepspectrum/deepspectrum/badges/installer/conda.svg)](https://conda.anaconda.org/deepspectrum)
+
 
 **DeepSpectrum** is a Python toolkit for feature extraction from audio data with pre-trained Image Convolutional Neural Networks (CNNs). It features an extraction pipeline which first creates visual representations for audio data - plots of spectrograms or chromagrams - and then feeds them to a pre-trained Image CNN. Activations of a specific layer then form the final feature vectors.
 
@@ -14,13 +18,45 @@ If you use DeepSpectrum or any code from DeepSpectrum in your research work, you
 
 
 # Installation
-This program provides a setup.py script for easy installation with [pip](#installation-through-pip) and also an environment.yml for installing through [conda](#conda-installation) (recommended on Windows).
+The easiest way to install DeepSpectrum is through the packages on our official conda channel which will be built for every release tag on the master branch. For installing different branches or a more manual approach, you can also use the setup.py script with [pip](#installation-through-pip) (only for Linux) and also an environment.yml for installing through [conda](#conda-installation) (recommended on Windows and OSX).
 
 ## Dependencies (only for installation with pip)
 * Python >=3.6
 * ffmpeg
 
-## Installation through pip
+## Installing the conda packages
+First, you have to add the pytorch and conda-forge channels to your conda channel configuration:
+```bash
+conda config --add channels pytorch
+conda config --add channels conda-forge
+```
+
+Then you can install DeepSpectrum into a new environment:
+```bash
+conda install -n DeepSpectrum -c deepspectrum 
+```
+
+Finally, activate your DeepSpectrum environment and start using the tool:
+```bash
+conda activate DeepSpectrum
+```
+Installation is now completed - you can skip to [configuration](#configuration) or [usage](#using-the-tool).
+
+
+## Manual Conda installation
+You can use the included environment.yml file to create a new virtual python environment with DeepSpectrum by running:
+```bash
+conda env create -f environment.yml
+```
+Then activate the environmnet with:
+```bash
+conda activate DeepSpectrum
+```
+
+Installation is now completed - you can skip to [configuration](#configuration) or [usage](#using-the-tool).
+
+
+## Installation through pip (for Linux)
 We recommend that you install the DeepSpectrum tool into a virtual environment. To do so first create a new virtualenvironment:
 ```bash
 virtualenv -p python3 ds_virtualenv
@@ -34,24 +70,14 @@ You can then activate the virtualenv (Linux):
 ```bash
 source ds_virtualenv/bin/activate
 ```
-Or for windows:
-```bash
-.\ds_virtualenv\Scripts\activate.bat
-```
 
 Once the virtualenv is activated, the tool can be installed from the source directory (containing setup.py) with this command:
 ```bash
 pip install .
 ```
-## Conda installation
-You can use the included environment.yml file to create a new virtual python environment with DeepSpectrum by running:
-```bash
-conda env create -f environment.yml
-```
-Then activate the environmnet with:
-```bash
-conda activate DeepSpectrum
-```
+
+Installation is now completed - you can skip to [configuration](#configuration) or [usage](#using-the-tool).
+
 
 ## Configuration
 If you just want to start working with ImageNet pretrained keras-application models, skip to [usage](#using-the-tool). Otherwise, you can adjust your configuration file to use other weights for the supported models. The default file can be found in `deep-spectrum/src/cli/deep.conf`:
@@ -74,8 +100,13 @@ mobilenet_v2 = imagenet
 nasnet_large = imagenet
 nasnet_mobile = imagenet
 
+[pytorch-nets]
+alexnet=
+squeezenet=
+googlenet=
+
 ```
-Under `keras-nets` you can define network weights for the supported models. Setting the weights for a model to `imagenet` is the default and uses ImageNet pretrained models from `keras-aplications`.
+Under `keras-nets` you can define network weights for the supported models. Setting the weights for a model to `imagenet` is the default and uses ImageNet pretrained models from `keras-aplications`. Three additional networks are also supported through pytorch: `alexnet`, `squeezenet` and `googlenet`. For these, no definition of the used weights is needed (or possible, for the time being).
 
 # Using the tool
 You can access the scripts provided by the tool from the virtualenvironment by calling `deepspectrum`. The feature extraction component is provided by the subcommand `features`.
