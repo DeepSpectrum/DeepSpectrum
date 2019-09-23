@@ -67,6 +67,13 @@ class KerasExtractor(Extractor):
         x = x[:, :, :, ::-1]
         return x
 
+    @staticmethod
+    def __preprocess_default(x):
+        x = x.astype(np.float32)
+        x /= 127.5
+        x -= 1.
+        return x
+
     def __init__(self,
                  images,
                  model_key,
@@ -132,7 +139,13 @@ class KerasExtractor(Extractor):
         }
         self.batch_size = batch_size
         self.layer = layer
-        base_model = self.models[model_key](weights=weights_path)
+        if model_key in self.models:
+            base_model = self.models[model_key](weights=weights_path)
+            self.preprocess = self.preprocessors[model_key]
+        else:
+            log.info(f'{model_key} not available in Keras Applications. Trying to load model file from {weights_path}.')
+            base_model = tf.keras.models.load_model(weights_path)
+            self.preprocess = self.__preprocess_default
         if log.getEffectiveLevel() < logging.INFO:
             base_model.summary()
         self.layers = [layer.name for layer in base_model.layers]
@@ -143,7 +156,6 @@ class KerasExtractor(Extractor):
                    if not hasattr(base_model.get_layer(layer), "output") else
                    base_model.get_layer(layer).output)
         self.model = tf.keras.models.Model(inputs=inputs, outputs=outputs)
-        self.preprocess = self.preprocessors[model_key]
 
     def extract_features(self, tuple_batch):
         name_batch, ts_batch, image_batch = tuple_batch
