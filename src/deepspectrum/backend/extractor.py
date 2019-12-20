@@ -28,6 +28,16 @@ tensorflow_shutup()
 
 FeatureTuple = namedtuple("FeatureTuple", ["name", "timestamp", "features"])
 
+eps = 1e-8
+
+
+def mask(func):
+    def mask_loss_function(*args, **kwargs):
+        mask = tf.cast(tf.not_equal(tf.sign(args[0]), -1), tf.float32) + eps
+        return func(args[0] * mask, args[1] * mask)
+
+    return mask_loss_function
+
 
 class Extractor:
     def __init__(self, images, batch_size):
@@ -143,8 +153,15 @@ class KerasExtractor(Extractor):
             base_model = self.models[model_key](weights=weights_path)
             self.preprocess = self.preprocessors[model_key]
         else:
-            log.info(f'{model_key} not available in Keras Applications. Trying to load model file from {weights_path}.')
-            base_model = tf.keras.models.load_model(weights_path)
+            log.info(
+                f'{model_key} not available in Keras Applications. Trying to load model file from {weights_path}.'
+            )
+            base_model = tf.keras.models.load_model(
+                weights_path,
+                custom_objects={
+                    'mask_loss_function':
+                    mask(tf.keras.losses.categorical_crossentropy)
+                })
             self.preprocess = self.__preprocess_default
         if log.getEffectiveLevel() < logging.INFO:
             base_model.summary()
