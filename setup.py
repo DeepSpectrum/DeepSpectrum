@@ -85,7 +85,7 @@ if not tensorflow_found:
         print("error during CUDA detection: %s", e)
 
     if not use_gpu:
-        install_requires.append("tensorflow>=1.13.0")
+        install_requires.append("tensorflow >=1.13.0, <2")
 else:
     pass
 
