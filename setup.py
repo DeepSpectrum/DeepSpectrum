@@ -64,7 +64,7 @@ if not tensorflow_found:
             if major == 10 and minor == 0:
                 print("detected compatible CUDA version %d.%d" %
                       (major, minor))
-                install_requires.append("tensorflow-gpu>=1.13.0")
+                install_requires.append("tensorflow-gpu>=1.13.0,<2")
                 use_gpu = True
 
             if major == 9:
