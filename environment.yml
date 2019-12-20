@@ -1,4 +1,4 @@
-name: DeepSpectrum
+name: DeepSpectrumManual
 channels:
   - pytorch
   - conda-forge
@@ -19,4 +19,4 @@ dependencies:
   - pytorch-cpu>=1.1.0
   - torchvision-cpu>=0.3
   - pip:
-    - .
+    - -e .
