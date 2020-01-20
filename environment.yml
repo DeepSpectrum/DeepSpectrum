@@ -12,7 +12,7 @@ dependencies:
   - matplotlib>=3.0.3
   - numpy>=1.16.3
   - opencv>=4.1.0
-  - pillow>=6.0.0
+  - pillow>=6.0.0,<7
   - scipy>=1.2.1
   - tensorflow-gpu >=1.13.0,<2
   - tqdm>=4.32.1

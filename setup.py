@@ -19,7 +19,7 @@ install_requires = [
     "matplotlib>=3.0.2",
     "librosa>=0.6.3",
     "click>=7.0",
-    "Pillow>=6.0.0",
+    "Pillow >=6.0.0, <7",
 ]
 
 try:
