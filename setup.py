@@ -20,6 +20,7 @@ install_requires = [
     "librosa>=0.6.4",
     "click>=7.0",
     "Pillow >=6.0.0, <7",
+    "xarray"
 ]
 
 try:

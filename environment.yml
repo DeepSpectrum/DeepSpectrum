@@ -18,5 +18,6 @@ dependencies:
   - tqdm>=4.32.1
   - pytorch-cpu>=1.1.0
   - torchvision-cpu>=0.3
+  - xarray
   - pip:
     - .
