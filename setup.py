@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 from subprocess import CalledProcessError, check_output
 
 PROJECT = "DeepSpectrum"
-VERSION = "0.6.3"
+VERSION = "0.6.4"
 LICENSE = "GPLv3+"
 AUTHOR = "Maurice Gerczuk"
 AUTHOR_EMAIL = "gerczuk@fim.uni-passau.de"
@@ -17,7 +17,7 @@ install_requires = [
     "imread>=0.7.0",
     "tqdm>=4.30.0",
     "matplotlib>=3.0.2",
-    "librosa>=0.6.3",
+    "librosa>=0.6.4",
     "click>=7.0",
     "Pillow >=6.0.0, <7",
 ]
