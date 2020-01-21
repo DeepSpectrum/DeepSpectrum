@@ -109,7 +109,8 @@ setup(
     tests_require=tests_require,
     namespace_packages=[],
     packages=find_packages('src'),
-    package_dir={'': 'src'},
+    package_dir={'': 'src',
+                 'audeep': 'auDeep/audeep'},
     include_package_data=True,
     entry_points={
         "console_scripts": [
