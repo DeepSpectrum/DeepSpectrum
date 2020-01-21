@@ -19,6 +19,7 @@ _global_options = [
     click.option('-v', '--verbose', count=True),
 ]
 
+
 version_str = f"DeepSpectrum %(version)s\nCopyright (C) 2017-2020 Shahin Amiriparian, Maurice Gerczuk, Sandra Ottl, " \
                       "Bjoern Schuller\n" \
                       "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n" \
