@@ -1,3 +1,6 @@
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'auDeep'))
+
 import click
 import logging
 import logging.config
@@ -5,9 +8,12 @@ import pkg_resources
 
 from deepspectrum.cli.features import features
 from deepspectrum.cli.image_features import image_features
+from deepspectrum.cli.features_with_parser import features_with_parser
 from deepspectrum.cli.plot import plot
 from deepspectrum.cli.utils import add_options
 from deepspectrum import __version__ as VERSION
+
+
 
 _global_options = [
     click.option('-v', '--verbose', count=True),
@@ -47,5 +53,6 @@ def cli(verbose):
 
 
 cli.add_command(features)
+cli.add_command(features_with_parser)
 cli.add_command(plot)
 cli.add_command(image_features)
