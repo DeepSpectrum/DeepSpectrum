@@ -12,7 +12,7 @@ from os.path import splitext
 
 from audeep.backend.parsers.meta import MetaParser
 from audeep.backend.parsers.no_metadata import NoMetadataParser
-from audeep.backend.data.data_set import Partition
+from audeep.backend.data.data_set import Partition, Split
 
 
 
@@ -47,36 +47,23 @@ def features_with_parser(**kwargs):
         
     parser = parser_class(basedir=Path(kwargs['input']))
     instances = parser.parse()
-    num_folds = parser.num_folds if parser.num_folds > 0 else 1
+    num_folds = parser.num_folds
     partitions = set()
-    label_dicts = {0: {}}
-    for fold in range(num_folds):
-        if not fold in label_dicts:
-            label_dicts[fold] = {0: {}}
+    if num_folds > 0:
+        log.error('Folded datasets not supported yet!')
+        exit()
+    else:
+        label_dicts = {'None': {}}
         for i in instances:
-            if i.partition is not None:
-                if not i.partition in label_dicts[fold]:
-                    label_dicts[fold][i.partition] = {}
-                    partitions.add(i.partition)
-                if i.label_nominal is not None:
-                    label_dicts[fold][i.partition][str(i.filename)] = [i.label_nominal]
-                    nominal = True
-                else:
-                    label_dicts[fold][i.partition][str(i.filename)] = [i.label_numeric]
-                    nominal = False
-
-                
+            nominal = i.label_nominal is not None
+            if i.partition is None:
+                label_dicts['None'][str(i.path)] = [i.label_nominal] if nominal else [i.label_numeric]
             else:
-                if not Partition.TRAIN in label_dicts[fold]:
-                    label_dicts[fold][Partition.TRAIN] = {}
+                if i.partition not in label_dicts:
+                    partitions.add(i.partition)
+                    label_dicts[i.partition] = {}
+                label_dicts[i.partition][str(i.path)] = [i.label_nominal] if nominal else [i.label_numeric]
 
-                if i.label_nominal is not None:
-                    label_dicts[fold][Partition.TRAIN][str(i.filename)] = [i.label_nominal]
-                    nominal = True
-                else:
-                    label_dicts[fold][Partition.TRAIN][str(i.filename)] = [i.label_numeric]
-                    nominal = False                
-                    partitions.add(Partition.TRAIN)
     use_folds = num_folds > 1
     use_partitions = len(partitions) > 1
     if nominal:
@@ -87,7 +74,7 @@ def features_with_parser(**kwargs):
             
     base_output = kwargs['output']
 
-    for f in range(num_folds):
+    if use_partitions:
         for p in partitions:
             log_str = f"Extracting features for audio files in {kwargs['input']} using {parser.__class__.__name__}"
             output = base_output
@@ -99,7 +86,7 @@ def features_with_parser(**kwargs):
                 output = splitext(output)[0] + f'.{p.name.lower()}' + splitext(output)[-1]
             kwargs['output'] = output
             log.info(log_str)
-            label_dict = label_dicts[f][p]
+            label_dict = label_dicts[p]
             configuration = Configuration(plotting=True,
                                         extraction=True,
                                         writer=True,
@@ -119,5 +106,29 @@ def features_with_parser(**kwargs):
 
             writer = get_writer(**configuration.writer_args)
             writer.write_features(configuration.files, extractor, hide_progress=False)
+    else: 
+        log_str = f"Extracting features for audio files in {kwargs['input']} using {parser.__class__.__name__}"
+        output = base_output
+        kwargs['output'] = output
+        log.info(log_str)
+        label_dict = label_dicts['None']
+        configuration = Configuration(plotting=True,
+                                    extraction=True,
+                                    writer=True,
+                                    parser=True,
+                                    label_dict=label_dict,
+                                    labels=labels,
+                                    file_type=Filetypes.AUDIO,
+                                    **kwargs)
+        plots = PlotGenerator(
+            files=configuration.files,
+            number_of_processes=configuration.number_of_processes,
+            **configuration.plotting_args)
 
+        log.info('Loading model and weights...')
+        extractor = configuration.extractor(images=plots,
+                                            **configuration.extraction_args)
+
+        writer = get_writer(**configuration.writer_args)
+        writer.write_features(configuration.files, extractor, hide_progress=False)
     log.info('Done extracting features.')

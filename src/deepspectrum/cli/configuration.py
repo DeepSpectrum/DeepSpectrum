@@ -347,6 +347,7 @@ class Configuration:
 
         self._load_config()
         self.files = self._find_files(input)
+        
         if not self.files:
             log.error(
                 f"No files were found under the path {input}. Check the specified input path."
@@ -372,7 +373,7 @@ class Configuration:
             if self.parser:
                 self.writer_args["label_dict"] = label_dict
                 self.writer_args["labels"] = labels
-                self._files_to_extract()
+                self._files_to_extract(relative_paths_in_label_dict=False)
             elif self.label_file is not None:
                 self._read_label_file()
             else:
@@ -402,13 +403,16 @@ class Configuration:
         )
         return input_files
 
-    def _files_to_extract(self):
+    def _files_to_extract(self, relative_paths_in_label_dict=True):
         file_names = set(
             map(
                 lambda f: get_relative_path(
                     f, prefix=self.input_folder), self.files))
-
+        if not relative_paths_in_label_dict:
+            self.writer_args["label_dict"] = {get_relative_path(
+                    key, prefix=self.input_folder): value for key, value in self.writer_args["label_dict"].items()}
         # check if labels are missing for specific files
+        
         missing_labels = file_names.difference(self.writer_args["label_dict"])
         if missing_labels:
             log.info(
