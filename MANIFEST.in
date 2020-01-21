@@ -1,3 +1,2 @@
 include src/deepspectrum/cli/deep.conf
 recursive-include tests *.py
-recursive-include auDeep *

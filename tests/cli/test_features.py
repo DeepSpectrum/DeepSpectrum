@@ -36,6 +36,34 @@ def test_features_file_level(tmpdir):
     assert result.exit_code == 0
 
 
+def test_features_file_level_parser(tmpdir):
+    runner = CliRunner()
+    result = runner.invoke(cli,
+                           args=[
+                               '-vv', 'features-with-parser',
+                               join(examples, 'audio'), '-c',
+                               join(tmpdir, 'deep.conf'), '-o',
+                               join(tmpdir, 'features.csv')
+                           ])
+    assert 'Please initialize your configuration file' in result.output
+    assert result.exit_code == 1
+    result = runner.invoke(cli,
+                           args=[
+                               '-vv', 'features-with-parser',
+                               join(examples, 'audio'), '-np',
+                               cpu_count(), '-cm', 'viridis', '-o',
+                               join(tmpdir, 'features.csv'), '-so',
+                               join(tmpdir,
+                                    'spectrograms'), '-en', 'squeezenet',
+                               '-sr', 16000, '-m', 'mel', '-fs', 'mel', '-c',
+                               join(tmpdir, 'deep.conf')
+                           ])
+    print(result.output)
+    print(listdir(join(tmpdir, 'spectrograms')))
+    assert 'Done' in result.output
+    assert result.exit_code == 0
+
+
 def test_features_file_level_single_file(tmpdir):
     runner = CliRunner()
     result = runner.invoke(cli,

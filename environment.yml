@@ -16,7 +16,8 @@ dependencies:
   - scipy>=1.2.1
   - tensorflow-gpu >=1.13.0,<2
   - tqdm>=4.32.1
-  - pytorch-cpu>=1.1.0
-  - torchvision-cpu>=0.3
+  - pytorch>=1.2.0
+  - torchvision>=0.3.0
+  - xarray
   - pip:
     - .
