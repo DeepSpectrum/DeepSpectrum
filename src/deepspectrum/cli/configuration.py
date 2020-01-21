@@ -62,6 +62,16 @@ GENERAL_OPTIONS = [
     ),
 ]
 
+PARSER_OPTIONS = [
+    click.option(
+        "-p",
+        "--parser",
+        type=click.Path(readable=True, dir_okay=False),
+        help=
+        "Path to auDeep parser file.",
+        default=None)
+]
+
 PLOTTING_OPTIONS = [
     click.option(
         "-s",
@@ -257,6 +267,7 @@ class Configuration:
             plotting=True,
             extraction=True,
             writer=True,
+            parser=False,
             file_type=Filetypes.AUDIO,
             input=None,
             config="deep.conf",
@@ -284,6 +295,8 @@ class Configuration:
             no_timestamps=False,
             no_labels=False,
             sample_rate=None,
+            label_dict=None,
+            labels=None,
     ):
 
         self.input_folder = input if not isfile(input) else dirname(input)
@@ -298,6 +311,7 @@ class Configuration:
         self.writer = writer
         self.writer_args = {}
         self.backend = "keras"
+        self.parser = parser
 
         if self.plotting:
             self.plotting_args["cmap"] = colour_map
@@ -338,6 +352,8 @@ class Configuration:
                 f"No files were found under the path {input}. Check the specified input path."
             )
             exit(1)
+        
+        
         if self.writer:
             self.label_file = label_file
             self.writer_args["output"] = output
@@ -353,10 +369,14 @@ class Configuration:
             self.writer_args["no_labels"] = no_labels
 
             log.info("Parsing labels...")
-            if self.label_file is None:
-                self._create_labels_from_folder_structure()
-            else:
+            if self.parser:
+                self.writer_args["label_dict"] = label_dict
+                self.writer_args["labels"] = labels
+                self._files_to_extract()
+            elif self.label_file is not None:
                 self._read_label_file()
+            else:
+                self._create_labels_from_folder_structure()            
 
     def _find_files(self, folder):
         log.debug(f'Input file types are "{self.file_type.value}".')
@@ -382,6 +402,25 @@ class Configuration:
         )
         return input_files
 
+    def _files_to_extract(self):
+        file_names = set(
+            map(
+                lambda f: get_relative_path(
+                    f, prefix=self.input_folder), self.files))
+
+        # check if labels are missing for specific files
+        missing_labels = file_names.difference(self.writer_args["label_dict"])
+        if missing_labels:
+            log.info(
+                f"No labels for: {len(missing_labels)} files. Only processing files with labels."
+            )
+            self.files = [
+                file for file in self.files
+                if get_relative_path(
+                    file, prefix=self.input_folder) in self.writer_args["label_dict"]
+            ]
+        log.info(f'Extracting features for {len(self.files)} files.')
+
     def _read_label_file(self):
         """
         Read labels from either .csv or .tsv files
@@ -404,24 +443,10 @@ class Configuration:
 
         self.writer_args["label_dict"] = parser.label_dict
         self.writer_args["labels"] = parser.labels
+        
+        self._files_to_extract()
 
-        file_names = set(
-            map(
-                lambda f: get_relative_path(
-                    f, prefix=self.input_folder), self.files))
-
-        # check if labels are missing for specific files
-        missing_labels = file_names.difference(self.writer_args["label_dict"])
-        if missing_labels:
-            log.info(
-                f"No labels for: {len(missing_labels)} files. Only processing files with labels."
-            )
-            self.files = [
-                file for file in self.files
-                if get_relative_path(
-                    file, prefix=self.input_folder) in self.writer_args["label_dict"]
-            ]
-        log.info(f'Extracting features for {len(self.files)} files.')
+        
 
     def _create_labels_from_folder_structure(self):
         """

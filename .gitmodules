@@ -1,0 +1,4 @@
+[submodule "auDeep"]
+	path = auDeep
+	url = git@github.com:auDeep/auDeep.git
+	branch = master
