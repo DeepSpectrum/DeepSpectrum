@@ -19,7 +19,7 @@ install_requires = [
     "matplotlib>=3.0.2",
     "librosa>=0.6.4",
     "click>=7.0",
-    "Pillow >=6.0.0, <7",
+    "Pillow >=6.0.0",
     "xarray"
 ]
 
@@ -39,7 +39,7 @@ except ImportError:
     torch_found = False
 
 if not torch_found:
-    install_requires.append("torch>=1.1.0")
+    install_requires.append("torch>=1.2.0")
     install_requires.append("torchvision>=0.3.0")
 
 try:
@@ -93,7 +93,7 @@ else:
 tests_require = ['pytest>=4.4.1', 'pytest-cov>=2.7.1']
 needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
 setup_requires = ['pytest-runner'] if needs_pytest else []
-
+packages = find_packages('src') + find_packages('auDeep')
 setup(
     name=PROJECT,
     version=VERSION,
@@ -108,7 +108,7 @@ setup(
     setup_requires=setup_requires,
     tests_require=tests_require,
     namespace_packages=[],
-    packages=find_packages('src'),
+    packages=packages,
     package_dir={'': 'src',
                  'audeep': 'auDeep/audeep'},
     include_package_data=True,
