@@ -401,7 +401,7 @@ class Configuration:
         log.debug(
             f"Found a total of {len(input_files)} {self.file_type.value}-files."
         )
-        return input_files
+        return sorted(input_files)
 
     def _files_to_extract(self, relative_paths_in_label_dict=True):
         file_names = set(
