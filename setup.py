@@ -94,6 +94,7 @@ tests_require = ['pytest>=4.4.1', 'pytest-cov>=2.7.1']
 needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
 setup_requires = ['pytest-runner'] if needs_pytest else []
 packages = find_packages('src') + find_packages('auDeep')
+
 setup(
     name=PROJECT,
     version=VERSION,
@@ -103,7 +104,7 @@ setup(
     platforms=["Any"],
     scripts=[],
     provides=[],
-    python_requires=">=3.6",
+    python_requires=">=3.6, <3.8",
     install_requires=install_requires,
     setup_requires=setup_requires,
     tests_require=tests_require,
