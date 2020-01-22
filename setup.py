@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 from subprocess import CalledProcessError, check_output
 
 PROJECT = "DeepSpectrum"
-VERSION = "0.6.5"
+VERSION = "0.6.6"
 LICENSE = "GPLv3+"
 AUTHOR = "Maurice Gerczuk"
 AUTHOR_EMAIL = "gerczuk@fim.uni-passau.de"
@@ -17,7 +17,7 @@ install_requires = [
     "imread>=0.7.0",
     "tqdm>=4.30.0",
     "matplotlib>=3.0.2",
-    "librosa>=0.6.5",
+    "librosa>=0.6.6",
     "click>=7.0",
     "Pillow >=6.0.0",
     "xarray"
@@ -40,7 +40,7 @@ except ImportError:
 
 if not torch_found:
     install_requires.append("torch>=1.2.0")
-    install_requires.append("torchvision>=0.3.0")
+    install_requires.append("torchvision>=0.5.0")
 
 try:
     import tensorflow
