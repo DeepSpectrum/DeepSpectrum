@@ -7,7 +7,7 @@
 
 **DeepSpectrum** is a Python toolkit for feature extraction from audio data with pre-trained Image Convolutional Neural Networks (CNNs). It features an extraction pipeline which first creates visual representations for audio data - plots of spectrograms or chromagrams - and then feeds them to a pre-trained Image CNN. Activations of a specific layer then form the final feature vectors.
 
-**(c) 2017-2018 Shahin Amiriparian, Maurice Gerczuk, Sandra Ottl, Björn Schuller: Universität Augsburg**
+**(c) 2017-2020 Shahin Amiriparian, Maurice Gerczuk, Sandra Ottl, Björn Schuller: Universität Augsburg**
 Published under GPLv3, see the LICENSE.md file for details.
 
 Please direct any questions or requests to Shahin Amiriparian (shahin.amiriparian at tum.de) or Maurice Gercuk (maurice.gerczuk at informatik.uni-augsburg.de).
@@ -18,7 +18,10 @@ If you use DeepSpectrum or any code from DeepSpectrum in your research work, you
 
 
 # Installation
-The easiest way to install DeepSpectrum is through the packages on our official conda channel which will be built for every release tag on the master branch. For installing different branches or a more manual approach, you can also use the setup.py script with [pip](#installation-through-pip) (only for Linux) and also an environment.yml for installing through [conda](#conda-installation) (recommended on Windows and OSX).
+The easiest way to install DeepSpectrum is through the packages on our official conda channel which will be built for every release tag on the master branch. For installing different branches or a more manual approach, you can also use the setup.py script with [pip](#installation-through-pip) (only for Linux) and also an environment.yml for installing through [conda](#conda-installation) (recommended on Windows and OSX). For manual installation you also have to pull in the auDeep submodule:
+```bash
+git submodule update --init --recursive
+```
 
 ## Dependencies (only for installation with pip)
 * Python >=3.6
