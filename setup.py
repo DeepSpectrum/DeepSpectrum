@@ -40,7 +40,7 @@ except ImportError:
 
 if not torch_found:
     install_requires.append("torch>=1.2.0")
-    install_requires.append("torchvision>=0.3.0")
+    install_requires.append("torchvision>=0.5.0")
 
 try:
     import tensorflow
