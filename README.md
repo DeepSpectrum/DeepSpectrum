@@ -23,6 +23,8 @@ The easiest way to install DeepSpectrum is through the packages on our official 
 git submodule update --init --recursive
 ```
 
+
+
 ## Dependencies (only for installation with pip)
 * Python >=3.6
 * ffmpeg
@@ -80,6 +82,13 @@ pip install .
 ```
 
 Installation is now completed - you can skip to [configuration](#configuration) or [usage](#using-the-tool).
+
+## Manually updating auDeep
+We try to keep the auDeep submodule up to date, e.g. when new parsers are added. For the case that the submodule lags behind the latest commit in the auDeep main repository and you encounter issues, like `ModuleNotFoundError: No module named 'audeep.backend.parsers.[parser_module]'`, you can manually update auDeep (activate your virtual python environment first):
+```bash
+git submodule foreach git pull origin master
+pip install ./auDeep/
+```
 
 
 ## Configuration
