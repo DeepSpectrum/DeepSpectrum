@@ -118,7 +118,7 @@ squeezenet=
 googlenet=
 
 ```
-Under `keras-nets` you can define network weights for the supported models. Setting the weights for a model to `imagenet` is the default and uses ImageNet pretrained models from `keras-aplications`. Three additional networks are also supported through pytorch: `alexnet`, `squeezenet` and `googlenet`. For these, no definition of the used weights is needed (or possible, for the time being).
+Under `keras-nets` you can define network weights for the supported models. Setting the weights for a model to `imagenet` is the default and uses ImageNet pretrained models from `keras-aplications`. Three additional networks are also supported through pytorch: `alexnet`, `squeezenet` and `googlenet`. For these, no definition of the used weights is needed (or possible, for the time being). The downloaded `keras-nets` will be stored in `$HOME/.keras`.
 
 # Using the tool
 You can access the scripts provided by the tool from the virtualenvironment by calling `deepspectrum`. The feature extraction component is provided by the subcommand `features`.
