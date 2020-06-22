@@ -49,7 +49,7 @@ GENERAL_OPTIONS = [
         "--config",
         type=click.Path(readable=True, dir_okay=False),
         help=
-        "Path to configuration file which specifies caffe model and weight files. If this file does not exist a new one is created and filled with the standard settings.",
+        "Path to configuration file which specifies available extraction networks. If this file does not exist a new one is created and filled with the standard settings.",
         default=join(dirname(realpath(__file__)), "deep.conf"),
     ),
     click.option(
@@ -70,6 +70,7 @@ PARSER_OPTIONS = [
         help=
         "Path to auDeep parser file.",
         default=None)
+        
 ]
 
 PLOTTING_OPTIONS = [

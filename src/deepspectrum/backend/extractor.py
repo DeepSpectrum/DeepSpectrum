@@ -20,7 +20,7 @@ def tensorflow_shutup():
 
     # noinspection PyPackageRequirements
 
-    tf.logging.set_verbosity(logging.ERROR)
+    tf.compat.v1.logging.set_verbosity(logging.ERROR)
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 

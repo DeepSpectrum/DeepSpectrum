@@ -50,8 +50,11 @@ def features_with_parser(**kwargs):
     num_folds = parser.num_folds
     partitions = set()
     if num_folds > 0:
-        log.error('Folded datasets not supported yet!')
-        exit()
+        label_dicts = [{}]*num_folds
+        for i in instances:
+            nominal = i.label_nominal is not None
+            fold = i.cv_folds.index(Split.VALID)
+            label_dicts[fold][str(i.path)] = [i.label_nominal] if nominal else [i.label_numeric]    
     else:
         label_dicts = {'None': {}}
         for i in instances:
@@ -67,7 +70,7 @@ def features_with_parser(**kwargs):
     use_folds = num_folds > 1
     use_partitions = len(partitions) > 1
     if nominal:
-        labels = [("class", set(parser.label_map.keys()))]
+        labels = [("class", set(parser.label_map().keys()))]
     else:
         labels = [("label", "NUMERIC")]
             
@@ -78,15 +81,40 @@ def features_with_parser(**kwargs):
         for p in partitions:
             log_str = f"Extracting features for audio files in {kwargs['input']} using {parser.__class__.__name__}"
             output = base_output
-            if use_folds:
-                log_str += f" for fold {f}"
-                output = splitext(output)[0] + f'.fold-{f}' + splitext(output)[-1]
-            if use_partitions:
-                log_str += f" for partition {p.name.lower()}"
-                output = splitext(output)[0] + f'.{p.name.lower()}' + splitext(output)[-1]
+           
+            log_str += f" for partition {p.name.lower()}"
+            output = splitext(output)[0] + f'.{p.name.lower()}' + splitext(output)[-1]
             kwargs['output'] = output
             log.info(log_str)
             label_dict = label_dicts[p]
+            configuration = Configuration(plotting=True,
+                                        extraction=True,
+                                        writer=True,
+                                        parser=True,
+                                        label_dict=label_dict,
+                                        labels=labels,
+                                        file_type=Filetypes.AUDIO,
+                                        **kwargs)
+            plots = PlotGenerator(
+                files=configuration.files,
+                number_of_processes=configuration.number_of_processes,
+                **configuration.plotting_args)
+
+            log.info('Loading model and weights...')
+            extractor = configuration.extractor(images=plots,
+                                                **configuration.extraction_args)
+
+            writer = get_writer(**configuration.writer_args)
+            writer.write_features(configuration.files, extractor, hide_progress=False)
+    elif use_folds:
+        for i in range(num_folds):
+            log_str = f"Extracting features for audio files in {kwargs['input']} using {parser.__class__.__name__}  for fold {i}"
+            output = base_output
+            output = splitext(output)[0] + f'.fold-{i}' + splitext(output)[-1]
+            
+            kwargs['output'] = output
+            log.info(log_str)
+            label_dict = label_dicts[i]
             configuration = Configuration(plotting=True,
                                         extraction=True,
                                         writer=True,
