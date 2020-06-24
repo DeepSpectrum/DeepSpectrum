@@ -3,6 +3,7 @@ from collections import namedtuple
 
 import numpy as np
 import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import tensorflow as tf
 import torch
 from torchvision import models, transforms
@@ -10,21 +11,21 @@ from PIL import Image
 
 import logging
 
+tf.compat.v1.logging.set_verbosity(logging.ERROR)
+
 log = logging.getLogger(__name__)
+# sess = tf.compat.v1.keras.backend.get_session()
+tf.compat.v1.keras.backend.clear_session()
 
+log.debug(f'Collected garbage {gc.collect()}') # if it's done something you should see a number being outputted
 
-def tensorflow_shutup():
-    """
-    Make Tensorflow less verbose
-    """
-
-    # noinspection PyPackageRequirements
-
-    tf.compat.v1.logging.set_verbosity(logging.ERROR)
-    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-
-
-tensorflow_shutup()
+# # # use the same config as you used to create the session
+config = tf.compat.v1.ConfigProto()
+config.gpu_options.allow_growth = True
+# config.gpu_options.per_process_gpu_memory_fraction = 0.3
+sess = tf.compat.v1.Session(config=config)
+tf.compat.v1.keras.backend.set_session(sess)
+# # sess.as_default()
 
 FeatureTuple = namedtuple("FeatureTuple", ["name", "timestamp", "features"])
 
@@ -41,8 +42,9 @@ def mask(func):
 
 class Extractor:
     def __init__(self, images, batch_size):
-        self.images = _batch_images(images, batch_size)
-
+        self.batch_size = batch_size
+        self.set_images(images)
+        
     def __len__(self):
         return len(self.images)
 
@@ -55,6 +57,9 @@ class Extractor:
         except StopIteration:
             raise StopIteration
 
+    def set_images(self, images):
+        self.images = _batch_images(images, batch_size=self.batch_size)
+        
     def extract_features(self, images):
         raise NotImplementedError(
             """Feature extractor must implement 'extract_features(self, images'\
@@ -91,6 +96,7 @@ class KerasExtractor(Extractor):
                  weights_path="imagenet",
                  batch_size=256):
         super().__init__(images, batch_size)
+        # reset_keras() 
         self.models = {
             "vgg16":
             tf.keras.applications.vgg16.VGG16,
@@ -147,7 +153,6 @@ class KerasExtractor(Extractor):
             "inception_resnet_v2":
             tf.keras.applications.inception_resnet_v2.preprocess_input,
         }
-        self.batch_size = batch_size
         self.layer = layer
         if model_key in self.models:
             base_model = self.models[model_key](weights=weights_path)
@@ -185,6 +190,8 @@ class KerasExtractor(Extractor):
 
         return map(FeatureTuple._make, zip(name_batch, ts_batch,
                                            feature_batch))
+    
+
 
 
 class PytorchExtractor(Extractor):
@@ -231,7 +238,6 @@ class PytorchExtractor(Extractor):
             "squeezenet": self.__preprocess_squeezenet,
             "googlenet": self.__preprocess_googlenet
         }
-        self.batch_size = batch_size
         self.layer = layer
         self.model_key = model_key
 

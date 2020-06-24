@@ -4,6 +4,7 @@ import importlib
 from os import environ
 from deepspectrum.cli.configuration import Configuration, GENERAL_OPTIONS,\
  PLOTTING_OPTIONS, EXTRACTION_OPTIONS, PARSER_OPTIONS, WRITER_OPTIONS, Filetypes
+from deepspectrum.backend.extractor import _batch_images
 from ..backend.plotting import PlotGenerator
 from ..tools.feature_writer import get_writer
 from .utils import add_options
@@ -76,6 +77,7 @@ def features_with_parser(**kwargs):
             
             
     base_output = kwargs['output']
+    extractor = None
 
     if use_partitions:
         for p in partitions:
@@ -101,9 +103,11 @@ def features_with_parser(**kwargs):
                 **configuration.plotting_args)
 
             log.info('Loading model and weights...')
-            extractor = configuration.extractor(images=plots,
-                                                **configuration.extraction_args)
-
+            if extractor is None:
+                extractor = configuration.extractor(images=plots,
+                                                    **configuration.extraction_args)
+            else: 
+                extractor.set_images(plots)
             writer = get_writer(**configuration.writer_args)
             writer.write_features(configuration.files, extractor, hide_progress=False)
     elif use_folds:
@@ -129,8 +133,11 @@ def features_with_parser(**kwargs):
                 **configuration.plotting_args)
 
             log.info('Loading model and weights...')
-            extractor = configuration.extractor(images=plots,
-                                                **configuration.extraction_args)
+            if extractor is None:
+                extractor = configuration.extractor(images=plots,
+                                                    **configuration.extraction_args)
+            else: 
+                extractor.set_images(plots)
 
             writer = get_writer(**configuration.writer_args)
             writer.write_features(configuration.files, extractor, hide_progress=False)
