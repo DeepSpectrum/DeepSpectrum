@@ -14,18 +14,14 @@ import logging
 tf.compat.v1.logging.set_verbosity(logging.ERROR)
 
 log = logging.getLogger(__name__)
-# sess = tf.compat.v1.keras.backend.get_session()
 tf.compat.v1.keras.backend.clear_session()
 
 log.debug(f'Collected garbage {gc.collect()}') # if it's done something you should see a number being outputted
 
-# # # use the same config as you used to create the session
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
-# config.gpu_options.per_process_gpu_memory_fraction = 0.3
 sess = tf.compat.v1.Session(config=config)
 tf.compat.v1.keras.backend.set_session(sess)
-# # sess.as_default()
 
 FeatureTuple = namedtuple("FeatureTuple", ["name", "timestamp", "features"])
 
