@@ -1,2 +1,3 @@
 include src/deepspectrum/cli/deep.conf
 recursive-include tests *.py
+include DESCRIPTION.md

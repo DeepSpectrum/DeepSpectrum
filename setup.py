@@ -9,11 +9,14 @@ from setuptools import setup, find_packages
 from subprocess import CalledProcessError, check_output
 
 PROJECT = "DeepSpectrum"
-VERSION = "0.6.6"
+VERSION = "0.6.7alpha1"
 LICENSE = "GPLv3+"
 AUTHOR = "Maurice Gerczuk"
 AUTHOR_EMAIL = "gerczuk@fim.uni-passau.de"
 URL = 'https://github.com/DeepSpectrum/DeepSpectrum'
+
+with open("DESCRIPTION.md", "r") as fh:
+    LONG_DESCRIPTION = fh.read()
 
 install_requires = [
     "audeep>=0.9.4",
@@ -41,10 +44,13 @@ setup(
     license=LICENSE,
     author=AUTHOR,
     author_email=AUTHOR_EMAIL,
+    long_description=LONG_DESCRIPTION,
+    long_description_content_type="text/markdown",
+    descrption="DeepSpectrum is a Python toolkit for feature extraction from audio data with pre-trained Image Convolutional Neural Networks (CNNs).",
     platforms=["Any"],
     scripts=[],
     provides=[],
-    python_requires="~=3.7,",
+    python_requires="~=3.7.2,",
     install_requires=install_requires,
     setup_requires=setup_requires,
     tests_require=tests_require,
@@ -57,6 +63,28 @@ setup(
         "console_scripts": [
             "deepspectrum = deepspectrum.__main__:cli",
         ]
+    },
+    classifiers=[
+        # How mature is this project? Common values are
+        #   3 - Alpha
+        #   4 - Beta
+        #   5 - Production/Stable
+        'Development Status :: 4 - Beta',
+            
+        'Environment :: GPU :: NVIDIA CUDA :: 10.0',
+        # Indicate who your project is intended for
+        'Topic :: Scientific/Engineering :: Artificial Intelligence',
+        'Intended Audience :: Science/Research',
+
+        # Pick your license as you wish (should match "license" above)
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+
+        'Programming Language :: Python :: 3.7',
+    ],
+    keywords='machine-learning audio-analysis science research',
+    project_urls={
+        'Source': 'https://github.com/DeepSpectrum/DeepSpectrum/',
+        'Tracker': 'https://github.com/DeepSpectrum/DeepSpectrum/issues',
     },
     url=URL,
     zip_safe=False,
