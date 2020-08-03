@@ -17,7 +17,7 @@ install_requires = [
     "imread>=0.7.0",
     "tqdm>=4.30.0",
     "matplotlib>=3.0.2",
-    "librosa>=0.6.6",
+    "librosa>=0.6.6, <0.8.0",
     "click>=7.0",
     "Pillow >=6.0.0",
     "xarray"
