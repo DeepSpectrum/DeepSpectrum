@@ -8,7 +8,7 @@ dependencies:
   - pip
   - click>=7.0
   - imread>=0.7.1
-  - librosa>=0.6.3, 0.8.0
+  - librosa >=0.6.3,<0.8.0
   - matplotlib>=3.0.3
   - numpy>=1.16.3
   - opencv>=4.1.0
