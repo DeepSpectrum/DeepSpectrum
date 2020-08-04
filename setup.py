@@ -12,88 +12,25 @@ AUTHOR_EMAIL = "gerczuk@fim.uni-passau.de"
 URL = 'https://github.com/DeepSpectrum/DeepSpectrum'
 
 install_requires = [
-    "numpy>=1.16",
-    "scipy>=1.2.0",
+    "audeep>=0.9.4",
     "imread>=0.7.0",
     "tqdm>=4.30.0",
-    "matplotlib>=3.0.2",
-    "librosa>=0.6.6, <0.8.0",
+    "matplotlib>=3.3",
+    "numba==0.48.0",
+    "librosa>=0.7.0, <0.8.0",
     "click>=7.0",
     "Pillow >=6.0.0",
-    "xarray"
+    "tensorflow-gpu>=1.15.2, <2",
+    "opencv-python>=4.0.0.21",
+    "torch>=1.2.0",
+    "torchvision>=0.5.0"
 ]
 
-try:
-    import cv2
-    cv2_found = True
-except ImportError:
-    cv2_found = False
-
-if not cv2_found:
-    install_requires.append("opencv-python>=4.0.0.21")
-
-try:
-    import torch
-    torch_found = True
-except ImportError:
-    torch_found = False
-
-if not torch_found:
-    install_requires.append("torch>=1.2.0")
-    install_requires.append("torchvision>=0.5.0")
-
-try:
-    import tensorflow
-
-    tensorflow_found = True
-except ImportError:
-    tensorflow_found = False
-
-if not tensorflow_found:
-    # inspired by cmake's FindCUDA
-    nvcc_version_regex = re.compile(
-        "release (?P<major>[0-9]+)\\.(?P<minor>[0-9]+)")
-    use_gpu = False
-
-    try:
-        output = str(check_output(["nvcc", "--version"]))
-        version_string = nvcc_version_regex.search(output)
-
-        if version_string:
-            major = int(version_string.group("major"))
-            minor = int(version_string.group("minor"))
-            if major == 10 and minor == 0:
-                print("detected compatible CUDA version %d.%d" %
-                      (major, minor))
-                install_requires.append("tensorflow-gpu >=1.13.0, <2")
-                use_gpu = True
-
-            if major == 9:
-                print("detected compatible CUDA version %d.%d" %
-                      (major, minor))
-                install_requires.append("tensorflow-gpu==1.12.0")
-                use_gpu = True
-
-            else:
-                print("detected incompatible CUDA version %d.%d" %
-                      (major, minor))
-
-        else:
-            print("CUDA detected, but unable to parse version")
-    except CalledProcessError:
-        print("no CUDA detected")
-    except Exception as e:
-        print("error during CUDA detection: %s", e)
-
-    if not use_gpu:
-        install_requires.append("tensorflow >=1.13.0, <2")
-else:
-    pass
 
 tests_require = ['pytest>=4.4.1', 'pytest-cov>=2.7.1']
 needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
 setup_requires = ['pytest-runner'] if needs_pytest else []
-packages = find_packages('src') + find_packages('auDeep')
+packages = find_packages('src')
 
 setup(
     name=PROJECT,
