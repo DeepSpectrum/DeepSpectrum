@@ -22,9 +22,9 @@ install_requires = [
     "audeep>=0.9.4",
     "imread>=0.7.0",
     "tqdm>=4.30.0",
-    "matplotlib>=3.0.2",
+    "matplotlib>=3.3",
     "numba==0.48.0",
-    "librosa>=0.6.6",
+    "librosa>=0.7.0, <0.8.0",
     "click>=7.0",
     "Pillow >=6.0.0",
     "tensorflow-gpu>=1.15.2, <2",
@@ -33,10 +33,11 @@ install_requires = [
     "torchvision>=0.5.0"
 ]
 
+
 tests_require = ['pytest>=4.4.1', 'pytest-cov>=2.7.1']
 needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
 setup_requires = ['pytest-runner'] if needs_pytest else []
-packages = find_packages('src')# + find_packages('auDeep')
+packages = find_packages('src')
 
 setup(
     name=PROJECT,
