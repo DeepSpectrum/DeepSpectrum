@@ -13,7 +13,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Anaconda-Action
       id: step1
-      uses: fdiblen/anaconda-action@0.1.7
+      uses: fdiblen/anaconda-action@0.1.20
       with:
         envFileName: 'environment.yml'
         channels: 'conda-forge pytorch'
