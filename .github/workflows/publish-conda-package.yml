@@ -19,4 +19,4 @@ jobs:
         channels: 'conda-forge pytorch'
         publish: 'true'
         publishChannel: 'deepspectrum'
-        publishToken: ${{ secrets.ANACONDA_TOKEN }}          
+        anacondaToken: ${{ secrets.ANACONDA_TOKEN }}          
