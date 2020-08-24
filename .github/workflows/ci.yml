@@ -37,7 +37,7 @@ jobs:
       with:
         file: ./coverage.xml # optional
         fail_ci_if_error: true # optional (default = false)
-  test_job:
+  conda:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -49,7 +49,7 @@ jobs:
       id: step1
       uses: fdiblen/anaconda-action@0.1.7
       with:
-        envFileName: 'environment.yml'
+        env-file-name: 'environment.yml'
     - name: Install test dependencies
       run: |
         if [ -f requirements-test.txt ]; then pip install -r requirements-test.txt; fi
