@@ -1,5 +1,12 @@
 import sys, os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'auDeep'))
+# sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'auDeep'))
+
+import warnings
+# from numba.errors import NumbaDeprecationWarning, NumbaPendingDeprecationWarning
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+warnings.filterwarnings('ignore', category=FutureWarning)
+# warnings.filterwarnings('ignore', category=NumbaDeprecationWarning)
+# warnings.filterwarnings('ignore', category=NumbaPendingDeprecationWarning)
 
 import click
 import logging

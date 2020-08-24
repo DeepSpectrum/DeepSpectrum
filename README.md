@@ -1,9 +1,7 @@
-[![Coverage Status](https://coveralls.io/repos/github/DeepSpectrum/DeepSpectrum/badge.svg)](https://coveralls.io/github/DeepSpectrum/DeepSpectrum)
-[![Build Status](https://travis-ci.org/DeepSpectrum/DeepSpectrum.svg?branch=master)](https://travis-ci.org/DeepSpectrum/DeepSpectrum)
-[![Anaconda-Server Badge](https://anaconda.org/deepspectrum/deepspectrum/badges/version.svg)](https://anaconda.org/deepspectrum/deepspectrum)
-[![Anaconda-Server Badge](https://anaconda.org/deepspectrum/deepspectrum/badges/platforms.svg)](https://anaconda.org/deepspectrum/deepspectrum)
-[![Anaconda-Server Badge](https://anaconda.org/deepspectrum/deepspectrum/badges/installer/conda.svg)](https://conda.anaconda.org/deepspectrum)
-
+![Codecov](https://img.shields.io/codecov/c/github/deepspectrum/deepspectrum?style=flat)
+![CI status](https://github.com/deepspectrum/deepspectrum/workflows/CI/badge.svg)
+[![PyPI version](https://badge.fury.io/py/DeepSpectrum.svg)](https://badge.fury.io/py/DeepSpectrum)
+![PyPI - License](https://img.shields.io/pypi/l/DeepSpectrum)
 
 **DeepSpectrum** is a Python toolkit for feature extraction from audio data with pre-trained Image Convolutional Neural Networks (CNNs). It features an extraction pipeline which first creates visual representations for audio data - plots of spectrograms or chromagrams - and then feeds them to a pre-trained Image CNN. Activations of a specific layer then form the final feature vectors.
 
@@ -18,34 +16,20 @@ If you use DeepSpectrum or any code from DeepSpectrum in your research work, you
 
 
 # Installation
-The easiest way to install DeepSpectrum is through the packages on our official conda channel which will be built for every release tag on the master branch. For installing different branches or a more manual approach, you can also use the setup.py script with [pip](#installation-through-pip) (only for Linux) and also an environment.yml for installing through [conda](#conda-installation) (recommended on Windows and OSX). For manual installation you also have to pull in the auDeep submodule:
-```bash
-git submodule update --init --recursive
-```
+The easiest way to install DeepSpectrum is through the official pypi package which is built for every release tag on the master branch. For installing different branches or a more manual approach, you can also use the setup.py script with [pip](#installation-through-pip) (only for Linux) and also an environment.yml for installing through [conda](#conda-installation) (recommended on Windows and OSX).
 
 
 
 ## Dependencies (only for installation with pip)
-* Python >=3.6
+* Python 3.7
 * ffmpeg
 
-## Installing the conda packages
-First, you have to add the pytorch and conda-forge channels to your conda channel configuration:
+## Installing the python package
+We recommend that you first setup and activate a virtual python 3.7 environment. Then you can install the toolkit via pip:
 ```bash
-conda config --add channels pytorch
-conda config --add channels conda-forge
+pip install deepspectrum
 ```
-
-Then you can install DeepSpectrum into a new environment:
-```bash
-conda create -n DeepSpectrum -c deepspectrum deepspectrum
-```
-
-Finally, activate your DeepSpectrum environment and start using the tool:
-```bash
-conda activate DeepSpectrum
-```
-Installation is now completed - you can skip to [configuration](#configuration) or [usage](#using-the-tool).
+Installation is now complete - you can skip to [configuration](#configuration) or [usage](#using-the-tool).
 
 
 ## Manual Conda installation
@@ -66,10 +50,7 @@ We recommend that you install the DeepSpectrum tool into a virtual environment. 
 ```bash
 virtualenv -p python3 ds_virtualenv
 ```
-If you have a recent installation of tensorflow (>=1.12) on your system, you can also create a virtualenvironment that incorporates you system python packages:
-```bash
-virtualenv -p python3 --system-site-packages ds_virtualenv
-```
+
 This creates a minimal python installation in the folder "ds_virtualenv". You can choose a different name instead of "ds_virtualenv" if you like, but the guide assumes this name.
 You can then activate the virtualenv (Linux):
 ```bash
@@ -83,12 +64,8 @@ pip install .
 
 Installation is now completed - you can skip to [configuration](#configuration) or [usage](#using-the-tool).
 
-## Manually updating auDeep
-We try to keep the auDeep submodule up to date, e.g. when new parsers are added. For the case that the submodule lags behind the latest commit in the auDeep main repository and you encounter issues, like `ModuleNotFoundError: No module named 'audeep.backend.parsers.[parser_module]'`, you can manually update auDeep (activate your virtual python environment first):
-```bash
-git submodule foreach git pull origin master
-pip install ./auDeep/
-```
+## GPU support
+DeepSpectrum uses Tensorflow 1.15.2. GPU support should be automatically available, as long as you have CUDA version 10.0 available. If cannot install cuda 10.0 globally, you can use Anaconda to install it in a virtual environment along DeepSpectrum.
 
 
 ## Configuration
