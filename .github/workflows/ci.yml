@@ -32,9 +32,9 @@ jobs:
         if [ -f requirements-test.txt ]; then pip install -r requirements-test.txt; fi
     - name: Test with pytest
       run: |
-        py.test -s tests/ --cov deepspectrum  --cov-report term
+        py.test -s tests/ --cov deepspectrum  --cov-report xml:cov.xml
     - name: Coveralls
       uses: coverallsapp/github-action@master
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
-        path-to-lcov: ./term
+        path-to-lcov: ./cov.xml
