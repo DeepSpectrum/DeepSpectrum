@@ -33,3 +33,8 @@ jobs:
     - name: Test with pytest
       run: |
         py.test -s tests/ --cov deepspectrum  --cov-report term
+    - name: Coveralls
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: ./term
