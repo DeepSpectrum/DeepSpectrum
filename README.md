@@ -21,7 +21,7 @@ The easiest way to install DeepSpectrum is through the official pypi package whi
 
 
 ## Dependencies (only for installation with pip)
-* Python >=3.6
+* Python 3.7
 * ffmpeg
 
 ## Installing the python package
