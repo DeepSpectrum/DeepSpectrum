@@ -10,8 +10,7 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
-
+  pip:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -38,3 +37,23 @@ jobs:
       with:
         file: ./coverage.xml # optional
         fail_ci_if_error: true # optional (default = false)
+  test_job:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        pythonVersion: [3.7]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Anaconda-Action
+      id: step1
+      uses: fdiblen/anaconda-action@0.1.7
+      with:
+        envFileName: 'environment.yml'
+    - name: Install test dependencies
+      run: |
+        if [ -f requirements-test.txt ]; then pip install -r requirements-test.txt; fi
+    - name: Test with pytest
+      run: |
+        py.test -s tests/ --cov deepspectrum  --cov-report term
+      
