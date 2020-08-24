@@ -1,4 +1,5 @@
 ![Codecov](https://img.shields.io/codecov/c/github/deepspectrum/deepspectrum?style=flat)
+![CI status](https://github.com/deepspectrum/deepspectrum/workflows/CI/badge.svg)
 [![PyPI version](https://badge.fury.io/py/DeepSpectrum.svg)](https://badge.fury.io/py/DeepSpectrum)
 ![PyPI - License](https://img.shields.io/pypi/l/DeepSpectrum)
 
