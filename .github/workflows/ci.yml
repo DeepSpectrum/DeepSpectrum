@@ -50,6 +50,8 @@ jobs:
       uses: fdiblen/anaconda-action@0.1.7
       with:
         env-file-name: 'environment.yml'
+        channels: conda-forge pytorch
+        python-version: 3.7
     - name: Install test dependencies
       run: |
         if [ -f requirements-test.txt ]; then pip install -r requirements-test.txt; fi
