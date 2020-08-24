@@ -1,5 +1,4 @@
-[![Coverage Status](https://coveralls.io/repos/github/DeepSpectrum/DeepSpectrum/badge.svg)](https://coveralls.io/github/DeepSpectrum/DeepSpectrum)
-[![Build Status](https://travis-ci.org/DeepSpectrum/DeepSpectrum.svg?branch=master)](https://travis-ci.org/DeepSpectrum/DeepSpectrum)
+![Codecov](https://img.shields.io/codecov/c/github/deepspectrum/deepspectrum?style=flat)
 [![PyPI version](https://badge.fury.io/py/DeepSpectrum.svg)](https://badge.fury.io/py/DeepSpectrum)
 ![PyPI - License](https://img.shields.io/pypi/l/DeepSpectrum)
 
