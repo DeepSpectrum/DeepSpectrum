@@ -47,11 +47,11 @@ jobs:
     - uses: actions/checkout@v2
     - name: Anaconda-Action
       id: step1
-      uses: fdiblen/anaconda-action@0.1.7
+      uses: fdiblen/anaconda-action@0.1.20
       with:
-        env-file-name: 'environment.yml'
+        envFileName: 'environment.yml'
         channels: conda-forge pytorch
-        python-version: 3.7
+        pythonVersion: 3.7
     - name: Install test dependencies
       run: |
         if [ -f requirements-test.txt ]; then pip install -r requirements-test.txt; fi
