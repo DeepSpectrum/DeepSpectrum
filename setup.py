@@ -51,7 +51,7 @@ setup(
     platforms=["Any"],
     scripts=[],
     provides=[],
-    python_requires="3.7",
+    python_requires="~=3.7.0",
     install_requires=install_requires,
     setup_requires=setup_requires,
     tests_require=tests_require,
