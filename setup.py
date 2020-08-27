@@ -9,7 +9,7 @@ from setuptools import setup, find_packages
 from subprocess import CalledProcessError, check_output
 
 PROJECT = "DeepSpectrum"
-VERSION = "0.6.7"
+VERSION = "0.6.8"
 LICENSE = "GPLv3+"
 AUTHOR = "Maurice Gerczuk"
 AUTHOR_EMAIL = "gerczuk@fim.uni-passau.de"
@@ -51,7 +51,7 @@ setup(
     platforms=["Any"],
     scripts=[],
     provides=[],
-    python_requires="~=3.7.2,",
+    python_requires="~=3.7.0",
     install_requires=install_requires,
     setup_requires=setup_requires,
     tests_require=tests_require,
