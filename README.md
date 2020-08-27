@@ -65,7 +65,7 @@ pip install .
 Installation is now completed - you can skip to [configuration](#configuration) or [usage](#using-the-tool).
 
 ## GPU support
-DeepSpectrum uses Tensorflow 1.15.2. GPU support should be automatically available, as long as you have CUDA version 10.0 available. If you cannot install cuda 10.0 globally, you can use Anaconda to install it in a virtual environment along DeepSpectrum.
+DeepSpectrum uses Tensorflow 1.15.2. GPU support should be automatically available, as long as you have CUDA version 10.0. If you cannot install cuda 10.0 globally, you can use Anaconda to install it in a virtual environment along DeepSpectrum.
 
 
 ## Configuration
