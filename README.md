@@ -14,6 +14,23 @@ Please direct any questions or requests to Shahin Amiriparian (shahin.amiriparia
 If you use DeepSpectrum or any code from DeepSpectrum in your research work, you are kindly asked to acknowledge the use of DeepSpectrum in your publications.
 > S. Amiriparian, M. Gerczuk, S. Ottl, N. Cummins, M. Fre-itag, S. Pugachevskiy, and B. Schuller, “Snore Sound Classification Using Image-based Deep Spectrum Fea-tures,” in Proceedings INTERSPEECH 2017, 18th Annual Conference of the International Speech Communication Association, (Stockholm, Sweden), pp. 3512–3516, ISCA, August 2017.
 
+
+```
+@inproceedings{amiriparian2017Snore,
+  title = {Snore Sound Classification Using Image-Based Deep Spectrum Features},
+  booktitle = {Interspeech 2017},
+  author = {Amiriparian, Shahin and Gerczuk, Maurice and Ottl, Sandra and Cummins, Nicholas and Freitag, Michael and Pugachevskiy, Sergey and Baird, Alice and Schuller, Bj{\"o}rn},
+  year = {2017},
+  month = aug,
+  pages = {3512--3516},
+  publisher = {{ISCA}},
+  language = {en}
+}
+```
+
+
+
+
 # Installation
 The easiest way to install DeepSpectrum is through the official pypi package which is built for every release tag on the master branch. For installing different branches or a more manual approach, you can also use the setup.py script with [pip](#installation-through-pip) (only for Linux) and also an environment.yml for installing through [conda](#conda-installation) (recommended on Windows and OSX).
 
