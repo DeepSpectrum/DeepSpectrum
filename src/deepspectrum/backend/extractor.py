@@ -252,7 +252,7 @@ class PytorchExtractor(Extractor):
             log.debug(f'Layout of base model: \n{base_model}')
             layers = {"fc6": -5, "fc7": -2}
             assert (layer in layers
-                    ), f"Invalid layer key. Available layers: {layers.keys}"
+                    ), f"Invalid layer key. Available layers: {sorted(layers.keys())}"
 
             feature_layer = base_model.classifier[layers[layer]]
             return base_model, feature_layer, (4096, )
@@ -271,7 +271,7 @@ class PytorchExtractor(Extractor):
         elif self.model_key == "googlenet":
             layers = {"avgpool": base_model.avgpool, "fc": base_model.fc}
             assert (layer in layers
-                    ), f"Invalid layer key. Available layers: {layers.keys}"
+                    ), f"Invalid layer key. Available layers: {sorted(layers.keys())}"
             feature_layer = layers[layer]
             log.debug(f'Layout of model: \n{base_model}')
             return base_model, feature_layer, (1024, 1, 1)
