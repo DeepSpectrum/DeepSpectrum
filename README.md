@@ -151,7 +151,7 @@ All options can also be displayed using `deepspectrum features --help`.
 ### Parameters for the feature extractor CNN
 | Option   | Description | Default |
 |----------|-------------|---------|
-| -en, --extraction-network | Choose the net for feature extraction as specified in the config file | alexnet |
+| -en, --extraction-network | Choose the net for feature extraction as specified in the config file | vgg16 |
 | -fl, --feature-layer | Name of the layer from which features should be extracted. | fc2 |
 
 ### Defining label information

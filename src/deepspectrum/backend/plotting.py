@@ -1,10 +1,8 @@
 import matplotlib
-matplotlib.use('Agg')
 import io
 import warnings
-import matplotlib.pyplot as plt
-import librosa.display
-import librosa
+# import librosa.display
+# import librosa
 import numpy as np
 import pathlib
 import logging
@@ -14,7 +12,7 @@ from os.path import basename, join, dirname, splitext
 from multiprocessing import cpu_count, Pool
 from functools import partial
 from collections import namedtuple
-from ..tools.path import get_relative_path
+from deepspectrum.tools.path import get_relative_path
 
 PlotTuple = namedtuple('PlotTuple', ['name', 'timestamp', 'plot'])
 AudioChunk = namedtuple('AudioChunk',
@@ -37,6 +35,7 @@ def read_wav_data(wav_file, start=0, end=None, resample=None):
     :param wav_file: path to an existing .wav file
     :return: np array of audio data, frame rate
     """
+    import librosa
     start = float(start) if start is not None else None
     end = float(end) if end is not None else None
     y, sr, = librosa.core.load(wav_file,
@@ -71,6 +70,8 @@ def plot_chunk(chunk,
     :param kwargs: keyword args for plotting functions
     :return: blob of the spectrogram plot
     """
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
     filename, sr, ts, audio = chunk
     write_index = ts is not None
     if not nfft:
@@ -171,6 +172,7 @@ def _generate_chunks_filename_timestamp_wrapper(filepath,
 
 
 def plot_spectrogram(audio_data, sr, nfft=None, delta=None, **kwargs):
+    import librosa
     spectrogram = librosa.stft(audio_data,
                                n_fft=nfft,
                                hop_length=int(nfft / 2),
@@ -187,6 +189,7 @@ def plot_mel_spectrogram(audio_data,
                          melbands=64,
                          delta=None,
                          **kwargs):
+    import librosa
     spectrogram = y_limited_spectrogram(audio_data,
                                         sr=sr,
                                         nfft=nfft,
@@ -202,6 +205,7 @@ def plot_mel_spectrogram(audio_data,
 
 
 def plot_chroma(audio_data, sr, nfft=None, delta=None, **kwargs):
+    import librosa
     spectrogram = librosa.stft(audio_data,
                                n_fft=nfft,
                                hop_length=int(nfft / 2),
@@ -214,6 +218,7 @@ def plot_chroma(audio_data, sr, nfft=None, delta=None, **kwargs):
 
 
 def y_limited_spectrogram(audio_data, sr, nfft=None, ylim=None):
+    import librosa
     spectrogram = librosa.stft(audio_data,
                                n_fft=nfft,
                                hop_length=int(nfft / 2),
@@ -232,6 +237,7 @@ def _create_plot(spectrogram,
                  cmap='viridis',
                  scale='linear',
                  **kwargs):
+    import librosa.display
     if not ylim:
         ylim = sr / 2
     spectrogram_axes = librosa.display.specshow(spectrogram,
@@ -255,6 +261,7 @@ PLOTTING_FUNCTIONS = {
 
 
 def _generate_chunks(sound_info, sr, window, hop, start=0, wav_out=None):
+    import librosa
     if not window and not hop:
         yield sound_info
         return
