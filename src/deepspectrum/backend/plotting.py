@@ -237,7 +237,7 @@ def _create_plot(spectrogram,
                  cmap='viridis',
                  scale='linear',
                  **kwargs):
-    import librosa
+    import librosa.display
     if not ylim:
         ylim = sr / 2
     spectrogram_axes = librosa.display.specshow(spectrogram,
