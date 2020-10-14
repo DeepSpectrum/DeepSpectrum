@@ -1,10 +1,8 @@
 import logging
 import click
-from os import environ
 from deepspectrum.cli.configuration import Configuration, GENERAL_OPTIONS,\
- PLOTTING_OPTIONS, EXTRACTION_OPTIONS, LABEL_OPTIONS, WRITER_OPTIONS, Filetypes
-from ..backend.plotting import PlotGenerator
-from ..tools.feature_writer import get_writer
+PLOTTING_OPTIONS, EXTRACTION_OPTIONS, LABEL_OPTIONS, WRITER_OPTIONS, Filetypes
+from os import environ
 from .utils import add_options
 
 log = logging.getLogger(__name__)
@@ -23,6 +21,8 @@ environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 @add_options(WRITER_OPTIONS)
 def features(**kwargs):
     # set up the configuration object and parse commandline arguments
+    from ..backend.plotting import PlotGenerator
+    from ..tools.feature_writer import get_writer
     configuration = Configuration(plotting=True,
                                   extraction=True,
                                   writer=True,

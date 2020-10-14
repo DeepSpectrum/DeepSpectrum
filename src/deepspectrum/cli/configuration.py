@@ -10,11 +10,13 @@ from os import makedirs, walk
 from matplotlib import cm
 from os.path import abspath, join, isfile, basename, dirname, realpath, splitext
 
+mpl_cmaps = list(cm.cmaps_listed)+list(cm.datad)
+cmaps = mpl_cmaps
+cmaps += [cmap+'_r' for cmap in mpl_cmaps]
+
 from deepspectrum.backend.plotting import PLOTTING_FUNCTIONS
 from deepspectrum.tools.label_parser import LabelParser
-from deepspectrum.backend.extractor import KerasExtractor, PytorchExtractor
 from deepspectrum.tools.path import get_relative_path
-
 max_np = cpu_count()
 
 decimal.getcontext().prec = 6
@@ -48,17 +50,15 @@ GENERAL_OPTIONS = [
         "-c",
         "--config",
         type=click.Path(readable=True, dir_okay=False),
-        help=
-        "Path to configuration file which specifies available extraction networks. If this file does not exist a new one is created and filled with the standard settings.",
-        default=join(dirname(realpath(__file__)), "deep.conf"),
+        help="Path to configuration file which specifies available extraction networks. If this file does not exist a new one is created and filled with the standard settings.",
+        default=join(dirname(realpath(__file__)), "deep.conf"), show_default=True
     ),
     click.option(
         "-np",
         "--number-of-processes",
         type=click.IntRange(1, max_np, clamp=True),
-        help=
-        "Define the number of processes used in parallel for the extraction. If None defaults to cpu-count",
-        default=max_np,
+        help="Define the number of processes used in parallel for the extraction. If None defaults to cpu-count",
+        default=max_np, show_default=True
     ),
 ]
 
@@ -67,86 +67,80 @@ PARSER_OPTIONS = [
         "-p",
         "--parser",
         type=click.Path(readable=True, dir_okay=False),
-        help=
-        "Path to auDeep parser file.",
-        default=None)
-        
+        help="Path to auDeep parser file.",
+        default=None, show_default=True)
+
 ]
 
 PLOTTING_OPTIONS = [
     click.option(
         "-s",
         "--start",
-        help=
-        "Set a start time from which features should be extracted from the audio files.",
+        help="Set a start time from which features should be extracted from the audio files.",
         type=decimal.Decimal,
-        default=0,
+        default=0, show_default=True
     ),
     click.option(
         "-e",
         "--end",
-        help=
-        "Set a end time until which features should be extracted from the audio files.",
+        help="Set a end time until which features should be extracted from the audio files.",
         type=decimal.Decimal,
-        default=None,
+        default=None, show_default=True
     ),
     click.option(
         "-t",
         "--window-size-and-hop",
-        help=
-        "Extract deep spectrum features from windows with specified length and hopsize in seconds.",
+        help="Extract deep spectrum features from windows with specified length and hopsize in seconds.",
         nargs=2,
         type=decimal.Decimal,
-        default=[None, None],
+        default=[None, None], show_default=True
     ),
     click.option(
         "-nfft",
         default=None,
         help="specify the size for the FFT window in number of samples",
-        type=int,
+        type=int, show_default=True
     ),
     click.option(
         "-cm",
         "--colour-map",
         default="viridis",
         help="define the matplotlib colour map to use for the spectrograms",
-        type=click.Choice([m for m in cm.cmap_d])),  # ,
+        show_default=True,
+        type=click.Choice(cmaps)),  # ,
     # choices=sorted([m for m in cm.cmap_d]))
     click.option(
         "-fql",
         "--frequency-limit",
         type=int,
-        help=
-        "define a limit for the frequency axis for plotting the spectrograms",
-        default=None,
+        help="define a limit for the frequency axis for plotting the spectrograms",
+        default=None, show_default=True
     ),
     click.option(
         "-sr",
         "--sample-rate",
         type=int,
-        help=
-        "define a target sample rate for reading the audio files. Audio files will be resampled to this rate before spectrograms are extracted.",
-        default=None,
+        help="define a target sample rate for reading the audio files. Audio files will be resampled to this rate before spectrograms are extracted.",
+        default=None, show_default=True
     ),
     click.option(
         "-so",
         "--spectrogram-out",
-        help=
-        "define an existing folder where spectrogram plots should be saved during feature extraction. By default, spectrograms are not saved on disk to speed up extraction.",
-        default=None,
+        help="define an existing folder where spectrogram plots should be saved during feature extraction. By default, spectrograms are not saved on disk to speed up extraction.",
+        default=None, show_default=True
     ),
     click.option(
         "-wo",
         "--wav-out",
-        help=
-        "Convenience function to write the chunks of audio data used in the extraction to the specified folder.",
-        default=None,
+        help="Convenience function to write the chunks of audio data used in the extraction to the specified folder.",
+        default=None, show_default=True
     ),
     click.option(
         "-m",
         "--mode",
         help="Type of plot to use in the system.",
         default="spectrogram",
+        show_default=True,
         type=click.Choice(PLOTTING_FUNCTIONS.keys()),
     ),
     click.option(
@@ -156,29 +150,29 @@ PLOTTING_OPTIONS = [
         callback=_check_positive,
         help="Number of melbands used for computing the melspectrogram.",
         default=128,
+        show_default=True
     ),
     click.option(
         "-fs",
         "--frequency-scale",
-        help=
-        "Scale for the y-axis of the plots used by the system. Defaults to 'chroma' in chroma mode.",
+        help="Scale for the y-axis of the plots used by the system. Defaults to 'chroma' in chroma mode.",
         default="linear",
+        show_default=True,
         type=click.Choice(["linear", "log", "mel"]),
     ),
     click.option(
         "-d",
         "--delta",
         callback=_check_positive,
-        help=
-        "If given, derivatives of the given order of the selected features are displayed in the plots used by the system.",
+        help="If given, derivatives of the given order of the selected features are displayed in the plots used by the system.",
         default=None,
+        show_default=True
     ),
     click.option(
         "-ppdfs",
         "--pretty_pdfs",
         is_flag=True,
-        help=
-        "Add if you want to create nice pdf plots of the spectrograms the system uses. For figures in your papers ^.^",
+        help="Add if you want to create nice pdf plots of the spectrograms the system uses. For figures in your papers ^.^",
     ),
 ]
 
@@ -186,23 +180,24 @@ EXTRACTION_OPTIONS = [
     click.option(
         "-en",
         "--extraction-network",
-        help=
-        "specify the CNN that will be used for the feature extraction. You need to specify a valid weight file in .npy format in your configuration file for this network.",
+        help="specify the CNN that will be used for the feature extraction. You need to specify a valid weight file in .npy format in your configuration file for this network.",
         default="vgg16",
+        show_default=True
     ),
     click.option(
         "-fl",
         "--feature-layer",
         default="fc2",
         help="name of CNN layer from which to extract the features.",
+        show_default=True
     ),
     click.option(
         "-bs",
         "--batch-size",
         type=int,
-        help=
-        "Maximum batch size for feature extraction. Adjust according to your gpu memory size.",
+        help="Maximum batch size for feature extraction. Adjust according to your gpu memory size.",
         default=128,
+        show_default=True
     ),
 ]
 
@@ -210,8 +205,7 @@ WRITER_OPTIONS = [
     click.option(
         "-o",
         "--output",
-        help=
-        "The file which the features are written to. Supports csv and arff formats",
+        help="The file which the features are written to. Supports csv and arff formats",
         required=True,
         type=click.Path(writable=True, dir_okay=False),
     ),
@@ -231,8 +225,7 @@ WRITER_OPTIONS = [
         "-tc",
         "--time-continuous",
         is_flag=True,
-        help=
-        'Set labelling of features to timecontinuous mode. Only works in conjunction with "-t" and a label file with a matching timestamp column.',
+        help='Set labelling of features to timecontinuous mode. Only works in conjunction with "-t" and a label file with a matching timestamp column.',
     ),
 ]
 
@@ -240,9 +233,9 @@ LABEL_OPTIONS = [
     click.option(
         "-lf",
         "--label-file",
-        help=
-        "csv file with the labels for the files in the form: 'filename, label'. If nothing is specified here or under -labels, the name(s) of the directory/directories are used as labels.",
+        help="csv file with the labels for the files in the form: 'filename, label'. If nothing is specified here or under -labels, the name(s) of the directory/directories are used as labels.",
         default=None,
+        show_default=True,
         type=click.Path(exists=True, dir_okay=False, readable=True),
     ),
     click.option(
@@ -252,6 +245,7 @@ LABEL_OPTIONS = [
         nargs=1,
         help="Define an explicit label for the input files.",
         default=None,
+        show_default=True
     ),
 ]
 
@@ -348,14 +342,13 @@ class Configuration:
 
         self._load_config()
         self.files = self._find_files(input)
-        
+
         if not self.files:
             log.error(
                 f"No files were found under the path {input}. Check the specified input path."
             )
             exit(1)
-        
-        
+
         if self.writer:
             self.label_file = label_file
             self.writer_args["output"] = output
@@ -378,7 +371,7 @@ class Configuration:
             elif self.label_file is not None:
                 self._read_label_file()
             else:
-                self._create_labels_from_folder_structure()            
+                self._create_labels_from_folder_structure()
 
     def _find_files(self, folder):
         log.debug(f'Input file types are "{self.file_type.value}".')
@@ -411,9 +404,9 @@ class Configuration:
                     f, prefix=self.input_folder), self.files))
         if not relative_paths_in_label_dict:
             self.writer_args["label_dict"] = {get_relative_path(
-                    key, prefix=self.input_folder): value for key, value in self.writer_args["label_dict"].items()}
+                key, prefix=self.input_folder): value for key, value in self.writer_args["label_dict"].items()}
         # check if labels are missing for specific files
-        
+
         missing_labels = file_names.difference(self.writer_args["label_dict"])
         if missing_labels:
             log.info(
@@ -448,10 +441,8 @@ class Configuration:
 
         self.writer_args["label_dict"] = parser.label_dict
         self.writer_args["labels"] = parser.labels
-        
-        self._files_to_extract()
 
-        
+        self._files_to_extract()
 
     def _create_labels_from_folder_structure(self):
         """
@@ -499,6 +490,8 @@ class Configuration:
                 })
             self.file_type = filetypes[self.file_type.name]
             if self.extraction:
+                # only import here for performance reasons
+                from deepspectrum.backend.extractor import KerasExtractor, PytorchExtractor
                 keras_net_conf = conf_parser["keras-nets"]
                 pytorch_net_conf = conf_parser["pytorch-nets"]
                 if self.net in keras_net_conf:
@@ -514,7 +507,6 @@ class Configuration:
                         f"No model weights defined for {self.net} in {self.config}"
                     )
                     exit(1)
-                
 
         # if not, create it with standard settings
         else:

@@ -1,14 +1,12 @@
-import cv2
 import numpy as np
 import click
 import logging
 from os import environ
 from os.path import basename
 from .configuration import Configuration, GENERAL_OPTIONS, EXTRACTION_OPTIONS, LABEL_OPTIONS, WRITER_OPTIONS, Filetypes
-from ..backend.plotting import PlotTuple
-from ..tools.feature_writer import get_writer
-from ..tools.path import get_relative_path
 from .utils import add_options
+from ..backend.plotting import PlotTuple
+from ..tools.path import get_relative_path
 
 environ['GLOG_minloglevel'] = '2'
 environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -19,6 +17,7 @@ DESCRIPTION_IMAGE_FEATURES = 'Extract CNN-descriptors from images.'
 
 
 def image_reader(files, base_path=None, size=500):
+    import cv2
     for image in files:
         img = cv2.imread(image, cv2.IMREAD_COLOR)
         img = cv2.resize(img, dsize=(size, size))
@@ -34,6 +33,7 @@ def image_reader(files, base_path=None, size=500):
 @add_options(LABEL_OPTIONS)
 @add_options(WRITER_OPTIONS[:-2])
 def image_features(**kwargs):
+    from ..tools.feature_writer import get_writer
     configuration = Configuration(plotting=False,
                                   file_type=Filetypes.IMAGE,
                                   **kwargs)
