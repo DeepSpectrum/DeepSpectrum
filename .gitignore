@@ -15,3 +15,5 @@ venv/*
 .coverage
 .coverage.*
 .empty/
+.direnv/
+cov.xml
