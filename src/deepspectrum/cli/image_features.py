@@ -1,7 +1,7 @@
 import logging
 from os import environ, curdir
 
-import click
+import rich_click as click
 import numpy as np
 from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn
 

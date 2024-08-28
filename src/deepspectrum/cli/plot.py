@@ -1,7 +1,7 @@
 import logging
 from os import environ
 
-import click
+import rich_click as click
 from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn
 
 from deepspectrum.cli.configuration import (

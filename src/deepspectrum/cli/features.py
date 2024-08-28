@@ -1,5 +1,5 @@
 import logging
-import click
+import rich_click as click
 from deepspectrum.cli.configuration import (
     Configuration,
     GENERAL_OPTIONS,
