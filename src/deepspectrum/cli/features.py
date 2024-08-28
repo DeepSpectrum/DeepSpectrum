@@ -1,16 +1,24 @@
 import logging
 import click
-from deepspectrum.cli.configuration import Configuration, GENERAL_OPTIONS,\
-PLOTTING_OPTIONS, EXTRACTION_OPTIONS, LABEL_OPTIONS, WRITER_OPTIONS, Filetypes
+from deepspectrum.cli.configuration import (
+    Configuration,
+    GENERAL_OPTIONS,
+    PLOTTING_OPTIONS,
+    EXTRACTION_OPTIONS,
+    LABEL_OPTIONS,
+    WRITER_OPTIONS,
+    Filetypes,
+)
 from os import environ
+from rich.progress import Progress, TimeElapsedColumn, SpinnerColumn
 from .utils import add_options
 
 log = logging.getLogger(__name__)
 
-DESCRIPTION_EXTRACT = 'Extract deep spectrum features from wav files.'
+DESCRIPTION_EXTRACT = "Extract deep spectrum features from wav files."
 
-environ['GLOG_minloglevel'] = '2'
-environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+environ["GLOG_minloglevel"] = "2"
+environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 
 @click.command(help=DESCRIPTION_EXTRACT)
@@ -23,21 +31,28 @@ def features(**kwargs):
     # set up the configuration object and parse commandline arguments
     from ..backend.plotting import PlotGenerator
     from ..tools.feature_writer import get_writer
-    configuration = Configuration(plotting=True,
-                                  extraction=True,
-                                  writer=True,
-                                  file_type=Filetypes.AUDIO,
-                                  **kwargs)
-    plots = PlotGenerator(
-        files=configuration.files,
-        number_of_processes=configuration.number_of_processes,
-        **configuration.plotting_args)
 
-    log.info('Loading model and weights...')
-    extractor = configuration.extractor(images=plots,
-                                        **configuration.extraction_args)
+    configuration = Configuration(
+        plotting=True, extraction=True, writer=True, file_type=Filetypes.AUDIO, **kwargs
+    )
+    with Progress(
+        SpinnerColumn(),
+        *Progress.get_default_columns(),
+        TimeElapsedColumn(),
+    ) as progress:
+        plots = PlotGenerator(
+            files=configuration.files,
+            number_of_processes=configuration.number_of_processes,
+            progress_display=progress,
+            **configuration.plotting_args,
+        )
 
-    writer = get_writer(**configuration.writer_args)
-    writer.write_features(configuration.files, extractor, hide_progress=False)
+        log.info("Loading model and weights...")
+        extractor = configuration.extractor(
+            images=plots, **configuration.extraction_args
+        )
 
-    log.info('Done extracting features.')
+        writer = get_writer(**configuration.writer_args, progress_display=progress)
+        writer.write_features(configuration.files, extractor, hide_progress=False)
+
+        log.info("Done extracting features.")
