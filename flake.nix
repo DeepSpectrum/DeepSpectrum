@@ -49,11 +49,12 @@
       });
       projectDir = self;
       python = pkgs.python311;
-      src = ./src;
+      src = self;
     in {
       packages = {
         deepspectrum = poetry2nix.mkPoetryApplication {
           inherit src python projectDir overrides;
+          preferWheels = true;
         };
         default = self.packages.${system}.deepspectrum;
       };
